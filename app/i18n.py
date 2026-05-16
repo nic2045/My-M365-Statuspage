@@ -80,4 +80,17 @@ LABELS: dict[str, str] = {
     "maintenance.completed":      "Abgeschlossen",
     # Incident type
     "incident.type.maintenance":  "Wartung",
+    # Incident history (public page)
+    "page.history_heading":       "Kürzlich behoben",
+    "page.history_subheading":    "Letzte 30 Tage",
+    "page.history_empty":         "Keine behobenen Störungen in den letzten 30 Tagen.",
+    "page.history_show":          "Störungs-Verlauf anzeigen",
+    "incident.resolved_at":       "Behoben am",
+    # Service management
+    "admin.service_management":   "Dienstverwaltung",
+    "admin.discover_services":    "Von Microsoft laden",
+    "admin.service_enable":       "Aktivieren",
+    "admin.service_disable":      "Deaktivieren",
+    "admin.no_known_services":    "Noch keine Dienste bekannt.",
+    "admin.service_backfill_hint": "90-Tage-Verlauf wird im Hintergrund geladen…",
 }

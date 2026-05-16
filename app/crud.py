@@ -8,7 +8,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Incident, IncidentUpdate, ServiceStatus
+from app.models import Incident, IncidentUpdate, MonitoredService, ServiceStatus
 from app.schemas import (
     DayStatusSchema,
     IncidentSchema,
@@ -295,14 +295,19 @@ async def add_state_change_entry(
 async def get_resolved_incidents(
     db: AsyncSession,
     limit: int = 20,
+    days: int | None = None,
 ) -> list[Incident]:
-    result = await db.execute(
+    stmt = (
         select(Incident)
         .options(selectinload(Incident.updates))
         .where(Incident.is_resolved.is_(True), Incident.classification != "maintenance")
         .order_by(desc(Incident.last_modified))
         .limit(limit)
     )
+    if days is not None:
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        stmt = stmt.where(Incident.last_modified >= cutoff)
+    result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -324,6 +329,96 @@ async def get_suppressed_incidents(db: AsyncSession) -> list[Incident]:
         .order_by(desc(Incident.last_modified))
     )
     return list(result.scalars().all())
+
+
+async def get_enabled_services(db: AsyncSession) -> list[str]:
+    result = await db.execute(
+        select(MonitoredService.service_name)
+        .where(MonitoredService.is_enabled.is_(True))
+        .order_by(MonitoredService.service_name)
+    )
+    return [row[0] for row in result.fetchall()]
+
+
+async def get_all_monitored_services(db: AsyncSession) -> list[MonitoredService]:
+    result = await db.execute(
+        select(MonitoredService).order_by(MonitoredService.service_name)
+    )
+    return list(result.scalars().all())
+
+
+async def ensure_service_known(db: AsyncSession, service_name: str) -> MonitoredService:
+    result = await db.execute(
+        select(MonitoredService).where(MonitoredService.service_name == service_name)
+    )
+    svc = result.scalar_one_or_none()
+    if svc is None:
+        svc = MonitoredService(service_name=service_name, is_enabled=False)
+        db.add(svc)
+        await db.flush()
+    return svc
+
+
+async def set_service_enabled(
+    db: AsyncSession, service_name: str, is_enabled: bool
+) -> MonitoredService:
+    svc = await ensure_service_known(db, service_name)
+    svc.is_enabled = is_enabled
+    await db.flush()
+    return svc
+
+
+async def backfill_service_status_from_issues(
+    db: AsyncSession,
+    service_name: str,
+    issues: list[dict],
+    days: int = 90,
+) -> None:
+    today = date.today()
+    start_date = today - timedelta(days=days - 1)
+
+    _severity = {"operational": 0, "unknown": 1, "degraded": 2, "interrupted": 3}
+
+    def _parse_issue_date(val: str | None) -> date | None:
+        if not val:
+            return None
+        try:
+            dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+            return dt.date()
+        except (ValueError, AttributeError):
+            return None
+
+    day_status: dict[date, str] = {}
+    for issue in issues:
+        issue_start = _parse_issue_date(issue.get("startDateTime"))
+        issue_end = _parse_issue_date(issue.get("endDateTime") or issue.get("lastModifiedDateTime"))
+        if not issue_start:
+            continue
+        if issue_end is None or issue_end < issue_start:
+            issue_end = today
+        classification = issue.get("classification", "incident")
+        status = "interrupted" if classification == "incident" else "degraded"
+
+        cursor = max(issue_start, start_date)
+        end_clamped = min(issue_end, today)
+        while cursor <= end_clamped:
+            if _severity.get(status, 0) > _severity.get(day_status.get(cursor, "operational"), 0):
+                day_status[cursor] = status
+            cursor += timedelta(days=1)
+
+    result = await db.execute(
+        select(ServiceStatus.date).where(
+            ServiceStatus.service_name == service_name,
+            ServiceStatus.date >= start_date,
+        )
+    )
+    existing_dates = {row[0] for row in result.fetchall()}
+
+    for i in range(days):
+        d = start_date + timedelta(days=i)
+        if d not in existing_dates:
+            status = day_status.get(d, "operational")
+            await upsert_service_status(db, service_name, d, status, "backfill")
 
 
 async def set_service_status_manual(

@@ -5,9 +5,19 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
-from app.crud import upsert_incident, upsert_incident_updates, upsert_service_status
+from app.crud import (
+    ensure_service_known,
+    get_enabled_services,
+    upsert_incident,
+    upsert_incident_updates,
+    upsert_service_status,
+)
 from app.database import AsyncSessionLocal
-from app.graph_client import fetch_active_issues, fetch_health_overviews
+from app.graph_client import (
+    fetch_active_issues,
+    fetch_health_overviews,
+    fetch_recently_resolved_issues,
+)
 from app.models import GRAPH_STATUS_MAP
 
 logger = logging.getLogger(__name__)
@@ -32,7 +42,14 @@ def _parse_dt(value: str | None) -> datetime | None:
 
 
 async def poll_graph_api() -> None:
-    monitored = settings.monitored_services_list
+    # Read enabled services from DB (not env var) so admin toggles take effect
+    async with AsyncSessionLocal() as db:
+        monitored = await get_enabled_services(db)
+
+    if not monitored:
+        logger.info("No enabled services configured. Skipping poll.")
+        return
+
     today = date.today()
     logger.info("Graph API poll started for services: %s", monitored)
 
@@ -44,6 +61,10 @@ async def poll_graph_api() -> None:
 
             for svc in overviews:
                 name = svc.get("service", "")
+                if not name:
+                    continue
+                # Discover all services returned by Graph API (mark as known but not enabled)
+                await ensure_service_known(db, name)
                 if name not in monitored:
                     continue
                 seen_services.add(name)
@@ -62,11 +83,14 @@ async def poll_graph_api() -> None:
             await db.rollback()
             logger.exception("Health overview poll failed")
 
-    # ── Phase 2: Active incidents (separate session – failure won't roll back phase 1) ──
+    # ── Phase 2: Active + recently resolved incidents ────────────────────────────
     async with AsyncSessionLocal() as db:
         try:
-            issues = await fetch_active_issues()
-            for issue in issues:
+            active_issues = await fetch_active_issues()
+            resolved_issues = await fetch_recently_resolved_issues(days=30)
+            all_issues = active_issues + resolved_issues
+
+            for issue in all_issues:
                 if issue.get("service") not in monitored:
                     continue
                 severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
@@ -86,11 +110,15 @@ async def poll_graph_api() -> None:
                 await upsert_incident_updates(db, incident.id, posts)
 
             await db.commit()
-            logger.info("Graph API poll completed successfully.")
+            logger.info(
+                "Graph API poll completed: %d active, %d recently resolved.",
+                len(active_issues),
+                len(resolved_issues),
+            )
 
         except Exception:
             await db.rollback()
-            logger.exception("Active issues poll failed")
+            logger.exception("Issues poll failed")
 
 
 def start_scheduler() -> None:
