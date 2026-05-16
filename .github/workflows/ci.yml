@@ -151,16 +151,6 @@ jobs:
     env:
       IMAGE: m365-statuspage:ci
       CONTAINER: statuspage-ci
-      # Dummy secrets – safe for CI, never used against real Azure
-      COMMON_ENV: >-
-        -e AZURE_TENANT_ID=dummy-tenant
-        -e AZURE_CLIENT_ID=dummy-client
-        -e AZURE_CLIENT_SECRET=dummy-secret
-        -e AZURE_REDIRECT_URI=http://localhost:8000/auth/callback
-        -e SECRET_KEY=0000000000000000000000000000000000000000000000000000000000000000
-        -e DATABASE_URL=sqlite+aiosqlite:///./data/statuspage.db
-        -e EMBED_API_KEY=test-embed-key-ci
-        -e DEBUG=true
 
     steps:
       - uses: actions/checkout@v4
@@ -222,7 +212,14 @@ jobs:
       - name: Start container
         run: |
           docker run -d --name "$CONTAINER" -p 8000:8000 \
-            ${{ env.COMMON_ENV }} \
+            -e AZURE_TENANT_ID=dummy-tenant \
+            -e AZURE_CLIENT_ID=dummy-client \
+            -e AZURE_CLIENT_SECRET=dummy-secret \
+            -e AZURE_REDIRECT_URI=http://localhost:8000/auth/callback \
+            -e SECRET_KEY=0000000000000000000000000000000000000000000000000000000000000000 \
+            -e DATABASE_URL=sqlite+aiosqlite:///./data/statuspage.db \
+            -e EMBED_API_KEY=test-embed-key-ci \
+            -e DEBUG=true \
             "$IMAGE"
 
       - name: Wait for app to be ready (max 30 s)
@@ -296,8 +293,9 @@ jobs:
   trivy:
     name: Trivy Image Scan (CVE)
     runs-on: ubuntu-latest
-    # Run in parallel with docker tests; both need the image built independently
-    needs: []
+    permissions:
+      security-events: write   # required for SARIF upload to GitHub Security tab
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -306,16 +304,16 @@ jobs:
         run: docker build -t m365-statuspage:trivy .
 
       - name: Run Trivy (table output to console)
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: m365-statuspage:trivy
           format: table
-          exit-code: "0"          # never block CI on findings – we report only
+          exit-code: "0"          # report only in CI – never block on findings
           severity: HIGH,CRITICAL
           vuln-type: os,library
 
       - name: Run Trivy (SARIF for GitHub Security tab)
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: m365-statuspage:trivy
           format: sarif
@@ -327,6 +325,7 @@ jobs:
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true   # graceful if GitHub Advanced Security is not enabled
         with:
           sarif_file: trivy-results.sarif
           category: trivy-docker
