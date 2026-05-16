@@ -30,7 +30,12 @@ from app.crud import (
 )
 from app.database import AsyncSessionLocal
 from app.dependencies import get_db
-from app.graph_client import fetch_health_overviews, fetch_issues_since
+from app.graph_client import (
+    fetch_active_issues,
+    fetch_health_overviews,
+    fetch_issues_since,
+    fetch_recently_resolved_issues,
+)
 from app.models import MonitoredService
 from app.templates import templates
 
@@ -100,8 +105,7 @@ async def admin_dashboard(
     resolved = await get_resolved_incidents(db, limit=10)
     suppressed = await get_suppressed_incidents(db)
     maintenances = await get_scheduled_maintenances(db)
-    all_services = await get_all_monitored_services(db)
-    enabled_services = [s.service_name for s in all_services if s.is_enabled]
+    enabled_services = await get_enabled_services(db)
     return templates.TemplateResponse(
         request,
         "admin/dashboard.html",
@@ -111,9 +115,26 @@ async def admin_dashboard(
             "resolved_incidents": resolved,
             "suppressed_incidents": suppressed,
             "maintenances": maintenances,
-            "all_services": all_services,
             "services": enabled_services,
             "page_title": f"Admin – {settings.APP_TITLE}",
+        },
+    )
+
+
+@router.get("/settings")
+async def admin_settings(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    all_services = await get_all_monitored_services(db)
+    return templates.TemplateResponse(
+        request,
+        "admin/settings.html",
+        {
+            "user": user,
+            "all_services": all_services,
+            "page_title": f"Einstellungen – {settings.APP_TITLE}",
         },
     )
 
@@ -255,7 +276,7 @@ async def refresh_services(
         await db.commit()
     except Exception:
         logger.exception("Service discovery failed")
-    return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin/settings", status_code=303)
 
 
 @router.post("/services/{service_name}/toggle")
@@ -278,7 +299,7 @@ async def toggle_service(
         asyncio.create_task(_backfill_service(service_name))
         _schedule_delayed_poll(delay=8.0)  # debounced: cancels any pending poll first
 
-    return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin/settings", status_code=303)
 
 
 @router.post("/services/{service_name}/status")
@@ -355,3 +376,70 @@ async def create_maintenance(
     )
     await db.commit()
     return RedirectResponse(url=f"/admin/incidents/{incident.id}", status_code=303)
+
+
+# ── Debug / Diagnostics ───────────────────────────────────────────────────────
+
+@router.get("/debug")
+async def debug_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    enabled = await get_enabled_services(db)
+    return templates.TemplateResponse(
+        request,
+        "admin/debug.html",
+        {
+            "user": user,
+            "enabled_services": set(enabled),
+            "active_issues": None,
+            "resolved_issues": None,
+            "overviews": None,
+            "errors": [],
+            "page_title": "Debug – Graph API",
+        },
+    )
+
+
+@router.post("/debug/fetch")
+async def debug_fetch(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Live-fetch all Microsoft service health data and display raw results."""
+    enabled = await get_enabled_services(db)
+    errors: list[str] = []
+    overviews: list[dict] = []
+    active_issues: list[dict] = []
+    resolved_issues: list[dict] = []
+
+    try:
+        overviews = await fetch_health_overviews()
+    except Exception as exc:
+        errors.append(f"Health Overviews: {exc}")
+
+    try:
+        active_issues = await fetch_active_issues()
+    except Exception as exc:
+        errors.append(f"Aktive Störungen: {exc}")
+
+    try:
+        resolved_issues = await fetch_recently_resolved_issues(days=30)
+    except Exception as exc:
+        errors.append(f"Kürzlich behoben: {exc}")
+
+    return templates.TemplateResponse(
+        request,
+        "admin/debug.html",
+        {
+            "user": user,
+            "enabled_services": set(enabled),
+            "overviews": overviews,
+            "active_issues": active_issues,
+            "resolved_issues": resolved_issues,
+            "errors": errors,
+            "page_title": "Debug – Graph API",
+        },
+    )
