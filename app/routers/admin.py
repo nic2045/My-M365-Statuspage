@@ -173,8 +173,7 @@ async def update_incident(
     parsed_end = _parse_form_dt(end_datetime)
     # Auto-set end_datetime to now when marking resolved and no end time was given
     if new_resolved and not parsed_end and not (old and old.end_datetime):
-        from datetime import datetime as _dt
-        parsed_end = _dt.utcnow()
+        parsed_end = datetime.utcnow()
 
     updates: dict = {
         "title": title,
