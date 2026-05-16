@@ -1,7 +1,7 @@
 {# Renders one service card. Expects `service` (ServiceStatusSchema) in scope. #}
-<div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 mb-3 shadow-sm">
+<div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 mb-3 shadow-sm">
   <div class="flex items-center justify-between">
-    <span class="font-semibold text-gray-900 dark:text-white">{{ service.service_name }}</span>
+    <span class="font-medium text-gray-800 dark:text-gray-100">{{ service.service_name }}</span>
     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ status_badge_class(service.current_status) }}">
       {% if service.current_status == "operational" %}
       <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
