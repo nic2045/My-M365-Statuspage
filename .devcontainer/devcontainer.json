@@ -1,0 +1,15 @@
+{
+	"name": "My-M365-Statuspage",
+	"build": {
+		"context": "..",
+		"dockerfile": "../Dockerfile"
+	},
+	"forwardPorts": [8000],
+	"remoteUser": "appuser",
+	"workspaceFolder": "/app",
+	"mounts": [
+		"source=${localWorkspaceFolder}/app,target=/app/app,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/templates,target=/app/templates,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/static,target=/app/static,type=bind,consistency=cached"
+	]
+}
