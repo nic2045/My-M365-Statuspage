@@ -5,6 +5,7 @@ on:
     branches: ["**"]
   pull_request:
     branches: ["main"]
+  workflow_call:  # allows release.yml to reuse this workflow as a gate
 
 jobs:
   validate:
@@ -108,6 +109,40 @@ jobs:
 
       - name: Ruff check
         run: ruff check app/
+
+  audit:
+    name: Security Audit (pip-audit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit
+        # Audit declared dependencies (not the full environment) so only
+        # packages in requirements.txt are checked, not pip-audit itself.
+        run: |
+          pip-audit \
+            --requirement requirements.txt \
+            --output-format markdown \
+            --progress-spinner off \
+            | tee audit-report.md
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: audit-report.md
+          retention-days: 30
 
   docker:
     name: Docker Build
