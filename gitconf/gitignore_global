@@ -1,0 +1,43 @@
+# ─── macOS ────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# ─── Windows ──────────────────────────────────────────
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ─── Editor / IDE ─────────────────────────────────────
+.vscode/launch.json
+.idea/
+*.suo
+*.user
+
+# ─── Claude Code (local config, not for remote) ───────
+.claude/
+CLAUDE.md
+
+# ─── Temp / Generated ─────────────────────────────────
+*.tmp
+*.bak
+*tempCodeRunnerFile*
+*_transcript.txt
+
+# ─── Credentials / Secrets ────────────────────────────
+.env
+*.pfx
+*.p12
+*.key
+*credential*
+*password*
+*secret*
+
+# ─── PowerShell-spezifisch (in jedem Repo) ────────────
+# Exportierte Daten — Quellscripts ja, generierte Daten nein
+*.csv
+*.xlsx
+*.log
+PSReadLine/
