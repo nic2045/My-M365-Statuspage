@@ -213,6 +213,7 @@ async def create_manual_incident(
     service_name: str,
     classification: str = "incident",
     status: str = "active",
+    description: str | None = None,
     scheduled_start: datetime | None = None,
     scheduled_end: datetime | None = None,
 ) -> Incident:
@@ -222,6 +223,7 @@ async def create_manual_incident(
         service_name=service_name,
         classification=classification,
         status=status,
+        description=description or None,
         start_datetime=datetime.utcnow(),
         last_modified=datetime.utcnow(),
         is_resolved=False,
@@ -291,6 +293,7 @@ async def build_status_page_data(
                 service_name=inc.service_name,
                 classification=inc.classification,
                 status=inc.status,
+                description=inc.description,
                 start_datetime=inc.start_datetime,
                 last_modified=inc.last_modified,
                 is_resolved=inc.is_resolved,

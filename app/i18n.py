@@ -48,6 +48,7 @@ LABELS: dict[str, str] = {
     "admin.service_status":       "Dienststatus",
     "admin.set_status":           "Status setzen",
     "admin.title_label":          "Titel",
+    "admin.description_label":    "Beschreibung",
     "admin.service_label":        "Dienst",
     "admin.classification_label": "Typ",
     "admin.status_label":         "Status",

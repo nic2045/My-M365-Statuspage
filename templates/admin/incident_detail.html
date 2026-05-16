@@ -32,6 +32,15 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ L["admin.description_label"] }}
+            <span class="font-normal text-gray-400">(optional)</span>
+          </label>
+          <textarea name="description" rows="3"
+                    class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none">{{ incident.description or "" }}</textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {{ L["admin.status_label"] }}
           </label>
           <select name="status"

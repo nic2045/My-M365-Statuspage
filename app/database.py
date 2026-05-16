@@ -39,6 +39,7 @@ async def init_db() -> None:
         # Additive migrations for columns added after initial deployment
         for stmt in [
             "ALTER TABLE incidents ADD COLUMN source VARCHAR NOT NULL DEFAULT 'graph'",
+            "ALTER TABLE incidents ADD COLUMN description TEXT",
             "ALTER TABLE incidents ADD COLUMN scheduled_start DATETIME",
             "ALTER TABLE incidents ADD COLUMN scheduled_end DATETIME",
         ]:

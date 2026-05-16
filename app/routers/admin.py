@@ -73,6 +73,7 @@ async def create_incident(
     title: Annotated[str, Form()],
     service_name: Annotated[str, Form()],
     classification: Annotated[str, Form()],
+    description: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
@@ -81,6 +82,7 @@ async def create_incident(
         title=title,
         service_name=service_name,
         classification=classification,
+        description=description or None,
     )
     await db.commit()
     return RedirectResponse(url=f"/admin/incidents/{incident.id}", status_code=303)
@@ -113,6 +115,7 @@ async def update_incident(
     incident_id: int,
     title: Annotated[str, Form()],
     status: Annotated[str, Form()],
+    description: Annotated[str | None, Form()] = None,
     is_resolved: Annotated[str | None, Form()] = None,
     scheduled_start: Annotated[str | None, Form()] = None,
     scheduled_end: Annotated[str | None, Form()] = None,
@@ -122,6 +125,7 @@ async def update_incident(
     updates: dict = {
         "title": title,
         "status": status,
+        "description": description or None,
         "is_resolved": is_resolved == "on",
     }
     if scheduled_start is not None or scheduled_end is not None:
@@ -176,6 +180,7 @@ async def new_maintenance_form(
 async def create_maintenance(
     title: Annotated[str, Form()],
     service_name: Annotated[str, Form()],
+    description: Annotated[str | None, Form()] = None,
     scheduled_start: Annotated[str | None, Form()] = None,
     scheduled_end: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
@@ -187,6 +192,7 @@ async def create_maintenance(
         service_name=service_name,
         classification="maintenance",
         status="scheduled",
+        description=description or None,
         scheduled_start=_parse_form_dt(scheduled_start),
         scheduled_end=_parse_form_dt(scheduled_end),
     )

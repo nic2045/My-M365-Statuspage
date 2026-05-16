@@ -9,6 +9,9 @@
           &nbsp;·&nbsp;
           <span class="font-medium">{{ L["incident.since"] }}:</span> {{ incident.start_datetime | strftime_de }}
         </p>
+        {% if incident.description %}
+        <p class="text-sm text-gray-600 dark:text-gray-300 mt-2">{{ incident.description }}</p>
+        {% endif %}
       </div>
       <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
         {% if incident.classification == 'incident' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400
