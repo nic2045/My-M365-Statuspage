@@ -53,18 +53,18 @@ async def fetch_active_issues() -> list[dict]:
     """Returns all unresolved service health issues, with posts expanded."""
     token = await _get_access_token()
     all_issues: list[dict] = []
-    url = f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
-    params = {
-        "$filter": "isResolved eq false",
-        "$expand": "posts",
-        "$top": "100",
-    }
+    # OData $ parameters must NOT be percent-encoded; embed them in the URL
+    # directly so httpx leaves them as-is instead of encoding $ → %24.
+    base_url = (
+        f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
+        "?$filter=isResolved eq false&$expand=posts&$top=100"
+    )
+    url: str | None = base_url
     async with httpx.AsyncClient(timeout=30) as client:
         while url:
             resp = await client.get(
                 url,
                 headers={"Authorization": f"Bearer {token}"},
-                params=params if url == f"{GRAPH_BASE}/admin/serviceAnnouncement/issues" else None,
             )
             resp.raise_for_status()
             data = resp.json()

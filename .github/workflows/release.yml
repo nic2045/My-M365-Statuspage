@@ -46,6 +46,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -162,38 +163,33 @@ jobs:
           else
             RANGE="${PREVIOUS_TAG}..HEAD"
           fi
-          CHANGELOG=$(git log "$RANGE" --pretty=format:"- %s (%h)" --no-merges)
-          # Write to file to handle multi-line safely
-          echo "$CHANGELOG" > changelog.txt
-          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          REF="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+          {
+            printf "## Änderungen in %s\n\n" "$REF"
+            git log "$RANGE" --pretty=format:"- %s (%h)" --no-merges
+            printf "\n\n## Docker Image\n\n"
+            printf '```bash\n'
+            printf "docker pull ghcr.io/%s:%s\n" "$REPO" "$VERSION"
+            printf "# oder\n"
+            printf "docker pull ghcr.io/%s:latest\n" "$REPO"
+            printf '```\n\n'
+            printf "Deployment mit docker-compose:\n"
+            printf '```bash\n'
+            printf "# docker-compose.yml anpassen:\n"
+            printf "image: ghcr.io/%s:%s\n" "$REPO" "$VERSION"
+            printf "docker compose up -d\n"
+            printf '```\n\n'
+            printf "## Sicherheits-Audit\n\n"
+            printf "Siehe angehängten \`pip-audit-report.md\` für den vollständigen Dependency-Scan.\n"
+          } > release-body.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: "M365 Dienststatus ${{ github.ref_name }}"
-          body: |
-            ## Änderungen in ${{ github.ref_name }}
-
-            $(cat changelog.txt)
-
-            ## Docker Image
-
-            ```bash
-            docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
-            # oder
-            docker pull ghcr.io/${{ github.repository }}:latest
-            ```
-
-            Deployment mit docker-compose:
-            ```bash
-            # docker-compose.yml anpassen:
-            image: ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
-            docker compose up -d
-            ```
-
-            ## Sicherheits-Audit
-
-            Siehe angehängten `pip-audit-report.md` für den vollständigen Dependency-Scan.
+          body_path: release-body.md
           files: artifacts/audit-report.md
           generate_release_notes: true
           make_latest: true
