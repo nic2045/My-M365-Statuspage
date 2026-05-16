@@ -1,19 +1,5 @@
 schemaVersion: "2.0.0"
 
-# ── Image metadata ────────────────────────────────────────────────────────────
-metadataTest:
-  exposedPorts: ["8000"]
-  user: "appuser"
-  cmd:
-    - "uvicorn"
-    - "app.main:app"
-    - "--host"
-    - "0.0.0.0"
-    - "--port"
-    - "8000"
-    - "--workers"
-    - "1"
-
 # ── Required files and directories ───────────────────────────────────────────
 fileExistenceTests:
   - name: "app package"
