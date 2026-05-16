@@ -1,402 +1,249 @@
-# dotfiles
+# M365 Dienststatus
 
-Personal environment configuration — Claude Code instructions for all projects.
+> Leichtgewichtige Statusseite für Microsoft 365 — gebaut mit FastAPI, betrieben in Docker, abgesichert via Entra ID.
 
-## Structure
-
-```
-dotfiles/
-  claude/
-    CLAUDE.md              # Global instructions — loaded for every project
-    projects/
-      ha-garden-water.md   # HA blueprint rules, versioning convention
-      JIRA_WeeklyUpdater.md
-      Script-Libary.md
-      SW-Deployment.md
-      ADGroupChecker.md
-      PS-Script-Libary.md
-      MDT.md
-      RSG-Intune.md
-  git-templates/
-    hooks/
-      post-checkout        # Auto-links CLAUDE.md on git clone
-  gitconf/
-    gitignore_global       # Global gitignore (macOS, Windows, Editor, Secrets)
-  setup.sh                 # Run once on a new machine
-  add-project.sh           # Add a new project and link it immediately
-```
-
-## Architecture
-
-Source of truth: `dotfiles` repo on GitHub
-├── claude/CLAUDE.md → copied to ~/.claude/CLAUDE.md (global)
-├── claude/projects/*.md → symlinked to ~/Coding/<project>/CLAUDE.md (per-project)
-├── git-templates/hooks/post-checkout → installed to ~/.git-templates (auto-link on clone)
-├── gitconf/gitignore_global → configured as core.excludesfile (all repos)
-└── vscode-extensions/dotfiles-check → auto-sync every 6 hours
-
-How it flows:
-1. Clone dotfiles repo → run setup.sh once
-2. setup.sh creates symlinks to all known projects
-3. VSCode extension runs in background: every 6h, fetch origin → pull if behind
-4. Edit any dotfiles file → change propagates via symlink to all repos
-5. Multiple machines: all run VSCode extension → all sync to same GitHub state
-
-## How it works
-
-- **Global** (`~/.claude/CLAUDE.md`) — Claude Code loads this automatically for every project. Contains cross-project rules and preferences.
-- **Per-project** (`<repo>/CLAUDE.md`) — Claude Code loads this when working in a specific repo. Symlinked from `dotfiles/claude/projects/` so there is a single source of truth.
-- **Global gitignore** — Applied to every git repo without touching project `.gitignore` files.
-- **post-checkout hook** — Fires automatically after `git clone` for any `nic2045` repo and calls `add-project.sh` to link `CLAUDE.md` if none exists yet.
-- **Symlinks everywhere** — Editing a file in `dotfiles/` immediately takes effect everywhere via the symlink — no copy needed.
-- **Background sync** — VSCode extension `dotfiles-check` runs every 6 hours: fetch origin, detect if behind, auto-stash local changes, pull. Status shown in status bar.
+[![CI](https://github.com/nic2045/My-M365-Statuspage/actions/workflows/ci.yml/badge.svg)](https://github.com/nic2045/My-M365-Statuspage/actions/workflows/ci.yml)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
+[![Security Audit](https://img.shields.io/badge/Security-pip--audit-4CAF50?logo=python&logoColor=white)](https://github.com/nic2045/My-M365-Statuspage/actions/workflows/ci.yml)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025E8C?logo=dependabot&logoColor=white)](https://github.com/nic2045/My-M365-Statuspage/network/updates)
 
 ---
 
-## Setup Flow
+## Was ist das?
 
-What `bash ~/dotfiles/setup.sh` does:
+Die **M365 Dienststatus**-Seite fragt alle 10 Minuten die [Microsoft Graph API](https://learn.microsoft.com/en-us/graph/api/resources/servicehealth-overview) ab und zeigt:
 
-1. Copy global instructions
-   ~/.claude/CLAUDE.md ← ~/dotfiles/claude/CLAUDE.md (symlink, absolute path)
+- Den **aktuellen Status** überwachter M365-Dienste (Exchange, Teams, SharePoint, ...)
+- Einen **90-Tage-Verfügbarkeitsbalken** pro Dienst
+- **Aktive Incidents** mit chronologischem Update-Verlauf direkt aus Microsoft
+- Ein **einbettbares Widget** für Typo3, Confluence DC oder Intranets
 
-2. Configure git globally
-   core.excludesfile → dotfiles/gitconf/gitignore_global
-   alias.ignored → custom git alias
-   dotfiles.dir → dotfiles repo location (used by git hooks)
-
-3. Install git hook template
-   ~/.git-templates/hooks/post-checkout ← dotfiles/git-templates/hooks/post-checkout
-   init.templateDir → ~/.git-templates
-   (will run on future `git clone` for nic2045 repos)
-
-4. Create relative symlinks for all known projects
-   For each project in dotfiles/claude/projects/:
-   If ~/Coding/<project>/ exists:
-     → symlink ~/Coding/<project>/CLAUDE.md to ../dotfiles/claude/projects/<project>.md (relative)
-     → uses Python to calculate optimal relative path
-     → if Python unavailable, falls back to standard layout path
-   Else:
-     → skip with warning
-
-Result: All symlinks created. Future git clones auto-link via post-checkout hook.
-
-5. Install VSCode extension separately (see next section)
-
-## VSCode Extension: vscode-dotfiles-check
-
-The background sync extension lives in a separate repo (no circular dependency).
-
-**Install from source** (during development):
-```bash
-git clone git@github.com:nic2045/vscode-dotfiles-check.git ~/Coding/vscode-dotfiles-check
-bash ~/Coding/vscode-dotfiles-check/install.sh
-```
-
-**Or install from VSCode Marketplace** (when available):
-Extensions → Search "Dotfiles Check" → Install
-
-The extension will:
-- Run on VSCode startup
-- Schedule 6h background syncs of ~/Coding/dotfiles
-- Auto-pull if behind origin/main
-- Show status in status bar, notifications on sync
-
-## Symlink Logic
-
-All files in dotfiles repo are symlinked, not copied. Single source of truth.
-
-**macOS / Linux / Windows (Git Bash)** — Relative symlinks:
-Scripts automatically create relative symlinks:
-```
-~/Coding/ha-garden-water/CLAUDE.md → ../dotfiles/claude/projects/ha-garden-water.md
-```
-Relative paths are portable: work on any machine without path adjustment.
-
-How setup.sh does it:
-1. Calculate relative path from target to source using Python
-2. Create symlink with relative path
-3. Fallback: use `../dotfiles/claude/projects/...` for standard layout
-
-**Windows (PowerShell without Developer Mode)** — Manual step required:
-Symlinks require Developer Mode on Windows. If unavailable, create hard link manually:
-```powershell
-New-Item -ItemType HardLink `
-  -Path "C:\Users\<user>\Coding\ha-garden-water\CLAUDE.md" `
-  -Target "C:\Users\<user>\Coding\dotfiles\claude\projects\ha-garden-water.md"
-```
-Caveat: `git pull` in dotfiles rewrites files (new inode) → hard link breaks. Re-create if needed.
-
-**Edit strategy**: Edit in the symlink (project repo) or in source (dotfiles repo) — both stay in sync automatically via symlink.
+Der Zugang ist per **Entra ID OIDC** gesichert — nur interne Benutzer deines Tenants können sich einloggen.
 
 ---
 
-## Background Sync: dotfiles-check Extension
+## Features
 
-Logic:
-
-VSCode startup
-→ dotfiles-check extension activates
-→ verify dotfiles exists
-→ show status in status bar
-→ schedule background task: every 6 hours
-
-Every 6 hours:
-1. cd ~/Coding/dotfiles
-2. Check git status
-   - Has local changes? Auto-stash them (safe save)
-   - Clean? Continue
-3. git fetch origin main (check what's new)
-4. Compare local HEAD vs origin/main
-   - Behind? Pull the changes
-   - Up-to-date? Skip
-5. Update status bar icon and log
-
-User can also:
-- Click status bar icon → sync immediately
-- Command Palette → "Dotfiles: Sync Now"
-
-Notifications appear:
-- ✓ Dotfiles synced (success)
-- ⚠ Sync failed: <reason> (error)
-
-Full log visible in View → Output → "Dotfiles Check"
+| Feature | Details |
+|---------|---------|
+| **90-Tage-Verlauf** | Farbige Tagesbalken (grün / gelb / rot / grau) pro Dienst |
+| **Incident-Timeline** | Aktive Störungen mit allen Microsoft-Updates |
+| **Auto-Polling** | APScheduler fragt die Graph API alle 10 Minuten ab |
+| **OIDC-Login** | Entra ID – kein eigenes User-Management nötig |
+| **Embed-Widget** | `/embed?token=KEY` – iframe-tauglich ohne X-Frame-Options |
+| **Dark Mode** | Helles Design als Standard, Dark Mode per Toggle |
+| **Erweiterbar** | Neue Dienste nur per Umgebungsvariable, kein Code-Change |
+| **Sicher** | Non-root Docker-Container, WAL-SQLite, HTML-Sanitierung |
 
 ---
 
-## Multi-Machine Sync Example
+## Schnellstart
 
-Scenario: Two machines, both running VSCode with dotfiles-check extension.
-
-Initial state:
-  Machine A (macOS): ~/Coding/dotfiles cloned, setup.sh run
-  Machine B (Linux): ~/Coding/dotfiles cloned, setup.sh run
-  Both: VSCode installed with dotfiles-check extension
-  GitHub: origin/main HEAD = commit X
-
-Timeline:
-
-Step 1 — Machine A makes a change
-  User edits ~/Coding/dotfiles/claude/CLAUDE.md (or via symlink in any project)
-  Machine A commits & pushes
-  GitHub: origin/main HEAD = commit Y
-
-Step 2 — Machine A's extension syncs
-  Next background sync: fetch origin → already at origin/main
-  No action needed
-
-Step 3 — Machine B's extension syncs (6h later, or user clicks manually)
-  Background sync: fetch origin → sees origin/main = commit Y
-  Machine B HEAD = commit X (behind)
-  Auto-pull: git pull origin main
-  Local files updated
-  Symlinks propagate changes to all projects
-  Notification: ✓ Dotfiles synced
-  ~/.claude/CLAUDE.md automatically reflects Machine A's edit
-
-Result: Both machines in sync, single source of truth on GitHub.
-
----
-
-## Setup: macOS / Linux
-
-Prerequisites: Git, Claude Code CLI, Python 3 (for relative path calculation).
+### 1. Repository klonen & Konfiguration anlegen
 
 ```bash
-git clone git@github.com:nic2045/dotfiles.git ~/Coding/dotfiles
-bash ~/Coding/dotfiles/setup.sh
+git clone https://github.com/nic2045/My-M365-Statuspage.git
+cd My-M365-Statuspage
+cp .env.example .env
 ```
 
-`setup.sh` autodetects your environment and:
-1. Symlinks `~/.claude/CLAUDE.md` → `~/Coding/dotfiles/claude/CLAUDE.md`
-2. Sets git config: `core.excludesfile`, `alias.ignored`, `dotfiles.dir`
-3. Installs `git-templates/hooks/post-checkout` for auto-linking on future clones
-4. Creates relative symlinks for all known projects at `~/Coding/<repo-name>`
-5. Installs VSCode extension (reads version from package.json)
+### 2. `.env` befüllen
 
-Repos are expected at `~/Coding/<repo-name>`. Missing repos are skipped with a warning.
+```dotenv
+AZURE_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+AZURE_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+AZURE_CLIENT_SECRET=dein-client-secret
+AZURE_REDIRECT_URI=https://statuspage.example.com/auth/callback
 
-If Python is unavailable, setup falls back to standard relative path format (`../dotfiles/...`).
+# Zufälligen Schlüssel erzeugen:
+# python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=...
 
-Verify symlinks were created correctly:
+EMBED_API_KEY=ein-langer-zufaelliger-string  # leer lassen = OIDC erforderlich
+MONITORED_SERVICES=Exchange Online,SharePoint Online,Microsoft Teams
+```
+
+### 3. Docker Compose starten
+
 ```bash
-readlink ~/Coding/ha-garden-water/CLAUDE.md
-# Should show relative path like: ../dotfiles/claude/projects/ha-garden-water.md
+docker compose up -d --build
+```
+
+Die Seite ist anschließend unter **`http://localhost:8000`** erreichbar.  
+Beim ersten Aufruf wird man zu Entra ID weitergeleitet.
+
+---
+
+## Entra ID App-Registrierung
+
+1. **Azure Portal → Entra ID → App-Registrierungen → Neue Registrierung**
+2. **Redirect-URI** (Typ: Web): `https://<deine-domain>/auth/callback`
+3. **API-Berechtigungen → Hinzufügen → Microsoft Graph → Anwendungsberechtigungen:**
+   - `ServiceHealth.Read.All`
+4. **Administrator-Zustimmung erteilen** (für Anwendungsberechtigungen Pflicht)
+5. **Zertifikate & Geheimnisse → Neues Clientgeheimnis** → Wert in `.env` eintragen
+
+> Eine App-Registrierung deckt beides ab: OIDC-Login für Browser-Benutzer **und** den Graph-API-Zugriff per Client Credentials.
+
+---
+
+## Konfigurationsreferenz
+
+| Variable | Beschreibung | Standard |
+|----------|-------------|---------|
+| `AZURE_TENANT_ID` | Verzeichnis-ID (Tenant) | — |
+| `AZURE_CLIENT_ID` | Anwendungs-ID | — |
+| `AZURE_CLIENT_SECRET` | Clientgeheimnis | — |
+| `AZURE_REDIRECT_URI` | OAuth-Callback-URL | `http://localhost:8000/auth/callback` |
+| `SECRET_KEY` | Session-Signaturschlüssel (≥32 Byte Hex) | — |
+| `EMBED_API_KEY` | Token für Widget-Zugriff ohne Login | *(leer)* |
+| `DATABASE_URL` | SQLAlchemy Async URL | `sqlite+aiosqlite:///./data/statuspage.db` |
+| `MONITORED_SERVICES` | Kommagetrennte Dienstnamen (Graph API exakt) | Exchange Online, SharePoint Online, Microsoft Teams |
+| `POLL_INTERVAL_MINUTES` | Abfrageintervall in Minuten | `10` |
+| `DEBUG` | Aktiviert `/api/docs`, ausführliches Logging | `false` |
+
+**Unterstützte `MONITORED_SERVICES`-Werte** (Graph API-Namen exakt einhalten):
+
+`Exchange Online` · `SharePoint Online` · `Microsoft Teams` · `Microsoft Intune` · `Azure Active Directory` · `OneDrive for Business` · `Microsoft 365 suite` · `Power BI` · `Yammer Enterprise` · `Dynamics 365 Apps`
+
+---
+
+## Deployment (Produktion)
+
+```bash
+# Image bauen und Container starten
+docker compose up -d --build
+
+# Logs live anzeigen
+docker compose logs -f statuspage
+
+# Gesundheitscheck
+curl http://localhost:8000/api/v1/health
+# → {"status":"ok"}
+
+# Container neustarten (nach .env-Änderung)
+docker compose restart statuspage
+```
+
+Die SQLite-Datenbank liegt im benannten Docker Volume **`statuspage_data`** und überlebt Container-Neustarts.
+
+### Hinter einem Reverse Proxy (nginx / Traefik)
+
+```nginx
+location / {
+    proxy_pass         http://127.0.0.1:8000;
+    proxy_set_header   Host $host;
+    proxy_set_header   X-Forwarded-Proto https;   # wichtig für sichere Session-Cookies
+    proxy_set_header   X-Real-IP $remote_addr;
+}
+```
+
+> Stelle sicher, dass `AZURE_REDIRECT_URI` auf die öffentliche HTTPS-URL zeigt und `DEBUG=false` gesetzt ist.
+
+---
+
+## Einbettung in Typo3 / Confluence DC
+
+Einen `EMBED_API_KEY` in `.env` setzen — der Token ersetzt den OIDC-Login für das Widget:
+
+```dotenv
+EMBED_API_KEY=ein-langer-zufaelliger-string-hier
+```
+
+### iframe-Snippet (Typo3 HTML-Element, Confluence HTML-Makro)
+
+```html
+<iframe
+  src="https://statuspage.example.com/embed?token=DEIN_EMBED_KEY"
+  width="100%"
+  height="180"
+  frameborder="0"
+  scrolling="no"
+  style="border: none; overflow: hidden;"
+  title="M365 Dienststatus">
+</iframe>
+```
+
+### JavaScript-Snippet (dynamisches Einbetten)
+
+```html
+<div id="m365-status-widget"></div>
+<script>
+(function () {
+  var f = document.createElement('iframe');
+  f.src = 'https://statuspage.example.com/embed?token=DEIN_EMBED_KEY';
+  f.style.cssText = 'width:100%;height:180px;border:none;overflow:hidden;';
+  f.scrolling = 'no';
+  f.title = 'M365 Dienststatus';
+  document.getElementById('m365-status-widget').appendChild(f);
+})();
+</script>
+```
+
+> **Sicherheitshinweis:** Der Embed-Key gewährt nur Lesezugriff auf den aktuellen Dienststatus — keine Benutzerdaten. Verwende einen langen, zufälligen String.
+
+---
+
+## Entwicklung
+
+```bash
+# Abhängigkeiten installieren
+pip install -r requirements.txt
+
+# .env anlegen
+cp .env.example .env   # Werte eintragen
+
+# Server starten (mit Auto-Reload)
+uvicorn app.main:app --reload --port 8000
+
+# Linter ausführen
+pip install ruff
+ruff check app/
+```
+
+Oder mit Docker (der Override wird automatisch angewendet):
+
+```bash
+docker compose up --build   # setzt DEBUG=true und --reload
 ```
 
 ---
 
-## Setup: Windows
+## Architektur
 
-### Option A: Git Bash (Recommended)
-
-**Prerequisites**: 
-- Git for Windows (includes Git Bash)
-- Claude Code CLI
-- Developer Mode (recommended, but setup works without it)
-- Python 3
-
-**Activate Developer Mode** (one-time, no reboot needed):
-```powershell
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v AllowDevelopmentWithoutDevLicense /d 1
 ```
-
-Or manually: Settings → System → For developers → Developer Mode → On.
-
-**Install dotfiles** — Open **Git Bash** (not PowerShell or CMD):
-```bash
-git clone git@github.com:nic2045/dotfiles.git ~/Coding/dotfiles
-bash ~/Coding/dotfiles/setup.sh
+FastAPI (app/main.py)
+├── SessionMiddleware  ──  Entra ID OIDC (authlib)
+├── Routers
+│   ├── /                  Hauptstatusseite (OIDC geschützt)
+│   ├── /embed             Einbettbares Widget (Token oder OIDC)
+│   ├── /auth/*            Login · Callback · Logout
+│   └── /api/v1/*          JSON-API · Healthcheck
+├── Jinja2-Templates (Tailwind CSS Play CDN)
+│   ├── base.html          Nav, Dark-Mode-Toggle
+│   ├── status.html        Hauptseite
+│   ├── embed.html         Widget (standalone)
+│   └── partials/          service_row · uptime_bar · incident_card
+├── APScheduler ── alle 10 min ──► Microsoft Graph API (MSAL)
+│   ├── /serviceAnnouncement/healthOverviews   (Dienststatus)
+│   └── /serviceAnnouncement/issues            (Aktive Incidents)
+└── SQLite  (SQLAlchemy async + aiosqlite, WAL-Modus)
+    ├── service_status     Tagesstatus pro Dienst (90-Tage-Verlauf)
+    ├── incidents          Aktive und behobene Störungen
+    └── incident_updates   Update-Timeline pro Incident
 ```
-
-`setup.sh` detects Windows and runs the same logic as macOS:
-- Creates relative symlinks (if Developer Mode active)
-- If Developer Mode inactive: symlinks still created (Git Bash can use them), but PowerShell cannot see them
-
-**Verify symlinks**:
-```bash
-# Git Bash
-readlink ~/Coding/ha-garden-water/CLAUDE.md
-# Should show: ../dotfiles/claude/projects/ha-garden-water.md
-```
-
-### Option B: PowerShell (Manual Symlinks)
-
-If you prefer PowerShell or cannot use Developer Mode, create symlinks manually:
-
-```powershell
-# For each project:
-New-Item -ItemType SymbolicLink `
-  -Path "C:\Users\<username>\Coding\ha-garden-water\CLAUDE.md" `
-  -Target "C:\Users\<username>\Coding\dotfiles\claude\projects\ha-garden-water.md"
-```
-
-Run `setup.sh` in Git Bash for everything else (git config, hooks, etc.).
-
-### Hard Link Fallback (Developer Mode Unavailable)
-
-If symbolic links fail, create hard links (manual, one-time):
-```powershell
-New-Item -ItemType HardLink `
-  -Path "C:\Users\<username>\Coding\<repo>\CLAUDE.md" `
-  -Target "C:\Users\<username>\Coding\dotfiles\claude\projects\<repo>.md"
-```
-
-**Caveat**: Hard links break when `git pull` rewrites dotfiles (new inode). Re-create them after pulling.
-
-### Path Mapping
-
-Git Bash on Windows:
-- `~` = `C:\Users\<username>` (from `$HOME`)
-- `~/Coding/` = `C:\Users\<username>\Coding\`
-
-If your repos are at `C:\Users\<username>\Documents\Coding\`, either:
-1. Move repos to `~/Coding/` (recommended)
-2. Edit `setup.sh` and change `CODING_DIR` lines
 
 ---
 
-## Integrating into an existing setup
+## CI / CD
 
-If git repos and config already exist on the machine, run `setup.sh` only after resolving the conflicts below. The script is otherwise safe to re-run.
-
-### 1 — Existing `~/.claude/CLAUDE.md`
-
-`setup.sh` overwrites this file with a plain `cp`. If a custom `CLAUDE.md` already exists:
-
-```bash
-# Compare before running setup
-diff ~/.claude/CLAUDE.md ~/dotfiles/claude/CLAUDE.md
-```
-
-Merge any local additions into `dotfiles/claude/CLAUDE.md` first, commit them, then run `setup.sh`.
-
-### 2 — Existing global gitignore (`core.excludesfile`)
-
-`setup.sh` sets `core.excludesfile` to `dotfiles/gitconf/gitignore_global`. Any previously configured file is replaced. Check first:
-
-```bash
-git config --global core.excludesfile
-```
-
-If a file is already set, copy its contents into `dotfiles/gitconf/gitignore_global`, commit, then run `setup.sh`.
-
-### 3 — Existing `init.templateDir`
-
-`setup.sh` sets `init.templateDir` to `~/.git-templates`. If another template dir is already configured:
-
-```bash
-git config --global init.templateDir
-```
-
-If it points somewhere else, either copy relevant hooks from there into `~/.git-templates/hooks/` after setup, or manually merge hook logic into `dotfiles/git-templates/hooks/post-checkout`.
-
-### 4 — Existing repos (already cloned before dotfiles setup)
-
-The `post-checkout` hook only fires on **new** clones. Repos that already exist on the machine get no symlink automatically. Link them manually:
-
-```bash
-# macOS / Git Bash on Windows
-bash ~/dotfiles/add-project.sh <repo-name>
-```
-
-Or re-run `setup.sh` — it iterates over all known projects and creates the symlink if the repo folder exists.
-
-To check which repos are missing a link:
-
-```bash
-# List known projects and whether a CLAUDE.md symlink exists
-for md in ~/dotfiles/claude/projects/*.md; do
-  name=$(basename "$md" .md)
-  target=~/Coding/$name/CLAUDE.md
-  if [ -L "$target" ]; then
-    echo "✓ $name"
-  elif [ -d ~/Coding/$name ]; then
-    echo "✗ $name  (repo exists, no symlink)"
-  else
-    echo "– $name  (repo not cloned)"
-  fi
-done
-```
-
-### 5 — Repos at non-standard paths
-
-`setup.sh` hardcodes `~/Coding/<repo-name>`. If repos live elsewhere (e.g., `~/Documents/Coding/` on Windows), either:
-
-- **Adjust `setup.sh`** — change the `link` calls for affected repos to use the actual path, then commit
-- **Or symlink manually** — `ln -sf ~/dotfiles/claude/projects/<repo>.md <actual-path>/CLAUDE.md`
-
-The `add-project.sh` script also assumes `~/Coding/` — edit `REPO=` on line 16 if needed.
-
----
-
-## Adding a new project
-
-### Option A — manual
-
-1. Create `claude/projects/<repo-name>.md` with project-specific instructions
-2. Add a `link` line to `setup.sh`
-3. Re-run `bash ~/dotfiles/setup.sh` (safe to re-run — existing symlinks are overwritten)
-4. Commit and push
-
-### Option B — script (macOS / Git Bash on Windows)
-
-```bash
-bash ~/dotfiles/add-project.sh <repo-name>
-```
-
-This creates the placeholder `.md`, adds the link to `setup.sh`, sets the symlink immediately (if the repo exists locally), and commits + pushes automatically.
-
-### Option C — automatic on clone
-
-When you clone any `nic2045` repo, the `post-checkout` hook fires and calls `add-project.sh` automatically. No manual step needed.
-
----
-
-## Roadmap
-
-- Shell config (`~/.zshrc` / PowerShell profile, aliases, PATH)
-- SSH config skeleton
-- macOS system preferences script
-- Windows-native setup script (PowerShell) for machines without Git Bash
-- App-specific configs (VS Code settings, keybindings)
+| Job | Beschreibung |
+|-----|-------------|
+| **Syntax & Imports** | `py_compile` + App-Import + DB-Init |
+| **Ruff Lint** | Code-Qualität und Import-Sortierung |
+| **Security Audit** | `pip-audit` gegen bekannte CVEs |
+| **Trivy Image Scan** | Docker-Image auf OS- und Library-CVEs |
+| **Wöchentlicher Audit** | Montags automatischer Sicherheitsscan, öffnet Issue bei Findings |
+| **Release-Workflow** | Tag `v*.*.*` → GHCR-Push (multi-arch) → GitHub Release |

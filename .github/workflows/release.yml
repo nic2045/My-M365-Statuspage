@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write   # needed to create GitHub Releases
+  packages: write   # needed if pushing to GHCR
+
+jobs:
+  # ── 1. Run full CI suite before releasing ──────────────────────────────────
+  ci:
+    name: CI (pre-release gate)
+    uses: ./.github/workflows/ci.yml
+
+  # ── 2. Build & push Docker image ───────────────────────────────────────────
+  docker:
+    name: Build & Push Docker image
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          labels: |
+            org.opencontainers.image.title=M365 Dienststatus
+            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  # ── 3. Trivy CVE scan – blocks release on CRITICAL findings ─────────────────
+  trivy:
+    name: Trivy CVE Scan (release gate)
+    runs-on: ubuntu-latest
+    needs: docker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR (to pull the just-pushed image)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull image
+        run: docker pull ghcr.io/${{ github.repository }}:${{ needs.docker.outputs.version || github.ref_name }}
+
+      - name: Trivy scan – CRITICAL findings block release
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          format: table
+          exit-code: "1"          # block release on CRITICAL CVEs
+          severity: CRITICAL
+          vuln-type: os,library
+
+      - name: Trivy scan – full report (SARIF)
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          format: sarif
+          output: trivy-release.sarif
+          exit-code: "0"
+          severity: HIGH,CRITICAL
+          vuln-type: os,library
+
+      - name: Upload SARIF
+        if: always()
+        continue-on-error: true   # graceful if GitHub Advanced Security is not enabled
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-release.sarif
+          category: trivy-release
+
+  # ── 4. pip-audit security audit on release ───────────────────────────────────
+  audit:
+    name: pip-audit Security Audit
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Run pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit \
+            --requirement requirements.txt \
+            --output-format markdown \
+            --progress-spinner off \
+            | tee audit-report.md
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report-${{ github.ref_name }}
+          path: audit-report.md
+          retention-days: 90
+
+  # ── 5. Create GitHub Release with auto-generated changelog ─────────────────
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [docker, trivy, audit]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for changelog generation
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Download audit report
+        uses: actions/download-artifact@v4
+        with:
+          name: pip-audit-report-${{ github.ref_name }}
+          path: artifacts/
+
+      - name: Generate changelog (commits since last tag)
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "^${{ github.ref_name }}$" | head -1)
+          if [ -z "$PREVIOUS_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${PREVIOUS_TAG}..HEAD"
+          fi
+          CHANGELOG=$(git log "$RANGE" --pretty=format:"- %s (%h)" --no-merges)
+          # Write to file to handle multi-line safely
+          echo "$CHANGELOG" > changelog.txt
+          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "M365 Dienststatus ${{ github.ref_name }}"
+          body: |
+            ## Änderungen in ${{ github.ref_name }}
+
+            $(cat changelog.txt)
+
+            ## Docker Image
+
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+            # oder
+            docker pull ghcr.io/${{ github.repository }}:latest
+            ```
+
+            Deployment mit docker-compose:
+            ```bash
+            # docker-compose.yml anpassen:
+            image: ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+            docker compose up -d
+            ```
+
+            ## Sicherheits-Audit
+
+            Siehe angehängten `pip-audit-report.md` für den vollständigen Dependency-Scan.
+          files: artifacts/audit-report.md
+          generate_release_notes: true
+          make_latest: true

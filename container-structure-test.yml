@@ -1,0 +1,40 @@
+schemaVersion: "2.0.0"
+
+# ── Required files and directories ───────────────────────────────────────────
+fileExistenceTests:
+  - name: "app package"
+    path: "/app/app"
+    shouldExist: true
+
+  - name: "templates directory"
+    path: "/app/templates"
+    shouldExist: true
+
+  - name: "static directory"
+    path: "/app/static"
+    shouldExist: true
+
+  - name: "data directory"
+    path: "/app/data"
+    shouldExist: true
+
+  - name: "main.py"
+    path: "/app/app/main.py"
+    shouldExist: true
+
+  - name: "base.html"
+    path: "/app/templates/base.html"
+    shouldExist: true
+
+  - name: "no .env"
+    path: "/app/.env"
+    shouldExist: false
+
+  - name: "no .env.example"
+    path: "/app/.env.example"
+    shouldExist: false
+
+  - name: "no .git"
+    path: "/app/.git"
+    shouldExist: false
+
