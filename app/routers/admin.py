@@ -60,15 +60,34 @@ async def _backfill_service(service_name: str) -> None:
         logger.exception("Backfill failed for %s", service_name)
 
 
+# Tracks a pending delayed poll so it can be cancelled and restarted when
+# another service is enabled before the timer fires (debounce behaviour).
+_pending_poll_task: asyncio.Task | None = None
+
+
 async def _delayed_poll(delay: float = 8.0) -> None:
-    """Wait briefly, then run a full Graph API poll so the new service appears current."""
+    """Wait N seconds, then run a full Graph API poll.
+
+    Each call to schedule_delayed_poll() cancels any previous pending task
+    so only one poll fires, 8 s after the *last* service toggle.
+    """
     await asyncio.sleep(delay)
     try:
         from app.scheduler import poll_graph_api  # local import avoids circular dep
         await poll_graph_api()
         logger.info("Delayed poll completed after enabling service.")
+    except asyncio.CancelledError:
+        pass  # task was cancelled because another service was enabled
     except Exception:
         logger.exception("Delayed poll failed")
+
+
+def _schedule_delayed_poll(delay: float = 8.0) -> None:
+    """Cancel any pending delayed poll and start a fresh one."""
+    global _pending_poll_task
+    if _pending_poll_task and not _pending_poll_task.done():
+        _pending_poll_task.cancel()
+    _pending_poll_task = asyncio.create_task(_delayed_poll(delay))
 
 
 @router.get("/")
@@ -257,7 +276,7 @@ async def toggle_service(
 
     if new_state:
         asyncio.create_task(_backfill_service(service_name))
-        asyncio.create_task(_delayed_poll(delay=8.0))
+        _schedule_delayed_poll(delay=8.0)  # debounced: cancels any pending poll first
 
     return RedirectResponse(url="/admin", status_code=303)
 

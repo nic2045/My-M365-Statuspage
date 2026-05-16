@@ -83,14 +83,11 @@ async def poll_graph_api() -> None:
             await db.rollback()
             logger.exception("Health overview poll failed")
 
-    # ── Phase 2: Active + recently resolved incidents ────────────────────────────
+    # ── Phase 2: Active incidents (independent – failure here doesn't touch phase 3) ──
     async with AsyncSessionLocal() as db:
         try:
             active_issues = await fetch_active_issues()
-            resolved_issues = await fetch_recently_resolved_issues(days=30)
-            all_issues = active_issues + resolved_issues
-
-            for issue in all_issues:
+            for issue in active_issues:
                 if issue.get("service") not in monitored:
                     continue
                 severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
@@ -106,19 +103,41 @@ async def poll_graph_api() -> None:
                     is_resolved=issue.get("isResolved", False),
                     severity=severity,
                 )
-                posts = issue.get("posts", [])
+                posts = issue.get("posts") or []
                 await upsert_incident_updates(db, incident.id, posts)
-
             await db.commit()
-            logger.info(
-                "Graph API poll completed: %d active, %d recently resolved.",
-                len(active_issues),
-                len(resolved_issues),
-            )
-
+            logger.info("Active issues committed: %d processed.", len(active_issues))
         except Exception:
             await db.rollback()
-            logger.exception("Issues poll failed")
+            logger.exception("Active issues poll failed")
+
+    # ── Phase 3: Recently resolved (30 days) – independent, safe to fail ────────
+    async with AsyncSessionLocal() as db:
+        try:
+            resolved_issues = await fetch_recently_resolved_issues(days=30)
+            for issue in resolved_issues:
+                if issue.get("service") not in monitored:
+                    continue
+                severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
+                incident = await upsert_incident(
+                    db,
+                    graph_issue_id=issue["id"],
+                    title=issue.get("title", ""),
+                    service_name=issue.get("service", ""),
+                    classification=issue.get("classification", "incident"),
+                    status="resolved" if issue.get("isResolved") else "active",
+                    start_datetime=_parse_dt(issue.get("startDateTime")),
+                    last_modified=_parse_dt(issue.get("lastModifiedDateTime")),
+                    is_resolved=issue.get("isResolved", False),
+                    severity=severity,
+                )
+                posts = issue.get("posts") or []
+                await upsert_incident_updates(db, incident.id, posts)
+            await db.commit()
+            logger.info("Recently resolved issues committed: %d processed.", len(resolved_issues))
+        except Exception:
+            await db.rollback()
+            logger.exception("Recently resolved issues poll failed – active issues unaffected")
 
 
 def start_scheduler() -> None:
