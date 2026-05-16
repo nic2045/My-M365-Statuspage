@@ -145,38 +145,188 @@ jobs:
           retention-days: 30
 
   docker:
-    name: Docker Build
+    name: Docker Tests
     runs-on: ubuntu-latest
+
+    env:
+      IMAGE: m365-statuspage:ci
+      CONTAINER: statuspage-ci
+      # Dummy secrets – safe for CI, never used against real Azure
+      COMMON_ENV: >-
+        -e AZURE_TENANT_ID=dummy-tenant
+        -e AZURE_CLIENT_ID=dummy-client
+        -e AZURE_CLIENT_SECRET=dummy-secret
+        -e AZURE_REDIRECT_URI=http://localhost:8000/auth/callback
+        -e SECRET_KEY=0000000000000000000000000000000000000000000000000000000000000000
+        -e DATABASE_URL=sqlite+aiosqlite:///./data/statuspage.db
+        -e EMBED_API_KEY=test-embed-key-ci
+        -e DEBUG=true
 
     steps:
       - uses: actions/checkout@v4
 
+      # ── 1. Build ────────────────────────────────────────────────────────────
       - name: Build Docker image
-        run: docker build -t m365-statuspage:ci .
+        run: docker build -t "$IMAGE" .
 
-      - name: Smoke test – healthcheck endpoint
+      # ── 2. Image structure tests ────────────────────────────────────────────
+      - name: "Structure: non-root user (UID 1000)"
         run: |
-          docker run -d \
-            --name statuspage-ci \
-            -p 8000:8000 \
-            -e AZURE_TENANT_ID=dummy-tenant \
-            -e AZURE_CLIENT_ID=dummy-client \
-            -e AZURE_CLIENT_SECRET=dummy-secret \
-            -e AZURE_REDIRECT_URI=http://localhost:8000/auth/callback \
-            -e SECRET_KEY=0000000000000000000000000000000000000000000000000000000000000000 \
-            -e DATABASE_URL=sqlite+aiosqlite:///./data/statuspage.db \
-            -e DEBUG=true \
-            m365-statuspage:ci
+          USER=$(docker inspect "$IMAGE" --format '{{.Config.User}}')
+          echo "Image user: '$USER'"
+          [ "$USER" = "appuser" ] || [ "$USER" = "1000" ] || {
+            echo "FAIL: expected appuser/1000, got '$USER'"; exit 1
+          }
 
-          # Wait for the app to be ready (max 30s)
+      - name: "Structure: port 8000 exposed"
+        run: |
+          PORTS=$(docker inspect "$IMAGE" --format '{{json .Config.ExposedPorts}}')
+          echo "Exposed ports: $PORTS"
+          echo "$PORTS" | grep -q "8000/tcp" || { echo "FAIL: port 8000/tcp not exposed"; exit 1; }
+
+      - name: "Structure: uvicorn in CMD"
+        run: |
+          CMD=$(docker inspect "$IMAGE" --format '{{json .Config.Cmd}}')
+          echo "CMD: $CMD"
+          echo "$CMD" | grep -q "uvicorn" || { echo "FAIL: uvicorn not in CMD"; exit 1; }
+
+      - name: "Structure: required files exist in image"
+        run: |
+          docker run --rm --entrypoint sh "$IMAGE" -c "
+            set -e
+            test -d /app/app       && echo 'OK: /app/app'
+            test -d /app/templates && echo 'OK: /app/templates'
+            test -d /app/static    && echo 'OK: /app/static'
+            test -d /app/data      && echo 'OK: /app/data'
+            test -f /app/app/main.py && echo 'OK: main.py'
+            test -f /app/templates/base.html && echo 'OK: base.html'
+          "
+
+      - name: "Structure: no secrets or source-control files leaked"
+        run: |
+          docker run --rm --entrypoint sh "$IMAGE" -c "
+            ! test -f /app/.env       || { echo 'FAIL: .env present in image'; exit 1; }
+            ! test -d /app/.git       || { echo 'FAIL: .git present in image'; exit 1; }
+            ! test -f /app/.env.example || { echo 'FAIL: .env.example present in image'; exit 1; }
+            echo 'OK: no secrets/VCS files in image'
+          "
+
+      - name: "Structure: image size < 400 MB"
+        run: |
+          SIZE=$(docker inspect "$IMAGE" --format '{{.Size}}')
+          MAX=$((400 * 1024 * 1024))
+          echo "Image size: $(( SIZE / 1024 / 1024 )) MB"
+          [ "$SIZE" -lt "$MAX" ] || { echo "FAIL: image exceeds 400 MB"; exit 1; }
+
+      # ── 3. Runtime / HTTP behaviour tests ──────────────────────────────────
+      - name: Start container
+        run: |
+          docker run -d --name "$CONTAINER" -p 8000:8000 \
+            ${{ env.COMMON_ENV }} \
+            "$IMAGE"
+
+      - name: Wait for app to be ready (max 30 s)
+        run: |
           for i in $(seq 1 15); do
-            if curl -sf http://localhost:8000/api/v1/health; then
-              echo "Healthcheck passed"
-              break
+            if curl -sf http://localhost:8000/api/v1/health > /dev/null; then
+              echo "App ready after $((i * 2))s"; break
             fi
-            echo "Waiting... ($i)"
-            sleep 2
+            echo "Waiting… ($i/15)"; sleep 2
           done
+          curl -sf http://localhost:8000/api/v1/health || { echo "FAIL: app did not start"; exit 1; }
 
-          curl -sf http://localhost:8000/api/v1/health | grep '"status":"ok"'
-          docker rm -f statuspage-ci
+      - name: "HTTP: GET /api/v1/health → 200 + {status:ok}"
+        run: |
+          BODY=$(curl -sf http://localhost:8000/api/v1/health)
+          echo "Body: $BODY"
+          echo "$BODY" | grep -q '"status":"ok"' || { echo "FAIL: unexpected body"; exit 1; }
+
+      - name: "HTTP: GET / → 302 redirect to /auth/login"
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/)
+          LOCATION=$(curl -sI http://localhost:8000/ | grep -i location | tr -d '\r')
+          echo "Status: $HTTP_CODE  Location: $LOCATION"
+          [ "$HTTP_CODE" = "302" ] || { echo "FAIL: expected 302, got $HTTP_CODE"; exit 1; }
+          echo "$LOCATION" | grep -qi "auth/login" || { echo "FAIL: redirect not to /auth/login"; exit 1; }
+
+      - name: "HTTP: GET /embed (no token) → 401"
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/embed)
+          echo "Status: $HTTP_CODE"
+          [ "$HTTP_CODE" = "401" ] || { echo "FAIL: expected 401, got $HTTP_CODE"; exit 1; }
+
+      - name: "HTTP: GET /embed?token=wrong → 401"
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "http://localhost:8000/embed?token=definitely-wrong")
+          echo "Status: $HTTP_CODE"
+          [ "$HTTP_CODE" = "401" ] || { echo "FAIL: expected 401, got $HTTP_CODE"; exit 1; }
+
+      - name: "HTTP: GET /embed?token=test-embed-key-ci → 200"
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "http://localhost:8000/embed?token=test-embed-key-ci")
+          echo "Status: $HTTP_CODE"
+          [ "$HTTP_CODE" = "200" ] || { echo "FAIL: expected 200, got $HTTP_CODE"; exit 1; }
+
+      - name: "HTTP: /embed has no X-Frame-Options (allow iframe embedding)"
+        run: |
+          HEADERS=$(curl -sI "http://localhost:8000/embed?token=test-embed-key-ci")
+          echo "$HEADERS"
+          if echo "$HEADERS" | grep -qi "x-frame-options"; then
+            echo "FAIL: X-Frame-Options header present – blocks iframe embedding"; exit 1
+          fi
+          echo "OK: no X-Frame-Options"
+
+      - name: "HTTP: GET /api/v1/status (no auth) → 302 redirect"
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/v1/status)
+          echo "Status: $HTTP_CODE"
+          [ "$HTTP_CODE" = "302" ] || { echo "FAIL: expected 302, got $HTTP_CODE"; exit 1; }
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker logs "$CONTAINER"
+
+      - name: Remove container
+        if: always()
+        run: docker rm -f "$CONTAINER" || true
+
+  # ── 4. CVE scan with Trivy ──────────────────────────────────────────────────
+  trivy:
+    name: Trivy Image Scan (CVE)
+    runs-on: ubuntu-latest
+    # Run in parallel with docker tests; both need the image built independently
+    needs: []
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image for Trivy
+        run: docker build -t m365-statuspage:trivy .
+
+      - name: Run Trivy (table output to console)
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: m365-statuspage:trivy
+          format: table
+          exit-code: "0"          # never block CI on findings – we report only
+          severity: HIGH,CRITICAL
+          vuln-type: os,library
+
+      - name: Run Trivy (SARIF for GitHub Security tab)
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: m365-statuspage:trivy
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: "0"
+          severity: HIGH,CRITICAL
+          vuln-type: os,library
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-docker

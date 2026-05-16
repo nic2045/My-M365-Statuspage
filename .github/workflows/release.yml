@@ -55,9 +55,55 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
 
-  # ── 3. Security audit on release ───────────────────────────────────────────
+  # ── 3. Trivy CVE scan – blocks release on CRITICAL findings ─────────────────
+  trivy:
+    name: Trivy CVE Scan (release gate)
+    runs-on: ubuntu-latest
+    needs: docker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR (to pull the just-pushed image)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull image
+        run: docker pull ghcr.io/${{ github.repository }}:${{ needs.docker.outputs.version || github.ref_name }}
+
+      - name: Trivy scan – CRITICAL findings block release
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          format: table
+          exit-code: "1"          # block release on CRITICAL CVEs
+          severity: CRITICAL
+          vuln-type: os,library
+
+      - name: Trivy scan – full report (SARIF)
+        if: always()
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          format: sarif
+          output: trivy-release.sarif
+          exit-code: "0"
+          severity: HIGH,CRITICAL
+          vuln-type: os,library
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-release.sarif
+          category: trivy-release
+
+  # ── 4. pip-audit security audit on release ───────────────────────────────────
   audit:
-    name: Security Audit
+    name: pip-audit Security Audit
     runs-on: ubuntu-latest
     needs: ci
 
@@ -85,11 +131,11 @@ jobs:
           path: audit-report.md
           retention-days: 90
 
-  # ── 4. Create GitHub Release with auto-generated changelog ─────────────────
+  # ── 5. Create GitHub Release with auto-generated changelog ─────────────────
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [docker, audit]
+    needs: [docker, trivy, audit]
 
     steps:
       - uses: actions/checkout@v4
