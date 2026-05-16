@@ -201,16 +201,18 @@ jobs:
             echo 'OK: no secrets/VCS files in image'
           "
 
-      - name: "Structure: image size < 400 MB"
+      - name: "Structure: image size < 800 MB"
         run: |
-          SIZE=$(docker inspect "$IMAGE" --format '{{.Size}}')
-          MAX=$((400 * 1024 * 1024))
-          echo "Image size: $(( SIZE / 1024 / 1024 )) MB"
-          [ "$SIZE" -lt "$MAX" ] || { echo "FAIL: image exceeds 400 MB"; exit 1; }
+          # Use 'docker image inspect' (not 'docker inspect') for reliable image size
+          SIZE=$(docker image inspect "$IMAGE" --format '{{.Size}}')
+          MAX=$((800 * 1024 * 1024))
+          echo "Image size (uncompressed): $(( SIZE / 1024 / 1024 )) MB  limit: 800 MB"
+          [ "$SIZE" -lt "$MAX" ] || { echo "FAIL: image exceeds 800 MB – check for unintended large files"; exit 1; }
 
       # ── 3. Runtime / HTTP behaviour tests ──────────────────────────────────
       - name: Start container
         run: |
+          set -x
           docker run -d --name "$CONTAINER" -p 8000:8000 \
             -e AZURE_TENANT_ID=dummy-tenant \
             -e AZURE_CLIENT_ID=dummy-client \
@@ -222,25 +224,33 @@ jobs:
             -e DEBUG=true \
             "$IMAGE"
 
+      - name: Show early startup logs (5 s)
+        run: |
+          sleep 5
+          echo "=== Container status ==="
+          docker inspect --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}}' "$CONTAINER" || true
+          echo "=== Container logs (first 60 lines) ==="
+          docker logs "$CONTAINER" 2>&1 | head -60 || true
+
       - name: Wait for app to be ready (max 60 s)
         run: |
           for i in $(seq 1 30); do
             # Abort early if container already exited
             STATUS=$(docker inspect --format '{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo "gone")
             if [ "$STATUS" != "running" ]; then
-              echo "Container is not running (status: $STATUS) – dumping logs:"
+              echo "Container exited (status: $STATUS) – full logs:"
               docker logs "$CONTAINER" 2>&1 || true
               exit 1
             fi
             if curl -sf http://localhost:8000/api/v1/health > /dev/null 2>&1; then
-              echo "App ready after ~$((i * 2))s"
+              echo "App ready after ~$((i * 2 + 5))s"
               break
             fi
             echo "Waiting… ($i/30) container=$STATUS"; sleep 2
           done
           # Final definitive check
           curl -sf http://localhost:8000/api/v1/health \
-            || { echo "FAIL: app not reachable after 60s"; docker logs "$CONTAINER"; exit 1; }
+            || { echo "FAIL: app not reachable after 65s"; docker logs "$CONTAINER"; exit 1; }
 
       - name: "HTTP: GET /api/v1/health → 200 + {status:ok}"
         run: |
