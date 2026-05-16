@@ -1,0 +1,19 @@
+#!/bin/bash
+# Runs after every git checkout/clone
+# Auto-repairs CLAUDE.md symlinks if dotfiles are configured
+
+REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+
+# Only for nic2045 repos
+if ! echo "$REMOTE" | grep -q "nic2045"; then
+  exit 0
+fi
+
+DOTFILES=$(git config --global dotfiles.dir 2>/dev/null || echo "")
+
+if [ -z "$DOTFILES" ] || [ ! -x "$DOTFILES/repair.sh" ]; then
+  exit 0
+fi
+
+# Quietly repair symlinks
+bash "$DOTFILES/repair.sh" 2>/dev/null || true
