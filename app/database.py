@@ -45,6 +45,7 @@ async def init_db() -> None:
             "ALTER TABLE incidents ADD COLUMN scheduled_end DATETIME",
             "ALTER TABLE incident_updates ADD COLUMN update_type VARCHAR NOT NULL DEFAULT 'note'",
             "ALTER TABLE incidents ADD COLUMN is_suppressed BOOLEAN NOT NULL DEFAULT 0",
+            "ALTER TABLE incidents ADD COLUMN end_datetime DATETIME",
         ]:
             try:
                 await conn.execute(text(stmt))

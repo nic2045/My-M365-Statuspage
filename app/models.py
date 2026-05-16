@@ -83,6 +83,7 @@ class Incident(Base):
     source: Mapped[str] = mapped_column(String(32), nullable=False, server_default="graph")
     severity: Mapped[str] = mapped_column(String(32), nullable=False, server_default="")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    end_datetime: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     scheduled_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     scheduled_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
