@@ -30,6 +30,27 @@ _GRAPH_SEVERITY_MAP: dict[str, str] = {
     "major":    "high",
 }
 
+# Maps Graph API classification to our internal classification.
+# advisory and unknown classifications are excluded (return None → skip).
+_GRAPH_CLASSIFICATION_MAP: dict[str, str] = {
+    "incident":           "incident",
+    "plannedMaintenance": "maintenance",
+}
+
+
+def _classify_issue(issue: dict) -> str | None:
+    """Return internal classification string, or None if the issue should be skipped."""
+    if issue.get("status") == "falsePositive":
+        return None
+    return _GRAPH_CLASSIFICATION_MAP.get(issue.get("classification", ""))
+
+
+def _issue_status(issue: dict, classification: str) -> str:
+    """Map Graph API issue to our internal status string."""
+    if issue.get("isResolved"):
+        return "completed" if classification == "maintenance" else "resolved"
+    return "scheduled" if classification == "maintenance" else "active"
+
 
 def _parse_dt(value: str | None) -> datetime | None:
     if not value:
@@ -87,26 +108,33 @@ async def poll_graph_api() -> None:
     async with AsyncSessionLocal() as db:
         try:
             active_issues = await fetch_active_issues()
+            synced = 0
             for issue in active_issues:
                 if issue.get("service") not in monitored:
                     continue
+                classification = _classify_issue(issue)
+                if classification is None:
+                    continue  # advisory, falsePositive, or unknown – skip
                 severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
-                incident = await upsert_incident(
-                    db,
-                    graph_issue_id=issue["id"],
-                    title=issue.get("title", ""),
-                    service_name=issue.get("service", ""),
-                    classification=issue.get("classification", "incident"),
-                    status="resolved" if issue.get("isResolved") else "active",
-                    start_datetime=_parse_dt(issue.get("startDateTime")),
-                    last_modified=_parse_dt(issue.get("lastModifiedDateTime")),
-                    is_resolved=issue.get("isResolved", False),
-                    severity=severity,
-                )
+                fields: dict = {
+                    "title": issue.get("title", ""),
+                    "service_name": issue.get("service", ""),
+                    "classification": classification,
+                    "status": _issue_status(issue, classification),
+                    "start_datetime": _parse_dt(issue.get("startDateTime")),
+                    "last_modified": _parse_dt(issue.get("lastModifiedDateTime")),
+                    "is_resolved": issue.get("isResolved", False),
+                    "severity": severity,
+                }
+                if classification == "maintenance":
+                    fields["scheduled_start"] = _parse_dt(issue.get("startDateTime"))
+                    fields["scheduled_end"] = _parse_dt(issue.get("endDateTime"))
+                incident = await upsert_incident(db, graph_issue_id=issue["id"], **fields)
                 posts = issue.get("posts") or []
                 await upsert_incident_updates(db, incident.id, posts)
+                synced += 1
             await db.commit()
-            logger.info("Active issues committed: %d processed.", len(active_issues))
+            logger.info("Active issues committed: %d synced (of %d fetched).", synced, len(active_issues))
         except Exception:
             await db.rollback()
             logger.exception("Active issues poll failed")
@@ -115,26 +143,33 @@ async def poll_graph_api() -> None:
     async with AsyncSessionLocal() as db:
         try:
             resolved_issues = await fetch_recently_resolved_issues(days=30)
+            synced = 0
             for issue in resolved_issues:
                 if issue.get("service") not in monitored:
                     continue
+                classification = _classify_issue(issue)
+                if classification is None:
+                    continue  # advisory, falsePositive, or unknown – skip
                 severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
-                incident = await upsert_incident(
-                    db,
-                    graph_issue_id=issue["id"],
-                    title=issue.get("title", ""),
-                    service_name=issue.get("service", ""),
-                    classification=issue.get("classification", "incident"),
-                    status="resolved" if issue.get("isResolved") else "active",
-                    start_datetime=_parse_dt(issue.get("startDateTime")),
-                    last_modified=_parse_dt(issue.get("lastModifiedDateTime")),
-                    is_resolved=issue.get("isResolved", False),
-                    severity=severity,
-                )
+                fields = {
+                    "title": issue.get("title", ""),
+                    "service_name": issue.get("service", ""),
+                    "classification": classification,
+                    "status": _issue_status(issue, classification),
+                    "start_datetime": _parse_dt(issue.get("startDateTime")),
+                    "last_modified": _parse_dt(issue.get("lastModifiedDateTime")),
+                    "is_resolved": issue.get("isResolved", False),
+                    "severity": severity,
+                }
+                if classification == "maintenance":
+                    fields["scheduled_start"] = _parse_dt(issue.get("startDateTime"))
+                    fields["scheduled_end"] = _parse_dt(issue.get("endDateTime"))
+                incident = await upsert_incident(db, graph_issue_id=issue["id"], **fields)
                 posts = issue.get("posts") or []
                 await upsert_incident_updates(db, incident.id, posts)
+                synced += 1
             await db.commit()
-            logger.info("Recently resolved issues committed: %d processed.", len(resolved_issues))
+            logger.info("Recently resolved committed: %d synced (of %d fetched).", synced, len(resolved_issues))
         except Exception:
             await db.rollback()
             logger.exception("Recently resolved issues poll failed – active issues unaffected")
