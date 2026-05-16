@@ -9,6 +9,7 @@
 	"workspaceFolder": "/app",
 	"postStartCommand": "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
 	"mounts": [
+		"source=${localWorkspaceFolder}/.env,target=/app/.env,type=bind,consistency=cached",
 		"source=${localWorkspaceFolder}/app,target=/app/app,type=bind,consistency=cached",
 		"source=${localWorkspaceFolder}/templates,target=/app/templates,type=bind,consistency=cached",
 		"source=${localWorkspaceFolder}/static,target=/app/static,type=bind,consistency=cached"
