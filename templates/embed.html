@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M365 Dienststatus</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: transparent; margin: 0; padding: 0; }
+  </style>
+</head>
+<body class="font-sans text-sm text-gray-800 p-3">
+
+  {% for service in data.services %}
+  <div class="flex items-center justify-between py-1.5
+    {% if not loop.last %}border-b border-gray-100{% endif %}">
+    <span class="font-medium text-gray-700">{{ service.service_name }}</span>
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+      {% if service.current_status == 'operational' %}bg-emerald-100 text-emerald-800
+      {% elif service.current_status == 'interrupted' %}bg-red-100 text-red-800
+      {% elif service.current_status == 'degraded' %}bg-amber-100 text-amber-800
+      {% else %}bg-gray-100 text-gray-600{% endif %}">
+      {{ status_label(service.current_status) }}
+    </span>
+  </div>
+  {% endfor %}
+
+  {% set has_incidents = data.services | selectattr("active_incidents") | list | length > 0 %}
+  {% if has_incidents %}
+  <div class="mt-2 pt-2 border-t border-gray-100 flex items-center gap-1 text-xs text-red-600 font-medium">
+    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+    </svg>
+    {{ L["embed.active_incidents"] }}
+  </div>
+  {% else %}
+  <div class="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-400">
+    {{ L["embed.all_good"] }}
+  </div>
+  {% endif %}
+
+  {% if data.last_updated %}
+  <div class="mt-1 text-xs text-gray-400">
+    {{ L["embed.updated"] }}: {{ data.last_updated | strftime_de }}
+  </div>
+  {% endif %}
+
+</body>
+</html>

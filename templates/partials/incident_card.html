@@ -1,0 +1,42 @@
+{# Renders one incident card with update timeline. Expects `incident` in scope. #}
+<div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 border-l-4 {{ incident_border_class(incident.classification) }} shadow-sm mb-4 overflow-hidden">
+  <div class="p-4">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h3 class="font-semibold text-gray-900 dark:text-white leading-snug">{{ incident.title }}</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <span class="font-medium">{{ L["incident.affects"] }}:</span> {{ incident.service_name }}
+          &nbsp;·&nbsp;
+          <span class="font-medium">{{ L["incident.since"] }}:</span> {{ incident.start_datetime | strftime_de }}
+        </p>
+      </div>
+      <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+        {% if incident.classification == 'incident' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400
+        {% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400{% endif %}">
+        {{ incident_type_label(incident.classification) }}
+      </span>
+    </div>
+
+    {% if incident.updates %}
+    <div class="mt-4 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ L["incident.updates"] }}</p>
+      {% for update in incident.updates | reverse %}
+      <div class="flex gap-3">
+        <div class="shrink-0 flex flex-col items-center">
+          <div class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 mt-1.5"></div>
+          {% if not loop.last %}
+          <div class="w-px flex-1 bg-gray-200 dark:bg-gray-700 my-1"></div>
+          {% endif %}
+        </div>
+        <div class="pb-3 min-w-0">
+          <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ update.post_created_at | strftime_de }}</p>
+          <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline">
+            {{ update.content | safe }}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>

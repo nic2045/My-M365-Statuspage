@@ -1,0 +1,14 @@
+{# Renders 90 colored day bars. Expects `service` in scope. #}
+<div class="flex gap-px w-full mt-2" aria-label="90-Tage Verfügbarkeit">
+  {% for day in service.uptime_days %}
+  <div
+    class="h-7 flex-1 rounded-sm bar-tooltip transition-opacity {{ status_bar_class(day.status) }}"
+    title="{{ day.date | date_de }}: {{ status_label(day.status) }}"
+    aria-label="{{ day.date | date_de }}: {{ status_label(day.status) }}"
+  ></div>
+  {% endfor %}
+</div>
+<div class="flex justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
+  <span>vor 90 Tagen</span>
+  <span>heute</span>
+</div>
