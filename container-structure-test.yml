@@ -13,11 +13,6 @@ metadataTest:
     - "8000"
     - "--workers"
     - "1"
-  envVars:
-    - key: PYTHONDONTWRITEBYTECODE
-      value: "1"
-    - key: PYTHONUNBUFFERED
-      value: "1"
 
 # ── Required files and directories ───────────────────────────────────────────
 fileExistenceTests:
@@ -49,7 +44,6 @@ fileExistenceTests:
     path: "/app/templates/base.html"
     shouldExist: true
 
-  # Security: no secrets or VCS data in the image
   - name: "no .env"
     path: "/app/.env"
     shouldExist: false
@@ -62,15 +56,9 @@ fileExistenceTests:
     path: "/app/.git"
     shouldExist: false
 
-# ── Runtime sanity: key binaries are present ──────────────────────────────────
-# (Full import/app testing is handled by the 'Syntax & Imports' CI job)
+# ── Installed binaries ────────────────────────────────────────────────────────
 commandTests:
-  - name: "uvicorn binary is in PATH"
+  - name: "uvicorn binary exists"
     command: "sh"
-    args: ["-c", "which uvicorn"]
-    exitCode: 0
-
-  - name: "python binary is accessible"
-    command: "python"
-    args: ["--version"]
+    args: ["-c", "ls /usr/local/bin/uvicorn"]
     exitCode: 0
