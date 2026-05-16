@@ -74,6 +74,28 @@ async def fetch_issues_since(service_name: str, days: int = 90) -> list[dict]:
     return all_issues
 
 
+async def fetch_recently_resolved_issues(days: int = 30) -> list[dict]:
+    """Returns resolved issues whose lastModifiedDateTime is within the past N days."""
+    token = await _get_access_token()
+    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
+    base_url = (
+        f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
+        f"?$filter=isResolved eq true and lastModifiedDateTime ge {since}"
+        f"&$expand=posts"
+        f"&$top=100"
+    )
+    all_issues: list[dict] = []
+    async with httpx.AsyncClient(timeout=60) as client:
+        url: str | None = base_url
+        while url:
+            resp = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+            resp.raise_for_status()
+            data = resp.json()
+            all_issues.extend(data.get("value", []))
+            url = data.get("@odata.nextLink")
+    return all_issues
+
+
 async def fetch_active_issues() -> list[dict]:
     """Returns all unresolved service health issues, with posts expanded."""
     token = await _get_access_token()

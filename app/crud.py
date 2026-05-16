@@ -295,14 +295,19 @@ async def add_state_change_entry(
 async def get_resolved_incidents(
     db: AsyncSession,
     limit: int = 20,
+    days: int | None = None,
 ) -> list[Incident]:
-    result = await db.execute(
+    stmt = (
         select(Incident)
         .options(selectinload(Incident.updates))
         .where(Incident.is_resolved.is_(True), Incident.classification != "maintenance")
         .order_by(desc(Incident.last_modified))
         .limit(limit)
     )
+    if days is not None:
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        stmt = stmt.where(Incident.last_modified >= cutoff)
+    result = await db.execute(stmt)
     return list(result.scalars().all())
 
 

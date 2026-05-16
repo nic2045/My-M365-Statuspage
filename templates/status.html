@@ -91,7 +91,7 @@
 
 {# ── Active incidents ─────────────────────────────────────────────────────────── #}
 {% set has_incidents = data.services | selectattr("active_incidents") | list | length > 0 %}
-<section>
+<section class="mb-6">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
     {{ L["page.incidents_heading"] }}
   </h2>
@@ -106,6 +106,97 @@
     {{ L["page.no_incidents"] }}
   </div>
   {% endif %}
+</section>
+
+{# ── Incident history (last 30 days, collapsed by default) ────────────────────── #}
+<section>
+  <details class="group">
+    <summary class="flex items-center gap-2 cursor-pointer list-none select-none mb-3">
+      <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+      <span class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+        {{ L["page.history_heading"] }}
+      </span>
+      <span class="text-xs text-gray-400 dark:text-gray-500">&middot; {{ L["page.history_subheading"] }}</span>
+      {% if recent_resolved %}
+      <span class="ml-auto text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+        {{ recent_resolved | length }}
+      </span>
+      {% endif %}
+    </summary>
+
+    {% if recent_resolved %}
+    <div class="space-y-2">
+      {% for incident in recent_resolved %}
+      <details class="group/item bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+        <summary class="flex items-center gap-3 px-4 py-3 cursor-pointer list-none select-none hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+          <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0 transition-transform group-open/item:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+              {% if incident.classification == 'incident' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400
+              {% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400{% endif %}">
+              {{ incident_type_label(incident.classification) }}
+            </span>
+            {% if incident.severity %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ severity_badge_class(incident.severity) }}">
+              {{ severity_label(incident.severity) }}
+            </span>
+            {% endif %}
+          </div>
+          <span class="text-sm font-medium text-gray-600 dark:text-gray-400 truncate min-w-0">
+            {{ incident.title }}
+          </span>
+          <div class="ml-auto flex items-center gap-3 shrink-0">
+            <span class="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">{{ incident.service_name }}</span>
+            <span class="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+              {{ L["incident.resolved"] }}
+            </span>
+            <span class="text-xs text-gray-400 dark:text-gray-500">{{ incident.last_modified | strftime_de }}</span>
+          </div>
+        </summary>
+        <div class="px-4 pb-4 border-t border-gray-100 dark:border-gray-800 pt-3">
+          {% if incident.description %}
+          <div class="text-sm text-gray-600 dark:text-gray-300 mb-3 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline">
+            {{ incident.description | render_md | safe }}
+          </div>
+          {% endif %}
+          {% set note_updates = incident.updates | selectattr("update_type", "equalto", "note") | list %}
+          {% if note_updates %}
+          <div class="space-y-3">
+            <p class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ L["incident.updates"] }}</p>
+            {% for update in note_updates | reverse %}
+            <div class="flex gap-3">
+              <div class="shrink-0 flex flex-col items-center">
+                <div class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 mt-1.5"></div>
+                {% if not loop.last %}<div class="w-px flex-1 bg-gray-200 dark:bg-gray-700 my-1"></div>{% endif %}
+              </div>
+              <div class="pb-2 min-w-0">
+                <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ update.post_created_at | strftime_de }}</p>
+                <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline">
+                  {{ update.content | render_md | safe }}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-xs text-gray-400 dark:text-gray-500">
+            {{ L["incident.since"] }}: {{ incident.start_datetime | strftime_de }}
+          </p>
+          {% endif %}
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-500 dark:text-gray-400 shadow-sm">
+      {{ L["page.history_empty"] }}
+    </div>
+    {% endif %}
+  </details>
 </section>
 
 {% endblock %}
