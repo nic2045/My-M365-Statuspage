@@ -222,15 +222,25 @@ jobs:
             -e DEBUG=true \
             "$IMAGE"
 
-      - name: Wait for app to be ready (max 30 s)
+      - name: Wait for app to be ready (max 60 s)
         run: |
-          for i in $(seq 1 15); do
-            if curl -sf http://localhost:8000/api/v1/health > /dev/null; then
-              echo "App ready after $((i * 2))s"; break
+          for i in $(seq 1 30); do
+            # Abort early if container already exited
+            STATUS=$(docker inspect --format '{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo "gone")
+            if [ "$STATUS" != "running" ]; then
+              echo "Container is not running (status: $STATUS) – dumping logs:"
+              docker logs "$CONTAINER" 2>&1 || true
+              exit 1
             fi
-            echo "Waiting… ($i/15)"; sleep 2
+            if curl -sf http://localhost:8000/api/v1/health > /dev/null 2>&1; then
+              echo "App ready after ~$((i * 2))s"
+              break
+            fi
+            echo "Waiting… ($i/30) container=$STATUS"; sleep 2
           done
-          curl -sf http://localhost:8000/api/v1/health || { echo "FAIL: app did not start"; exit 1; }
+          # Final definitive check
+          curl -sf http://localhost:8000/api/v1/health \
+            || { echo "FAIL: app not reachable after 60s"; docker logs "$CONTAINER"; exit 1; }
 
       - name: "HTTP: GET /api/v1/health → 200 + {status:ok}"
         run: |
@@ -289,7 +299,7 @@ jobs:
         if: always()
         run: docker rm -f "$CONTAINER" || true
 
-  # ── 4. CVE scan with Trivy ──────────────────────────────────────────────────
+  # ── 4. CVE scan with Trivy (direct install – no action wrapper) ─────────────
   trivy:
     name: Trivy Image Scan (CVE)
     runs-on: ubuntu-latest
@@ -300,27 +310,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin
+          trivy --version
+
       - name: Build image for Trivy
         run: docker build -t m365-statuspage:trivy .
 
-      - name: Run Trivy (table output to console)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: m365-statuspage:trivy
-          format: table
-          exit-code: "0"          # report only in CI – never block on findings
-          severity: HIGH,CRITICAL
-          vuln-type: os,library
+      - name: Run Trivy – table output (HIGH + CRITICAL)
+        run: |
+          trivy image \
+            --format table \
+            --severity HIGH,CRITICAL \
+            --vuln-type os,library \
+            --exit-code 0 \
+            m365-statuspage:trivy
 
-      - name: Run Trivy (SARIF for GitHub Security tab)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: m365-statuspage:trivy
-          format: sarif
-          output: trivy-results.sarif
-          exit-code: "0"
-          severity: HIGH,CRITICAL
-          vuln-type: os,library
+      - name: Run Trivy – SARIF output
+        run: |
+          trivy image \
+            --format sarif \
+            --output trivy-results.sarif \
+            --severity HIGH,CRITICAL \
+            --vuln-type os,library \
+            --exit-code 0 \
+            m365-statuspage:trivy
 
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
