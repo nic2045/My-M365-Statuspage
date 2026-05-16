@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  validate:
+    name: Syntax & Imports
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check syntax (py_compile)
+        run: |
+          python -m py_compile \
+            app/__init__.py \
+            app/config.py \
+            app/models.py \
+            app/database.py \
+            app/schemas.py \
+            app/crud.py \
+            app/i18n.py \
+            app/graph_client.py \
+            app/scheduler.py \
+            app/auth.py \
+            app/dependencies.py \
+            app/templates.py \
+            app/main.py \
+            app/routers/__init__.py \
+            app/routers/api.py \
+            app/routers/auth_router.py \
+            app/routers/embed.py \
+            app/routers/status.py
+          echo "Syntax OK"
+
+      - name: Validate imports & app startup
+        env:
+          # Minimal dummy env so pydantic-settings doesn't fail on missing vars
+          AZURE_TENANT_ID: "dummy-tenant"
+          AZURE_CLIENT_ID: "dummy-client"
+          AZURE_CLIENT_SECRET: "dummy-secret"
+          AZURE_REDIRECT_URI: "http://localhost:8000/auth/callback"
+          SECRET_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+          DATABASE_URL: "sqlite+aiosqlite:///./data/statuspage.db"
+        run: |
+          python -c "
+          from app.config import settings
+          from app.models import Base, GRAPH_STATUS_MAP, STATUS_TAILWIND_BAR
+          from app.schemas import StatusPageSchema
+          from app.i18n import LABELS
+          from app.templates import templates
+          from app.auth import LoginRequired
+          from app.routers import api, auth_router, embed, status
+          from app.main import app
+          routes = [r.path for r in app.routes]
+          assert '/' in routes
+          assert '/embed' in routes
+          assert '/auth/login' in routes
+          assert '/api/v1/health' in routes
+          print('All imports OK, routes:', routes)
+          "
+
+      - name: DB initialisation (async)
+        env:
+          AZURE_TENANT_ID: "dummy-tenant"
+          AZURE_CLIENT_ID: "dummy-client"
+          AZURE_CLIENT_SECRET: "dummy-secret"
+          AZURE_REDIRECT_URI: "http://localhost:8000/auth/callback"
+          SECRET_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+          DATABASE_URL: "sqlite+aiosqlite:///./data/statuspage.db"
+        run: |
+          mkdir -p data
+          python -c "
+          import asyncio
+          from app.database import init_db
+          asyncio.run(init_db())
+          print('DB init OK')
+          "
+
+  lint:
+    name: Ruff Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Ruff check
+        run: ruff check app/
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t m365-statuspage:ci .
+
+      - name: Smoke test – healthcheck endpoint
+        run: |
+          docker run -d \
+            --name statuspage-ci \
+            -p 8000:8000 \
+            -e AZURE_TENANT_ID=dummy-tenant \
+            -e AZURE_CLIENT_ID=dummy-client \
+            -e AZURE_CLIENT_SECRET=dummy-secret \
+            -e AZURE_REDIRECT_URI=http://localhost:8000/auth/callback \
+            -e SECRET_KEY=0000000000000000000000000000000000000000000000000000000000000000 \
+            -e DATABASE_URL=sqlite+aiosqlite:///./data/statuspage.db \
+            -e DEBUG=true \
+            m365-statuspage:ci
+
+          # Wait for the app to be ready (max 30s)
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8000/api/v1/health; then
+              echo "Healthcheck passed"
+              break
+            fi
+            echo "Waiting... ($i)"
+            sleep 2
+          done
+
+          curl -sf http://localhost:8000/api/v1/health | grep '"status":"ok"'
+          docker rm -f statuspage-ci

@@ -1,0 +1,25 @@
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "S",   # flake8-bandit (security)
+]
+ignore = [
+    "S101",  # assert statements are fine in validation scripts
+    "S105",  # possible hardcoded passwords – false positives on config field names
+    "S106",
+    "B008",  # FastAPI Depends() calls in function defaults are intentional
+    "E501",  # line too long – handled by formatter
+]
+
+[lint.per-file-ignores]
+"app/routers/*" = ["B008"]  # FastAPI Depends() pattern
+"app/main.py"   = ["B008"]

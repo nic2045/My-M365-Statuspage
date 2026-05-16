@@ -1,7 +1,16 @@
-from datetime import datetime, date as date_type
+from datetime import date as date_type
+from datetime import datetime
+
 from sqlalchemy import (
-    Integer, String, Date, DateTime, Boolean, Text, ForeignKey,
-    UniqueConstraint, func,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 

@@ -1,12 +1,14 @@
+import os
+
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy import event, text
+
 from app.config import settings
 from app.models import Base
-import os
 
 os.makedirs("data", exist_ok=True)
 
