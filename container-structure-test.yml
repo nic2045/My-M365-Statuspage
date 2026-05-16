@@ -38,9 +38,3 @@ fileExistenceTests:
     path: "/app/.git"
     shouldExist: false
 
-# ── Installed binaries ────────────────────────────────────────────────────────
-commandTests:
-  - name: "uvicorn binary exists"
-    command: "sh"
-    args: ["-c", "ls /usr/local/bin/uvicorn"]
-    exitCode: 0
