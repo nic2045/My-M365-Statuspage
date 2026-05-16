@@ -12,5 +12,5 @@ apscheduler==3.10.4
 pydantic-settings==2.6.1
 python-dotenv==1.0.1
 bleach==6.1.0
-starlette==0.41.3
+starlette==1.0.0
 cryptography>=2.5,<46
