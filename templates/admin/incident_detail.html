@@ -16,6 +16,22 @@
     {{ severity_label(incident.severity) }}
   </span>
   {% endif %}
+  <div class="ml-auto flex items-center gap-2">
+    {% if incident.is_suppressed %}
+    <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400">{{ L["admin.suppressed_heading"] }}</span>
+    <form method="post" action="/admin/incidents/{{ incident.id }}/unsuppress">
+      <button type="submit" class="text-xs px-2.5 py-1 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 transition-colors">
+        {{ L["admin.unsuppress"] }}
+      </button>
+    </form>
+    {% else %}
+    <form method="post" action="/admin/incidents/{{ incident.id }}/suppress">
+      <button type="submit" class="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-400 hover:text-gray-700 dark:text-gray-400 transition-colors">
+        {{ L["admin.suppress"] }}
+      </button>
+    </form>
+    {% endif %}
+  </div>
 </div>
 
 <div class="grid gap-6 lg:grid-cols-3">

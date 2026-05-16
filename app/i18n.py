@@ -69,6 +69,10 @@ LABELS: dict[str, str] = {
     "admin.scheduled_end":        "Ende (geplant)",
     "admin.back":                 "Zurück",
     "admin.no_incidents":         "Keine aktiven Einträge.",
+    "admin.suppress":             "Ignorieren",
+    "admin.unsuppress":           "Wiederherstellen",
+    "admin.suppressed_heading":   "Ignorierte Meldungen",
+    "admin.no_suppressed":        "Keine ignorierten Meldungen.",
     "admin.no_maintenances":      "Keine geplanten Wartungen.",
     # Maintenance status
     "maintenance.scheduled":      "Geplant",

@@ -79,6 +79,7 @@ class Incident(Base):
     start_datetime: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     last_modified: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_suppressed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     source: Mapped[str] = mapped_column(String(32), nullable=False, server_default="graph")
     severity: Mapped[str] = mapped_column(String(32), nullable=False, server_default="")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
