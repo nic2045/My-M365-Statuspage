@@ -170,13 +170,10 @@ jobs:
       # ── 3. Structure tests (Google Container Structure Test) ────────────────
       - name: Install container-structure-test
         run: |
-          # Download from GitHub releases (more reliable than the GCS mirror)
-          LATEST=$(curl -sSf \
-            https://api.github.com/repos/GoogleContainerTools/container-structure-test/releases/latest \
-            | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"\(.*\)".*/\1/')
-          echo "Installing container-structure-test ${LATEST}"
+          # Use the 'latest' redirect URL – no GitHub API call needed,
+          # avoids unauthenticated rate-limit (60 req/h on shared runner IPs).
           curl -sSfL \
-            "https://github.com/GoogleContainerTools/container-structure-test/releases/download/${LATEST}/container-structure-test-linux-amd64" \
+            "https://github.com/GoogleContainerTools/container-structure-test/releases/latest/download/container-structure-test-linux-amd64" \
             -o /usr/local/bin/container-structure-test
           chmod +x /usr/local/bin/container-structure-test
           container-structure-test version
