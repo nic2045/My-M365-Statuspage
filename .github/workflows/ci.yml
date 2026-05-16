@@ -144,7 +144,94 @@ jobs:
           path: audit-report.md
           retention-days: 30
 
-  # ── Docker Tests: temporarily removed – to be re-added once root cause is identified ──
+  docker:
+    name: Docker Tests
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE: m365-statuspage:ci
+      CONTAINER: statuspage-ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── 1. Build ────────────────────────────────────────────────────────────
+      - name: Build Docker image
+        run: docker build -t "$IMAGE" .
+
+      # ── 2. Image size guard (container-structure-test doesn't cover size) ──
+      - name: "Image size < 800 MB"
+        run: |
+          SIZE=$(docker image inspect "$IMAGE" --format '{{.Size}}')
+          MAX=$((800 * 1024 * 1024))
+          echo "Uncompressed size: $(( SIZE / 1024 / 1024 )) MB  (limit 800 MB)"
+          [ "$SIZE" -lt "$MAX" ] || { echo "FAIL: image exceeds 800 MB"; exit 1; }
+
+      # ── 3. Structure tests (Google Container Structure Test) ────────────────
+      - name: Install container-structure-test
+        run: |
+          curl -sSL \
+            https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64 \
+            -o /usr/local/bin/container-structure-test
+          chmod +x /usr/local/bin/container-structure-test
+          container-structure-test version
+
+      - name: Run container structure tests
+        run: |
+          container-structure-test test \
+            --image "$IMAGE" \
+            --config container-structure-test.yml \
+            --output text
+
+      # ── 4. HTTP integration tests (pytest + httpx) ──────────────────────────
+      - name: Start container
+        run: |
+          docker run -d --name "$CONTAINER" -p 8000:8000 \
+            -e AZURE_TENANT_ID=dummy-tenant \
+            -e AZURE_CLIENT_ID=dummy-client \
+            -e AZURE_CLIENT_SECRET=dummy-secret \
+            -e AZURE_REDIRECT_URI=http://localhost:8000/auth/callback \
+            -e SECRET_KEY=0000000000000000000000000000000000000000000000000000000000000000 \
+            -e DATABASE_URL=sqlite+aiosqlite:///./data/statuspage.db \
+            -e EMBED_API_KEY=test-embed-key-ci \
+            -e DEBUG=true \
+            "$IMAGE"
+
+      - name: Wait for app to be ready (max 60 s)
+        run: |
+          for i in $(seq 1 30); do
+            STATUS=$(docker inspect --format '{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo gone)
+            if [ "$STATUS" != running ]; then
+              echo "Container exited (status=$STATUS) – logs:"; docker logs "$CONTAINER"; exit 1
+            fi
+            curl -sf http://localhost:8000/api/v1/health > /dev/null \
+              && { echo "Ready after $((i * 2)) s"; break; }
+            echo "Waiting… ($i/30)"; sleep 2
+          done
+          curl -sf http://localhost:8000/api/v1/health \
+            || { echo "FAIL: app not ready after 60 s"; docker logs "$CONTAINER"; exit 1; }
+
+      - name: Set up Python for integration tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install pytest httpx
+
+      - name: Run HTTP integration tests
+        env:
+          CONTAINER_URL: http://localhost:8000
+          EMBED_API_KEY: test-embed-key-ci
+        run: pytest tests/test_docker_integration.py -v
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker logs "$CONTAINER" 2>&1 || true
+
+      - name: Remove container
+        if: always()
+        run: docker rm -f "$CONTAINER" || true
 
   # ── CVE scan with Trivy (direct install – no action wrapper) ─────────────
   trivy:

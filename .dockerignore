@@ -21,3 +21,5 @@ docker-compose*.yml
 Dockerfile
 ruff.toml
 README.md
+tests/
+container-structure-test.yml
