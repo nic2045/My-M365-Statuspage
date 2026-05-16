@@ -32,15 +32,30 @@
       </select>
     </div>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        {{ L["admin.classification_label"] }}
-      </label>
-      <select name="classification"
-              class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <option value="incident">{{ L["incident.type.incident"] }}</option>
-        <option value="advisory">{{ L["incident.type.advisory"] }}</option>
-      </select>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {{ L["admin.classification_label"] }}
+        </label>
+        <select name="classification"
+                class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="incident">{{ L["incident.type.incident"] }}</option>
+          <option value="advisory">{{ L["incident.type.advisory"] }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {{ L["admin.severity_label"] }}
+        </label>
+        <select name="severity"
+                class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">—</option>
+          <option value="critical">{{ L["severity.critical"] }}</option>
+          <option value="high">{{ L["severity.high"] }}</option>
+          <option value="medium">{{ L["severity.medium"] }}</option>
+          <option value="low">{{ L["severity.low"] }}</option>
+        </select>
+      </div>
     </div>
 
     <div>

@@ -80,6 +80,7 @@ class Incident(Base):
     last_modified: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     source: Mapped[str] = mapped_column(String(32), nullable=False, server_default="graph")
+    severity: Mapped[str] = mapped_column(String(32), nullable=False, server_default="")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     scheduled_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     scheduled_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -104,6 +105,7 @@ class IncidentUpdate(Base):
         Integer, ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False, index=True
     )
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    update_type: Mapped[str] = mapped_column(String(32), nullable=False, server_default="note")
     post_created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 

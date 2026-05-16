@@ -39,9 +39,11 @@ async def init_db() -> None:
         # Additive migrations for columns added after initial deployment
         for stmt in [
             "ALTER TABLE incidents ADD COLUMN source VARCHAR NOT NULL DEFAULT 'graph'",
+            "ALTER TABLE incidents ADD COLUMN severity VARCHAR NOT NULL DEFAULT ''",
             "ALTER TABLE incidents ADD COLUMN description TEXT",
             "ALTER TABLE incidents ADD COLUMN scheduled_start DATETIME",
             "ALTER TABLE incidents ADD COLUMN scheduled_end DATETIME",
+            "ALTER TABLE incident_updates ADD COLUMN update_type VARCHAR NOT NULL DEFAULT 'note'",
         ]:
             try:
                 await conn.execute(text(stmt))
