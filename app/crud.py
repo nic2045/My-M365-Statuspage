@@ -75,6 +75,9 @@ async def upsert_incident(
         await db.flush()
     else:
         for k, v in fields.items():
+            # Don't overwrite severity if admin has set it manually
+            if k == "severity" and incident.source == "manual":
+                continue
             setattr(incident, k, v)
         await db.flush()
     return incident
@@ -143,7 +146,11 @@ async def get_active_incidents(
     stmt = (
         select(Incident)
         .options(selectinload(Incident.updates))
-        .where(Incident.is_resolved.is_(False), Incident.classification != "maintenance")
+        .where(
+            Incident.is_resolved.is_(False),
+            Incident.classification != "maintenance",
+            Incident.is_suppressed.is_(False),
+        )
         .order_by(desc(Incident.last_modified))
     )
     if service_name:
@@ -299,6 +306,26 @@ async def get_resolved_incidents(
     return list(result.scalars().all())
 
 
+async def toggle_suppress_incident(
+    db: AsyncSession,
+    incident_id: int,
+    suppress: bool,
+) -> None:
+    incident = await get_incident_by_id(db, incident_id)
+    if incident:
+        incident.is_suppressed = suppress
+        await db.flush()
+
+
+async def get_suppressed_incidents(db: AsyncSession) -> list[Incident]:
+    result = await db.execute(
+        select(Incident)
+        .where(Incident.is_suppressed.is_(True), Incident.is_resolved.is_(False))
+        .order_by(desc(Incident.last_modified))
+    )
+    return list(result.scalars().all())
+
+
 async def set_service_status_manual(
     db: AsyncSession,
     service_name: str,
@@ -342,14 +369,6 @@ async def build_status_page_data(
             )
             for inc in raw_incidents
         ]
-
-        # Elevate current_status if active incidents are more severe
-        if incident_schemas:
-            current_status = max(
-                current_status,
-                "degraded",
-                key=lambda s: _STATUS_SEVERITY.get(s, 0),
-            )
 
         overall_severity = max(
             overall_severity, _STATUS_SEVERITY.get(current_status, 0)

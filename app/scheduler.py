@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler()
 
+_GRAPH_SEVERITY_MAP: dict[str, str] = {
+    "minor":    "low",
+    "moderate": "medium",
+    "major":    "high",
+}
+
 
 def _parse_dt(value: str | None) -> datetime | None:
     if not value:
@@ -63,6 +69,7 @@ async def poll_graph_api() -> None:
             for issue in issues:
                 if issue.get("service") not in monitored:
                     continue
+                severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
                 incident = await upsert_incident(
                     db,
                     graph_issue_id=issue["id"],
@@ -73,6 +80,7 @@ async def poll_graph_api() -> None:
                     start_datetime=_parse_dt(issue.get("startDateTime")),
                     last_modified=_parse_dt(issue.get("lastModifiedDateTime")),
                     is_resolved=issue.get("isResolved", False),
+                    severity=severity,
                 )
                 posts = issue.get("posts", [])
                 await upsert_incident_updates(db, incident.id, posts)

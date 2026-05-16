@@ -16,7 +16,9 @@ from app.crud import (
     get_incident_by_id,
     get_resolved_incidents,
     get_scheduled_maintenances,
+    get_suppressed_incidents,
     set_service_status_manual,
+    toggle_suppress_incident,
 )
 from app.dependencies import get_db
 from app.templates import templates
@@ -41,6 +43,7 @@ async def admin_dashboard(
 ):
     incidents = await get_all_incidents(db, include_resolved=False)
     resolved = await get_resolved_incidents(db, limit=10)
+    suppressed = await get_suppressed_incidents(db)
     maintenances = await get_scheduled_maintenances(db)
     return templates.TemplateResponse(
         request,
@@ -49,6 +52,7 @@ async def admin_dashboard(
             "user": user,
             "incidents": incidents,
             "resolved_incidents": resolved,
+            "suppressed_incidents": suppressed,
             "maintenances": maintenances,
             "services": settings.monitored_services_list,
             "page_title": f"Admin – {settings.APP_TITLE}",
@@ -178,6 +182,28 @@ async def set_service_status(
     await set_service_status_manual(db, service_name, status)
     await db.commit()
     return RedirectResponse(url="/admin", status_code=303)
+
+
+@router.post("/incidents/{incident_id}/suppress")
+async def suppress_incident(
+    incident_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    await toggle_suppress_incident(db, incident_id, suppress=True)
+    await db.commit()
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@router.post("/incidents/{incident_id}/unsuppress")
+async def unsuppress_incident(
+    incident_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    await toggle_suppress_incident(db, incident_id, suppress=False)
+    await db.commit()
+    return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
 
 @router.get("/maintenance/new")
