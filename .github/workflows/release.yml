@@ -186,7 +186,7 @@ jobs:
           } > release-body.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: "M365 Dienststatus ${{ github.ref_name }}"
           body_path: release-body.md
