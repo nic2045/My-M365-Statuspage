@@ -18,8 +18,9 @@ async def embed_widget(
 ):
     data = await build_status_page_data(db, settings.monitored_services_list)
     response = templates.TemplateResponse(
+        request,
         "embed.html",
-        {"request": request, "data": data},
+        {"data": data},
     )
     # Allow embedding from any origin (required for Confluence DC / Typo3 iframes)
     response.headers["Content-Security-Policy"] = "frame-ancestors *"
