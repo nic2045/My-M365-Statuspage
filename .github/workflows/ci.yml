@@ -170,8 +170,13 @@ jobs:
       # ── 3. Structure tests (Google Container Structure Test) ────────────────
       - name: Install container-structure-test
         run: |
-          curl -sSL \
-            https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64 \
+          # Download from GitHub releases (more reliable than the GCS mirror)
+          LATEST=$(curl -sSf \
+            https://api.github.com/repos/GoogleContainerTools/container-structure-test/releases/latest \
+            | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"\(.*\)".*/\1/')
+          echo "Installing container-structure-test ${LATEST}"
+          curl -sSfL \
+            "https://github.com/GoogleContainerTools/container-structure-test/releases/download/${LATEST}/container-structure-test-linux-amd64" \
             -o /usr/local/bin/container-structure-test
           chmod +x /usr/local/bin/container-structure-test
           container-structure-test version

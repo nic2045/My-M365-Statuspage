@@ -62,31 +62,10 @@ fileExistenceTests:
     path: "/app/.git"
     shouldExist: false
 
-# ── Runtime sanity checks ─────────────────────────────────────────────────────
+# ── Runtime sanity: uvicorn is installed and callable ─────────────────────────
+# (Python import testing is handled by the 'Syntax & Imports' CI job)
 commandTests:
   - name: "uvicorn is installed"
     command: "uvicorn"
     args: ["--version"]
     exitCode: 0
-
-  - name: "python can import the app"
-    command: "python"
-    args:
-      - "-c"
-      - |
-        import os, sys
-        os.environ.setdefault("AZURE_TENANT_ID", "dummy")
-        os.environ.setdefault("AZURE_CLIENT_ID", "dummy")
-        os.environ.setdefault("AZURE_CLIENT_SECRET", "dummy")
-        os.environ.setdefault("AZURE_REDIRECT_URI", "http://localhost:8000/auth/callback")
-        os.environ.setdefault("SECRET_KEY", "00" * 32)
-        os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./data/statuspage.db")
-        from app.main import app
-        routes = [r.path for r in app.routes]
-        assert "/api/v1/health" in routes, f"health route missing: {routes}"
-        assert "/embed" in routes, f"embed route missing"
-        print("import OK, routes:", routes)
-    exitCode: 0
-    envVars:
-      - key: PYTHONPATH
-        value: "/app"
