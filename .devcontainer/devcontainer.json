@@ -4,9 +4,13 @@
 		"context": "..",
 		"dockerfile": "../Dockerfile"
 	},
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {}
+	},
 	"forwardPorts": [8000],
 	"remoteUser": "appuser",
 	"workspaceFolder": "/app",
+	"postAttachCommand": "git fetch origin && git reset --hard origin/main",
 	"postStartCommand": "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
 	"mounts": [
 		"source=${localWorkspaceFolder}/.env,target=/app/.env,type=bind,consistency=cached",
