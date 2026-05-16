@@ -75,12 +75,18 @@ async def fetch_issues_since(service_name: str, days: int = 90) -> list[dict]:
 
 
 async def fetch_recently_resolved_issues(days: int = 30) -> list[dict]:
-    """Returns resolved issues whose lastModifiedDateTime is within the past N days."""
+    """Returns resolved issues that started within the past N days.
+
+    The Graph API does not support filtering on lastModifiedDateTime, so we
+    filter on startDateTime (a supported property) and accept that a small
+    number of long-running incidents resolved just inside the window may be
+    missed while keeping the query valid.
+    """
     token = await _get_access_token()
     since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
     base_url = (
         f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
-        f"?$filter=isResolved eq true and lastModifiedDateTime ge {since}"
+        f"?$filter=isResolved eq true and startDateTime ge {since}"
         f"&$expand=posts"
         f"&$top=100"
     )
