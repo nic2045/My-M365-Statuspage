@@ -60,6 +60,17 @@ async def _backfill_service(service_name: str) -> None:
         logger.exception("Backfill failed for %s", service_name)
 
 
+async def _delayed_poll(delay: float = 8.0) -> None:
+    """Wait briefly, then run a full Graph API poll so the new service appears current."""
+    await asyncio.sleep(delay)
+    try:
+        from app.scheduler import poll_graph_api  # local import avoids circular dep
+        await poll_graph_api()
+        logger.info("Delayed poll completed after enabling service.")
+    except Exception:
+        logger.exception("Delayed poll failed")
+
+
 @router.get("/")
 async def admin_dashboard(
     request: Request,
@@ -246,6 +257,7 @@ async def toggle_service(
 
     if new_state:
         asyncio.create_task(_backfill_service(service_name))
+        asyncio.create_task(_delayed_poll(delay=8.0))
 
     return RedirectResponse(url="/admin", status_code=303)
 
