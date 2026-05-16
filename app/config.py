@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     APP_TITLE: str = "M365 Dienststatus"
 
+    # Dev: bypass Entra ID OIDC – alle Routen ohne Login zugänglich
+    DISABLE_AUTH: bool = False
+
     @computed_field
     @property
     def oidc_metadata_url(self) -> str:

@@ -25,7 +25,12 @@ async def get_current_user(request: Request) -> dict | None:
     return request.session.get("user")
 
 
+_DEV_USER = {"name": "Dev User", "email": "dev@localhost", "sub": "dev"}
+
+
 async def require_auth(request: Request) -> dict:
+    if settings.DISABLE_AUTH:
+        return _DEV_USER
     user = await get_current_user(request)
     if user is None:
         raise LoginRequired(next_path=str(request.url.path))

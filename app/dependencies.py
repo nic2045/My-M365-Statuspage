@@ -23,6 +23,8 @@ async def require_embed_access(
     - A non-empty EMBED_API_KEY is configured and ?token=<key> matches, OR
     - No API key is configured and the user has a valid OIDC session.
     """
+    if settings.DISABLE_AUTH:
+        return
     if settings.EMBED_API_KEY and token == settings.EMBED_API_KEY:
         return
     user = await get_current_user(request)

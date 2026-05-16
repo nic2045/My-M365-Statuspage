@@ -18,7 +18,7 @@ COPY --from=builder /install /usr/local
 # Copy application code
 COPY app/ ./app/
 COPY templates/ ./templates/
-COPY static/ ./static/
+RUN mkdir -p /app/static
 
 # SQLite data directory – mount as named volume in production
 RUN mkdir -p /app/data && chown appuser:appuser /app/data
