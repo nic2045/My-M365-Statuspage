@@ -49,8 +49,9 @@ STATUS_BADGE_CLASSES: dict[str, str] = {
 }
 
 INCIDENT_BORDER: dict[str, str] = {
-    "incident": "border-red-500",
-    "advisory": "border-amber-400",
+    "incident":    "border-red-500",
+    "advisory":    "border-amber-400",
+    "maintenance": "border-blue-400",
 }
 
 
@@ -78,6 +79,10 @@ class Incident(Base):
     start_datetime: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     last_modified: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, server_default="graph")
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scheduled_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    scheduled_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

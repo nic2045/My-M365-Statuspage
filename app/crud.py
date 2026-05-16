@@ -1,3 +1,4 @@
+import uuid
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -142,7 +143,7 @@ async def get_active_incidents(
     stmt = (
         select(Incident)
         .options(selectinload(Incident.updates))
-        .where(Incident.is_resolved.is_(False))
+        .where(Incident.is_resolved.is_(False), Incident.classification != "maintenance")
         .order_by(desc(Incident.last_modified))
     )
     if service_name:
@@ -171,6 +172,108 @@ async def get_last_poll_time(db: AsyncSession) -> datetime | None:
     return result.scalar_one_or_none()
 
 
+async def get_scheduled_maintenances(db: AsyncSession) -> list[Incident]:
+    result = await db.execute(
+        select(Incident)
+        .options(selectinload(Incident.updates))
+        .where(Incident.classification == "maintenance", Incident.is_resolved.is_(False))
+        .order_by(Incident.scheduled_start)
+    )
+    return list(result.scalars().all())
+
+
+async def get_all_incidents(
+    db: AsyncSession,
+    include_resolved: bool = False,
+) -> list[Incident]:
+    stmt = (
+        select(Incident)
+        .options(selectinload(Incident.updates))
+        .where(Incident.classification != "maintenance")
+        .order_by(desc(Incident.last_modified))
+    )
+    if not include_resolved:
+        stmt = stmt.where(Incident.is_resolved.is_(False))
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_incident_by_id(db: AsyncSession, incident_id: int) -> Incident | None:
+    result = await db.execute(
+        select(Incident)
+        .options(selectinload(Incident.updates))
+        .where(Incident.id == incident_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def create_manual_incident(
+    db: AsyncSession,
+    title: str,
+    service_name: str,
+    classification: str = "incident",
+    status: str = "active",
+    description: str | None = None,
+    scheduled_start: datetime | None = None,
+    scheduled_end: datetime | None = None,
+) -> Incident:
+    incident = Incident(
+        graph_issue_id=f"manual-{uuid.uuid4().hex[:12]}",
+        title=title,
+        service_name=service_name,
+        classification=classification,
+        status=status,
+        description=description or None,
+        start_datetime=datetime.utcnow(),
+        last_modified=datetime.utcnow(),
+        is_resolved=False,
+        source="manual",
+        scheduled_start=scheduled_start,
+        scheduled_end=scheduled_end,
+    )
+    db.add(incident)
+    await db.flush()
+    return incident
+
+
+async def admin_update_incident(
+    db: AsyncSession,
+    incident_id: int,
+    **fields: Any,
+) -> Incident | None:
+    incident = await get_incident_by_id(db, incident_id)
+    if incident is None:
+        return None
+    for k, v in fields.items():
+        setattr(incident, k, v)
+    incident.last_modified = datetime.utcnow()
+    await db.flush()
+    return incident
+
+
+async def add_incident_post(
+    db: AsyncSession,
+    incident_id: int,
+    content: str,
+) -> IncidentUpdate:
+    update = IncidentUpdate(
+        incident_id=incident_id,
+        content=_sanitize_html(content),
+        post_created_at=datetime.utcnow(),
+    )
+    db.add(update)
+    await db.flush()
+    return update
+
+
+async def set_service_status_manual(
+    db: AsyncSession,
+    service_name: str,
+    status: str,
+) -> None:
+    await upsert_service_status(db, service_name, date.today(), status, "manual")
+
+
 async def build_status_page_data(
     db: AsyncSession,
     service_names: list[str],
@@ -190,6 +293,7 @@ async def build_status_page_data(
                 service_name=inc.service_name,
                 classification=inc.classification,
                 status=inc.status,
+                description=inc.description,
                 start_datetime=inc.start_datetime,
                 last_modified=inc.last_modified,
                 is_resolved=inc.is_resolved,

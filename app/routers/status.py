@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_auth
 from app.config import settings
-from app.crud import build_status_page_data
+from app.crud import build_status_page_data, get_scheduled_maintenances
 from app.dependencies import get_db
 from app.templates import templates
 
@@ -18,12 +18,14 @@ async def status_page(
     db: AsyncSession = Depends(get_db),
 ):
     data = await build_status_page_data(db, settings.monitored_services_list)
+    maintenances = await get_scheduled_maintenances(db)
     return templates.TemplateResponse(
         request,
         "status.html",
         {
             "user": user,
             "data": data,
+            "maintenances": maintenances,
             "page_title": settings.APP_TITLE,
         },
     )

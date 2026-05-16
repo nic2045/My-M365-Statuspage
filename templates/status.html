@@ -42,6 +42,51 @@
   {% endfor %}
 </section>
 
+{# ── Scheduled maintenances ───────────────────────────────────────────────────── #}
+{% if maintenances %}
+<section class="mb-8">
+  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
+    {{ L["page.maintenance_heading"] }}
+  </h2>
+  {% for m in maintenances %}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border-l-4 border-blue-400 border border-gray-100 dark:border-gray-800 px-5 py-4 mb-3 shadow-sm">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 mb-1">
+          {{ L["incident.type.maintenance"] }}
+        </span>
+        <h3 class="font-medium text-gray-900 dark:text-white">{{ m.title }}</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ m.service_name }}</p>
+        {% if m.description %}
+        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1.5">{{ m.description }}</p>
+        {% endif %}
+        {% if m.scheduled_start %}
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+          <span class="font-medium">{{ L["incident.since"] }}:</span>
+          {{ m.scheduled_start | strftime_de }}
+          {% if m.scheduled_end %}
+          &nbsp;·&nbsp;
+          <span class="font-medium">{{ L["admin.scheduled_end"] }}:</span>
+          {{ m.scheduled_end | strftime_de }}
+          {% endif %}
+        </p>
+        {% endif %}
+      </div>
+      <div class="shrink-0">
+        {% if m.status == "in_progress" %}
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ L["maintenance.in_progress"] }}</span>
+        {% elif m.status == "completed" %}
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">{{ L["maintenance.completed"] }}</span>
+        {% else %}
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">{{ L["maintenance.scheduled"] }}</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
 {# ── Active incidents ─────────────────────────────────────────────────────────── #}
 {% set has_incidents = data.services | selectattr("active_incidents") | list | length > 0 %}
 <section>

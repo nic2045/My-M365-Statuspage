@@ -9,7 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.auth import LoginRequired
 from app.config import settings
 from app.database import init_db
-from app.routers import api, auth_router, embed, status
+from app.routers import admin, api, auth_router, embed, status
 from app.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(
@@ -53,3 +53,4 @@ app.include_router(auth_router.router)
 app.include_router(status.router)
 app.include_router(embed.router)
 app.include_router(api.router)
+app.include_router(admin.router)

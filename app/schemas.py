@@ -18,6 +18,7 @@ class IncidentSchema(BaseModel):
     service_name: str
     classification: str
     status: str
+    description: str | None = None
     start_datetime: datetime | None
     last_modified: datetime | None
     is_resolved: bool
