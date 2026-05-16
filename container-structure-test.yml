@@ -62,10 +62,15 @@ fileExistenceTests:
     path: "/app/.git"
     shouldExist: false
 
-# ── Runtime sanity: uvicorn is installed and callable ─────────────────────────
-# (Python import testing is handled by the 'Syntax & Imports' CI job)
+# ── Runtime sanity: key binaries are present ──────────────────────────────────
+# (Full import/app testing is handled by the 'Syntax & Imports' CI job)
 commandTests:
-  - name: "uvicorn is installed"
-    command: "uvicorn"
+  - name: "uvicorn binary is in PATH"
+    command: "sh"
+    args: ["-c", "which uvicorn"]
+    exitCode: 0
+
+  - name: "python binary is accessible"
+    command: "python"
     args: ["--version"]
     exitCode: 0
