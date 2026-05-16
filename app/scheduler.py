@@ -5,7 +5,13 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
-from app.crud import upsert_incident, upsert_incident_updates, upsert_service_status
+from app.crud import (
+    ensure_service_known,
+    get_enabled_services,
+    upsert_incident,
+    upsert_incident_updates,
+    upsert_service_status,
+)
 from app.database import AsyncSessionLocal
 from app.graph_client import fetch_active_issues, fetch_health_overviews
 from app.models import GRAPH_STATUS_MAP
@@ -32,7 +38,14 @@ def _parse_dt(value: str | None) -> datetime | None:
 
 
 async def poll_graph_api() -> None:
-    monitored = settings.monitored_services_list
+    # Read enabled services from DB (not env var) so admin toggles take effect
+    async with AsyncSessionLocal() as db:
+        monitored = await get_enabled_services(db)
+
+    if not monitored:
+        logger.info("No enabled services configured. Skipping poll.")
+        return
+
     today = date.today()
     logger.info("Graph API poll started for services: %s", monitored)
 
@@ -44,6 +57,10 @@ async def poll_graph_api() -> None:
 
             for svc in overviews:
                 name = svc.get("service", "")
+                if not name:
+                    continue
+                # Discover all services returned by Graph API (mark as known but not enabled)
+                await ensure_service_known(db, name)
                 if name not in monitored:
                     continue
                 seen_services.add(name)

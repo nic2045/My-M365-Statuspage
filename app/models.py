@@ -34,15 +34,15 @@ GRAPH_STATUS_MAP: dict[str, str] = {
 }
 
 STATUS_TAILWIND_BAR: dict[str, str] = {
-    "operational": "bg-emerald-500",
-    "degraded":    "bg-amber-400",
-    "interrupted": "bg-red-500",
+    "operational": "bg-[#28a745]",
+    "degraded":    "bg-[#ffc107]",
+    "interrupted": "bg-[#dc3545]",
     "no_data":     "bg-gray-200 dark:bg-gray-700",
     "unknown":     "bg-gray-300 dark:bg-gray-600",
 }
 
 STATUS_BADGE_CLASSES: dict[str, str] = {
-    "operational": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400",
+    "operational": "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400",
     "degraded":    "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400",
     "interrupted": "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400",
     "unknown":     "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
@@ -111,3 +111,12 @@ class IncidentUpdate(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     incident: Mapped["Incident"] = relationship("Incident", back_populates="updates")
+
+
+class MonitoredService(Base):
+    __tablename__ = "monitored_services"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    service_name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

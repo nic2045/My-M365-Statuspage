@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import event, text
+from sqlalchemy import event, func, select, text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import settings
-from app.models import Base
+from app.models import Base, MonitoredService
 
 os.makedirs("data", exist_ok=True)
 
@@ -50,3 +50,11 @@ async def init_db() -> None:
                 await conn.execute(text(stmt))
             except Exception:  # noqa: S110
                 pass  # column already exists
+
+    # Seed monitored_services from env var if the table is empty
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(func.count()).select_from(MonitoredService))
+        if result.scalar_one() == 0:
+            for name in settings.monitored_services_list:
+                db.add(MonitoredService(service_name=name, is_enabled=True))
+            await db.commit()

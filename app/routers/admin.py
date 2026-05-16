@@ -1,8 +1,11 @@
+import asyncio
+import logging
 from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_auth
@@ -11,17 +14,27 @@ from app.crud import (
     add_incident_post,
     add_state_change_entry,
     admin_update_incident,
+    backfill_service_status_from_issues,
     create_manual_incident,
+    ensure_service_known,
     get_all_incidents,
+    get_all_monitored_services,
+    get_enabled_services,
     get_incident_by_id,
     get_resolved_incidents,
     get_scheduled_maintenances,
     get_suppressed_incidents,
+    set_service_enabled,
     set_service_status_manual,
     toggle_suppress_incident,
 )
+from app.database import AsyncSessionLocal
 from app.dependencies import get_db
+from app.graph_client import fetch_health_overviews, fetch_issues_since
+from app.models import MonitoredService
 from app.templates import templates
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -35,6 +48,18 @@ def _parse_form_dt(val: str | None) -> datetime | None:
         return None
 
 
+async def _backfill_service(service_name: str) -> None:
+    """Background task: fetch 90-day issue history and fill in missing status rows."""
+    try:
+        issues = await fetch_issues_since(service_name, days=90)
+        async with AsyncSessionLocal() as db:
+            await backfill_service_status_from_issues(db, service_name, issues, days=90)
+            await db.commit()
+        logger.info("Backfill completed for %s (%d issues)", service_name, len(issues))
+    except Exception:
+        logger.exception("Backfill failed for %s", service_name)
+
+
 @router.get("/")
 async def admin_dashboard(
     request: Request,
@@ -45,6 +70,8 @@ async def admin_dashboard(
     resolved = await get_resolved_incidents(db, limit=10)
     suppressed = await get_suppressed_incidents(db)
     maintenances = await get_scheduled_maintenances(db)
+    all_services = await get_all_monitored_services(db)
+    enabled_services = [s.service_name for s in all_services if s.is_enabled]
     return templates.TemplateResponse(
         request,
         "admin/dashboard.html",
@@ -54,7 +81,8 @@ async def admin_dashboard(
             "resolved_incidents": resolved,
             "suppressed_incidents": suppressed,
             "maintenances": maintenances,
-            "services": settings.monitored_services_list,
+            "all_services": all_services,
+            "services": enabled_services,
             "page_title": f"Admin – {settings.APP_TITLE}",
         },
     )
@@ -63,14 +91,16 @@ async def admin_dashboard(
 @router.get("/incidents/new")
 async def new_incident_form(
     request: Request,
+    db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
+    enabled_services = await get_enabled_services(db)
     return templates.TemplateResponse(
         request,
         "admin/incident_form.html",
         {
             "user": user,
-            "services": settings.monitored_services_list,
+            "services": enabled_services,
             "page_title": "Neue Störung / Hinweis",
         },
     )
@@ -108,13 +138,14 @@ async def incident_detail(
     incident = await get_incident_by_id(db, incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Nicht gefunden")
+    enabled_services = await get_enabled_services(db)
     return templates.TemplateResponse(
         request,
         "admin/incident_detail.html",
         {
             "user": user,
             "incident": incident,
-            "services": settings.monitored_services_list,
+            "services": enabled_services,
             "page_title": incident.title,
         },
     )
@@ -172,6 +203,46 @@ async def add_post(
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
 
+@router.post("/services/refresh")
+async def refresh_services(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Fetch all services from Graph API and register any new ones as disabled."""
+    try:
+        overviews = await fetch_health_overviews()
+        for svc in overviews:
+            name = svc.get("service", "")
+            if name:
+                await ensure_service_known(db, name)
+        await db.commit()
+    except Exception:
+        logger.exception("Service discovery failed")
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@router.post("/services/{service_name}/toggle")
+async def toggle_service(
+    service_name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Enable or disable a service on the status page. Triggers backfill when enabling."""
+    result = await db.execute(
+        sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+    )
+    svc = result.scalar_one_or_none()
+    currently_enabled = svc.is_enabled if svc else False
+    new_state = not currently_enabled
+    await set_service_enabled(db, service_name, new_state)
+    await db.commit()
+
+    if new_state:
+        asyncio.create_task(_backfill_service(service_name))
+
+    return RedirectResponse(url="/admin", status_code=303)
+
+
 @router.post("/services/{service_name}/status")
 async def set_service_status(
     service_name: str,
@@ -209,14 +280,16 @@ async def unsuppress_incident(
 @router.get("/maintenance/new")
 async def new_maintenance_form(
     request: Request,
+    db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
+    enabled_services = await get_enabled_services(db)
     return templates.TemplateResponse(
         request,
         "admin/maintenance_form.html",
         {
             "user": user,
-            "services": settings.monitored_services_list,
+            "services": enabled_services,
             "page_title": "Neue Wartung",
         },
     )

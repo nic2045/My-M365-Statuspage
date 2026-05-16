@@ -1,5 +1,7 @@
 import asyncio
 import logging
+from datetime import datetime, timedelta
+from urllib.parse import quote
 
 import httpx
 import msal
@@ -47,6 +49,29 @@ async def fetch_health_overviews() -> list[dict]:
         )
         resp.raise_for_status()
         return resp.json().get("value", [])
+
+
+async def fetch_issues_since(service_name: str, days: int = 90) -> list[dict]:
+    """Fetch all issues (including resolved) for a service over the past N days, for backfill."""
+    token = await _get_access_token()
+    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
+    name_encoded = quote(service_name, safe="")
+    base_url = (
+        f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
+        f"?$filter=service eq '{name_encoded}' and startDateTime ge {since}"
+        f"&$select=id,service,classification,startDateTime,endDateTime,lastModifiedDateTime,isResolved,severity"
+        f"&$top=100"
+    )
+    all_issues: list[dict] = []
+    async with httpx.AsyncClient(timeout=60) as client:
+        url: str | None = base_url
+        while url:
+            resp = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+            resp.raise_for_status()
+            data = resp.json()
+            all_issues.extend(data.get("value", []))
+            url = data.get("@odata.nextLink")
+    return all_issues
 
 
 async def fetch_active_issues() -> list[dict]:

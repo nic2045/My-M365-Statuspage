@@ -3,8 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: m365-statuspage:latest
-    container_name: m365-statuspage
+    image: pyur-statuspage:latest
+    container_name: pyur-statuspage
     restart: unless-stopped
     ports:
       - "8000:8000"
