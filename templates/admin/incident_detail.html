@@ -112,6 +112,17 @@
         </div>
         {% endif %}
 
+        {% if incident.classification != "maintenance" %}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ L["admin.end_datetime"] }}
+          </label>
+          <input type="datetime-local" name="end_datetime"
+                 value="{{ incident.end_datetime.strftime('%Y-%m-%dT%H:%M') if incident.end_datetime else '' }}"
+                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        {% endif %}
+
         <div class="flex items-center gap-3 pt-1">
           <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
             <input type="checkbox" name="is_resolved" value="on"
@@ -184,6 +195,9 @@
 
     <div class="mt-4 text-xs text-gray-400 dark:text-gray-500 space-y-0.5">
       <p>{{ L["incident.since"] }}: {{ incident.start_datetime | strftime_de }}</p>
+      {% if incident.end_datetime %}
+      <p>{{ L["admin.end_datetime"] }}: {{ incident.end_datetime | strftime_de }}</p>
+      {% endif %}
       <p>Quelle: {{ incident.source }}</p>
       <p class="font-mono truncate">ID: {{ incident.graph_issue_id }}</p>
     </div>

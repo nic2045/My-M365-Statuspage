@@ -65,6 +65,7 @@ LABELS: dict[str, str] = {
     "admin.service_label":        "Dienst",
     "admin.classification_label": "Typ",
     "admin.status_label":         "Status",
+    "admin.end_datetime":         "Ende (tatsächlich)",
     "admin.scheduled_start":      "Beginn (geplant)",
     "admin.scheduled_end":        "Ende (geplant)",
     "admin.back":                 "Zurück",

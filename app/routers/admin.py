@@ -159,6 +159,7 @@ async def update_incident(
     severity: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
     is_resolved: Annotated[str | None, Form()] = None,
+    end_datetime: Annotated[str | None, Form()] = None,
     scheduled_start: Annotated[str | None, Form()] = None,
     scheduled_end: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
@@ -169,12 +170,19 @@ async def update_incident(
     old_resolved = old.is_resolved if old else False
     new_resolved = is_resolved == "on"
 
+    parsed_end = _parse_form_dt(end_datetime)
+    # Auto-set end_datetime to now when marking resolved and no end time was given
+    if new_resolved and not parsed_end and not (old and old.end_datetime):
+        from datetime import datetime as _dt
+        parsed_end = _dt.utcnow()
+
     updates: dict = {
         "title": title,
         "status": status,
         "severity": severity or "",
         "description": description or None,
         "is_resolved": new_resolved,
+        "end_datetime": parsed_end,
     }
     if scheduled_start is not None or scheduled_end is not None:
         updates["scheduled_start"] = _parse_form_dt(scheduled_start)

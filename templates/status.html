@@ -154,7 +154,9 @@
             <span class="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
               {{ L["incident.resolved"] }}
             </span>
-            <span class="text-xs text-gray-400 dark:text-gray-500">{{ incident.last_modified | strftime_de }}</span>
+            <span class="text-xs text-gray-400 dark:text-gray-500">
+              {{ (incident.end_datetime or incident.last_modified) | strftime_de }}
+            </span>
           </div>
         </summary>
         <div class="px-4 pb-4 border-t border-gray-100 dark:border-gray-800 pt-3">
@@ -185,6 +187,9 @@
           {% else %}
           <p class="text-xs text-gray-400 dark:text-gray-500">
             {{ L["incident.since"] }}: {{ incident.start_datetime | strftime_de }}
+            {% if incident.end_datetime %}
+            &nbsp;·&nbsp;{{ L["admin.end_datetime"] }}: {{ incident.end_datetime | strftime_de }}
+            {% endif %}
           </p>
           {% endif %}
         </div>
