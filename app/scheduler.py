@@ -30,9 +30,9 @@ async def poll_graph_api() -> None:
     today = date.today()
     logger.info("Graph API poll started for services: %s", monitored)
 
+    # ── Phase 1: Health overviews (committed independently) ──────────────────
     async with AsyncSessionLocal() as db:
         try:
-            # ── Health overviews ──────────────────────────────────────────────
             overviews = await fetch_health_overviews()
             seen_services: set[str] = set()
 
@@ -45,12 +45,20 @@ async def poll_graph_api() -> None:
                 mapped = GRAPH_STATUS_MAP.get(raw_status, "unknown")
                 await upsert_service_status(db, name, today, mapped, raw_status)
 
-            # Services absent from the response are operational (Graph API omits them)
             for name in monitored:
                 if name not in seen_services:
                     await upsert_service_status(db, name, today, "operational", "serviceOperational")
 
-            # ── Active issues ─────────────────────────────────────────────────
+            await db.commit()
+            logger.info("Health overviews committed for %d services.", len(monitored))
+
+        except Exception:
+            await db.rollback()
+            logger.exception("Health overview poll failed")
+
+    # ── Phase 2: Active incidents (separate session – failure won't roll back phase 1) ──
+    async with AsyncSessionLocal() as db:
+        try:
             issues = await fetch_active_issues()
             for issue in issues:
                 if issue.get("service") not in monitored:
@@ -74,7 +82,7 @@ async def poll_graph_api() -> None:
 
         except Exception:
             await db.rollback()
-            logger.exception("Graph API poll failed")
+            logger.exception("Active issues poll failed")
 
 
 def start_scheduler() -> None:

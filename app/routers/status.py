@@ -19,9 +19,9 @@ async def status_page(
 ):
     data = await build_status_page_data(db, settings.monitored_services_list)
     return templates.TemplateResponse(
+        request,
         "status.html",
         {
-            "request": request,
             "user": user,
             "data": data,
             "page_title": settings.APP_TITLE,
