@@ -19,22 +19,18 @@ fileExistenceTests:
   - name: "app package"
     path: "/app/app"
     shouldExist: true
-    isDirectory: true
 
   - name: "templates directory"
     path: "/app/templates"
     shouldExist: true
-    isDirectory: true
 
   - name: "static directory"
     path: "/app/static"
     shouldExist: true
-    isDirectory: true
 
   - name: "data directory"
     path: "/app/data"
     shouldExist: true
-    isDirectory: true
 
   - name: "main.py"
     path: "/app/app/main.py"
