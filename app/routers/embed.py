@@ -23,5 +23,6 @@ async def embed_widget(
     )
     # Allow embedding from any origin (required for Confluence DC / Typo3 iframes)
     response.headers["Content-Security-Policy"] = "frame-ancestors *"
-    response.headers.pop("X-Frame-Options", None)
+    if "x-frame-options" in response.headers:
+        del response.headers["x-frame-options"]
     return response
