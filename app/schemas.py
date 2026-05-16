@@ -7,6 +7,7 @@ class IncidentUpdateSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     content: str
+    update_type: str = "note"
     post_created_at: datetime | None
 
 
@@ -18,6 +19,7 @@ class IncidentSchema(BaseModel):
     service_name: str
     classification: str
     status: str
+    severity: str = ""
     description: str | None = None
     start_datetime: datetime | None
     last_modified: datetime | None

@@ -58,7 +58,9 @@
         <h3 class="font-medium text-gray-900 dark:text-white">{{ m.title }}</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ m.service_name }}</p>
         {% if m.description %}
-        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1.5">{{ m.description }}</p>
+        <div class="text-sm text-gray-600 dark:text-gray-300 mt-1.5 prose prose-sm dark:prose-invert max-w-none">
+          {{ m.description | render_md | safe }}
+        </div>
         {% endif %}
         {% if m.scheduled_start %}
         <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">

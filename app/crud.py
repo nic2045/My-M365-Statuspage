@@ -213,6 +213,7 @@ async def create_manual_incident(
     service_name: str,
     classification: str = "incident",
     status: str = "active",
+    severity: str = "",
     description: str | None = None,
     scheduled_start: datetime | None = None,
     scheduled_end: datetime | None = None,
@@ -223,6 +224,7 @@ async def create_manual_incident(
         service_name=service_name,
         classification=classification,
         status=status,
+        severity=severity,
         description=description or None,
         start_datetime=datetime.utcnow(),
         last_modified=datetime.utcnow(),
@@ -259,11 +261,42 @@ async def add_incident_post(
     update = IncidentUpdate(
         incident_id=incident_id,
         content=_sanitize_html(content),
+        update_type="note",
         post_created_at=datetime.utcnow(),
     )
     db.add(update)
     await db.flush()
     return update
+
+
+async def add_state_change_entry(
+    db: AsyncSession,
+    incident_id: int,
+    new_status: str,
+) -> IncidentUpdate:
+    update = IncidentUpdate(
+        incident_id=incident_id,
+        content=new_status,
+        update_type="state_change",
+        post_created_at=datetime.utcnow(),
+    )
+    db.add(update)
+    await db.flush()
+    return update
+
+
+async def get_resolved_incidents(
+    db: AsyncSession,
+    limit: int = 20,
+) -> list[Incident]:
+    result = await db.execute(
+        select(Incident)
+        .options(selectinload(Incident.updates))
+        .where(Incident.is_resolved.is_(True), Incident.classification != "maintenance")
+        .order_by(desc(Incident.last_modified))
+        .limit(limit)
+    )
+    return list(result.scalars().all())
 
 
 async def set_service_status_manual(
@@ -293,6 +326,7 @@ async def build_status_page_data(
                 service_name=inc.service_name,
                 classification=inc.classification,
                 status=inc.status,
+                severity=inc.severity,
                 description=inc.description,
                 start_datetime=inc.start_datetime,
                 last_modified=inc.last_modified,
@@ -300,6 +334,7 @@ async def build_status_page_data(
                 updates=[
                     IncidentUpdateSchema(
                         content=u.content,
+                        update_type=u.update_type,
                         post_created_at=u.post_created_at,
                     )
                     for u in sorted(inc.updates, key=lambda x: x.post_created_at or datetime.min)
