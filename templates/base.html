@@ -59,6 +59,10 @@
           {{ user.get("name") or user.get("preferred_username") or user.get("email", "") }}
         </span>
         <a
+          href="/admin"
+          class="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+        >{{ L["admin.title"] }}</a>
+        <a
           href="/auth/logout"
           class="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
         >{{ L["page.logout"] }}</a>

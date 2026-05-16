@@ -44,7 +44,8 @@ jobs:
             app/routers/api.py \
             app/routers/auth_router.py \
             app/routers/embed.py \
-            app/routers/status.py
+            app/routers/status.py \
+            app/routers/admin.py
           echo "Syntax OK"
 
       - name: Validate imports & app startup
@@ -64,13 +65,14 @@ jobs:
           from app.i18n import LABELS
           from app.templates import templates
           from app.auth import LoginRequired
-          from app.routers import api, auth_router, embed, status
+          from app.routers import admin, api, auth_router, embed, status
           from app.main import app
           routes = [r.path for r in app.routes]
           assert '/' in routes
           assert '/embed' in routes
           assert '/auth/login' in routes
           assert '/api/v1/health' in routes
+          assert '/admin/' in routes
           print('All imports OK, routes:', routes)
           "
 

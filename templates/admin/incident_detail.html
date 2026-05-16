@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-6 flex items-center gap-3">
+  <a href="/admin" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+    ← {{ L["admin.back"] }}
+  </a>
+  <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full
+    {% if incident.classification == 'advisory' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400
+    {% elif incident.classification == 'maintenance' %}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400
+    {% else %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400{% endif %}">
+    {{ incident_type_label(incident.classification) }}
+  </span>
+</div>
+
+<div class="grid gap-6 lg:grid-cols-3">
+
+  {# ── Left: Edit form ──────────────────────────────────────────────────────── #}
+  <div class="lg:col-span-2 space-y-6">
+
+    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+      <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-4">Details</h2>
+      <form method="post" action="/admin/incidents/{{ incident.id }}" class="space-y-4">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ L["admin.title_label"] }}
+          </label>
+          <input type="text" name="title" value="{{ incident.title }}" required
+                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ L["admin.status_label"] }}
+          </label>
+          <select name="status"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            {% if incident.classification == "maintenance" %}
+              <option value="scheduled" {% if incident.status == "scheduled" %}selected{% endif %}>{{ L["maintenance.scheduled"] }}</option>
+              <option value="in_progress" {% if incident.status == "in_progress" %}selected{% endif %}>{{ L["maintenance.in_progress"] }}</option>
+              <option value="completed" {% if incident.status == "completed" %}selected{% endif %}>{{ L["maintenance.completed"] }}</option>
+            {% else %}
+              <option value="active" {% if incident.status == "active" %}selected{% endif %}>{{ L["status.degraded"] }}</option>
+              <option value="resolved" {% if incident.status == "resolved" %}selected{% endif %}>{{ L["incident.resolved"] }}</option>
+            {% endif %}
+          </select>
+        </div>
+
+        {% if incident.classification == "maintenance" %}
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {{ L["admin.scheduled_start"] }}
+            </label>
+            <input type="datetime-local" name="scheduled_start"
+                   value="{{ incident.scheduled_start.strftime('%Y-%m-%dT%H:%M') if incident.scheduled_start else '' }}"
+                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {{ L["admin.scheduled_end"] }}
+            </label>
+            <input type="datetime-local" name="scheduled_end"
+                   value="{{ incident.scheduled_end.strftime('%Y-%m-%dT%H:%M') if incident.scheduled_end else '' }}"
+                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="flex items-center gap-3 pt-1">
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input type="checkbox" name="is_resolved" value="on"
+                   {% if incident.is_resolved %}checked{% endif %}
+                   class="rounded border-gray-300 dark:border-gray-600 text-emerald-500 focus:ring-emerald-500">
+            {{ L["incident.resolved"] }}
+          </label>
+        </div>
+
+        <div>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium transition-colors">
+            {{ L["admin.save"] }}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    {# ── Add update post ────────────────────────────────────────────────────── #}
+    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+      <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-4">{{ L["admin.add_update"] }}</h2>
+      <form method="post" action="/admin/incidents/{{ incident.id }}/posts" class="space-y-3">
+        <textarea name="content" rows="4" required
+                  placeholder="{{ L['admin.post_placeholder'] }}"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+        <button type="submit"
+                class="px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium transition-colors">
+          {{ L["admin.add_update"] }}
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+  {# ── Right: Timeline ──────────────────────────────────────────────────────── #}
+  <div>
+    <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">{{ L["incident.updates"] }}</h2>
+    <div class="space-y-3">
+      {% for update in incident.updates | sort(attribute="post_created_at", reverse=True) %}
+      <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm px-4 py-3">
+        <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ update.post_created_at | strftime_de }}</p>
+        <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none">
+          {{ update.content | safe }}
+        </div>
+      </div>
+      {% else %}
+      <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-4 py-3 text-sm text-gray-400 dark:text-gray-500 shadow-sm">
+        Noch keine Updates.
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mt-4 text-xs text-gray-400 dark:text-gray-500 space-y-0.5">
+      <p>{{ L["incident.since"] }}: {{ incident.start_datetime | strftime_de }}</p>
+      <p>Quelle: {{ incident.source }}</p>
+      {% if incident.graph_issue_id %}
+      <p class="font-mono truncate">ID: {{ incident.graph_issue_id }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

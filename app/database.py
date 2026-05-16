@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import event
+from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -36,3 +36,13 @@ AsyncSessionLocal = async_sessionmaker(
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Additive migrations for columns added after initial deployment
+        for stmt in [
+            "ALTER TABLE incidents ADD COLUMN source VARCHAR NOT NULL DEFAULT 'graph'",
+            "ALTER TABLE incidents ADD COLUMN scheduled_start DATETIME",
+            "ALTER TABLE incidents ADD COLUMN scheduled_end DATETIME",
+        ]:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:  # noqa: S110
+                pass  # column already exists
