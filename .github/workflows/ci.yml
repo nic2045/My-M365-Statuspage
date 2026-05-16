@@ -167,21 +167,21 @@ jobs:
           echo "Uncompressed size: $(( SIZE / 1024 / 1024 )) MB  (limit 800 MB)"
           [ "$SIZE" -lt "$MAX" ] || { echo "FAIL: image exceeds 800 MB"; exit 1; }
 
-      # ── 3. Image structure verification (docker run – no external binary) ──
+      # ── 3. Image structure verification ────────────────────────────────────
       - name: Verify image structure
         run: |
-          # Required paths
-          docker run --rm "$IMAGE" test -d /app/app
-          docker run --rm "$IMAGE" test -d /app/templates
-          docker run --rm "$IMAGE" test -d /app/static
-          docker run --rm "$IMAGE" test -d /app/data
-          docker run --rm "$IMAGE" test -f /app/app/main.py
-          docker run --rm "$IMAGE" test -f /app/templates/base.html
-          # Secrets / VCS data must NOT be present
-          docker run --rm "$IMAGE" sh -c "! test -e /app/.env"
-          docker run --rm "$IMAGE" sh -c "! test -e /app/.env.example"
-          docker run --rm "$IMAGE" sh -c "! test -e /app/.git"
-          echo "Image structure OK"
+          docker run --rm "$IMAGE" sh -c "
+            echo 'Checking /app/app ...'       && test -d /app/app &&
+            echo 'Checking /app/templates ...' && test -d /app/templates &&
+            echo 'Checking /app/static ...'    && test -d /app/static &&
+            echo 'Checking /app/data ...'      && test -d /app/data &&
+            echo 'Checking main.py ...'        && test -f /app/app/main.py &&
+            echo 'Checking base.html ...'      && test -f /app/templates/base.html &&
+            echo 'Checking no .env ...'        && ! test -e /app/.env &&
+            echo 'Checking no .env.example ...' && ! test -e /app/.env.example &&
+            echo 'Checking no .git ...'        && ! test -e /app/.git &&
+            echo 'Image structure OK'
+          "
 
       # ── 4. HTTP integration tests (pytest + httpx) ──────────────────────────
       - name: Start container
