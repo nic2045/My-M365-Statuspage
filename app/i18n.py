@@ -143,6 +143,7 @@ LABELS: dict[str, str] = {
     "empty.admin.incidents_sub":  "Das System läuft normal.",
     "empty.admin.suppressed":     "Keine ignorierten Meldungen.",
     "empty.admin.maintenances":   "Keine geplanten Wartungen.",
+    "empty.admin.maintenances_sub": "Es stehen aktuell keine Arbeiten an.",
     "empty.public.all_good":      "Keine aktiven Störungen.",
     "empty.public.all_good_sub":  "Alle Dienste laufen normal.",
     "empty.public.history":       "Keine behobenen Störungen in den letzten 30 Tagen.",
