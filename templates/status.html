@@ -121,8 +121,14 @@
       {% endfor %}
     {% endfor %}
   {% else %}
-  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-500 dark:text-gray-400 shadow-sm">
-    {{ L["page.no_incidents"] }}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-8 shadow-sm">
+    <div class="flex flex-col items-center text-center gap-2">
+      <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <p class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ L["empty.public.all_good"] }}</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400">{{ L["empty.public.all_good_sub"] }}</p>
+    </div>
   </div>
   {% endif %}
 </section>
@@ -224,8 +230,9 @@
       {% endfor %}
     </div>
     {% else %}
-    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-500 dark:text-gray-400 shadow-sm">
-      {{ L["page.history_empty"] }}
+    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-6 shadow-sm flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+      <svg class="w-5 h-5 shrink-0 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span>{{ L["empty.public.history"] }}</span>
     </div>
     {% endif %}
   </details>

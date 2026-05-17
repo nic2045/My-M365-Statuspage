@@ -17,9 +17,10 @@
   <div class="p-4">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
+        {% set _phase = 'resolved' if incident.is_resolved else incident.status %}
         <h3 class="font-medium text-gray-900 dark:text-white leading-snug flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ phase_dot_class('resolved' if incident.is_resolved else incident.status) }}"
-                title="{{ state_label('resolved' if incident.is_resolved else incident.status) }}"></span>
+          <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ phase_dot_class(_phase) }} {{ phase_pulse_class(_phase) }}"
+                title="{{ state_label(_phase) }}"></span>
           <span>{{ incident.title }}</span>
         </h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
