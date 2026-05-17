@@ -8,7 +8,13 @@
   ></div>
   {% endfor %}
 </div>
-<div class="flex justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
+<div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
   <span>vor 90 Tagen</span>
+  {% if service.uptime_percentage is not none %}
+  <span class="text-gray-500 dark:text-gray-400">
+    <span class="font-medium text-gray-700 dark:text-gray-200">{{ "%.2f"|format(service.uptime_percentage) }} %</span>
+    {{ L["page.uptime_suffix"] }}
+  </span>
+  {% endif %}
   <span>heute</span>
 </div>

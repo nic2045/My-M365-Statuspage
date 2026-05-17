@@ -46,6 +46,7 @@ async def init_db() -> None:
             "ALTER TABLE incident_updates ADD COLUMN update_type VARCHAR NOT NULL DEFAULT 'note'",
             "ALTER TABLE incidents ADD COLUMN is_suppressed BOOLEAN NOT NULL DEFAULT 0",
             "ALTER TABLE incidents ADD COLUMN end_datetime DATETIME",
+            "ALTER TABLE monitored_services ADD COLUMN show_uptime_percentage BOOLEAN NOT NULL DEFAULT 1",
         ]:
             try:
                 await conn.execute(text(stmt))

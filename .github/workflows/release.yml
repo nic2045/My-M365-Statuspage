@@ -133,63 +133,20 @@ jobs:
           path: audit-report.md
           retention-days: 90
 
-  # ── 5. Create GitHub Release with auto-generated changelog ─────────────────
-  release:
-    name: Create GitHub Release
+  # ── 5. Attach pip-audit report to the GitHub Release (created by Release Please) ──
+  attach-audit:
+    name: Attach audit report to Release
     runs-on: ubuntu-latest
     needs: [docker, trivy, audit]
 
     steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0   # full history for changelog generation
-
-      - name: Extract version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
       - name: Download audit report
         uses: actions/download-artifact@v4
         with:
           name: pip-audit-report-${{ github.ref_name }}
           path: artifacts/
 
-      - name: Generate changelog (commits since last tag)
-        id: changelog
-        run: |
-          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "^${{ github.ref_name }}$" | head -1)
-          if [ -z "$PREVIOUS_TAG" ]; then
-            RANGE="HEAD"
-          else
-            RANGE="${PREVIOUS_TAG}..HEAD"
-          fi
-          VERSION="${{ steps.version.outputs.VERSION }}"
-          REF="${{ github.ref_name }}"
-          REPO="${{ github.repository }}"
-          {
-            printf "## Änderungen in %s\n\n" "$REF"
-            git log "$RANGE" --pretty=format:"- %s (%h)" --no-merges
-            printf "\n\n## Docker Image\n\n"
-            printf '```bash\n'
-            printf "docker pull ghcr.io/%s:%s\n" "$REPO" "$VERSION"
-            printf "# oder\n"
-            printf "docker pull ghcr.io/%s:latest\n" "$REPO"
-            printf '```\n\n'
-            printf "Deployment mit docker-compose:\n"
-            printf '```bash\n'
-            printf "# docker-compose.yml anpassen:\n"
-            printf "image: ghcr.io/%s:%s\n" "$REPO" "$VERSION"
-            printf "docker compose up -d\n"
-            printf '```\n\n'
-            printf "## Sicherheits-Audit\n\n"
-            printf "Siehe angehängten \`pip-audit-report.md\` für den vollständigen Dependency-Scan.\n"
-          } > release-body.md
-
-      - name: Create GitHub Release
+      - name: Upload audit report to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          name: "M365 Dienststatus ${{ github.ref_name }}"
-          body_path: release-body.md
           files: artifacts/audit-report.md
-          generate_release_notes: true
-          make_latest: true

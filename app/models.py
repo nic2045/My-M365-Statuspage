@@ -120,4 +120,7 @@ class MonitoredService(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     service_name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    show_uptime_percentage: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="1", default=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

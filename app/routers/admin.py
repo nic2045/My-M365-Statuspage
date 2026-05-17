@@ -26,6 +26,7 @@ from app.crud import (
     get_suppressed_incidents,
     set_service_enabled,
     set_service_status_manual,
+    set_show_uptime_percentage,
     toggle_suppress_incident,
 )
 from app.database import AsyncSessionLocal
@@ -299,6 +300,23 @@ async def toggle_service(
         asyncio.create_task(_backfill_service(service_name))
         _schedule_delayed_poll(delay=8.0)  # debounced: cancels any pending poll first
 
+    return RedirectResponse(url="/admin/settings", status_code=303)
+
+
+@router.post("/services/{service_name}/uptime-toggle")
+async def toggle_uptime_display(
+    service_name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Toggle whether the 90-day uptime percentage is shown for this service."""
+    result = await db.execute(
+        sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+    )
+    svc = result.scalar_one_or_none()
+    new_state = not (svc.show_uptime_percentage if svc else True)
+    await set_show_uptime_percentage(db, service_name, new_state)
+    await db.commit()
     return RedirectResponse(url="/admin/settings", status_code=303)
 
 
