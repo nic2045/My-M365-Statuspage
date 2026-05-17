@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/nic2045/My-M365-Statuspage/compare/v1.2.0...v1.3.0) (2026-05-17)
+
+
+### Features
+
+* service groups on status page ([5ec3eab](https://github.com/nic2045/My-M365-Statuspage/commit/5ec3eab4e6bb8893e847654142934e0741ad5c3f)), closes [#36](https://github.com/nic2045/My-M365-Statuspage/issues/36)
+* subscriber notifications (Email + MS Teams) ([a543bd1](https://github.com/nic2045/My-M365-Statuspage/commit/a543bd1d8cc68b2df3bf2b3c44252a8a6e947727)), closes [#35](https://github.com/nic2045/My-M365-Statuspage/issues/35)
+* subscriber notifications (Email + MS Teams) [#35](https://github.com/nic2045/My-M365-Statuspage/issues/35) ([a2091fd](https://github.com/nic2045/My-M365-Statuspage/commit/a2091fd56e3db2985a20e549c5122b31acee22e6))
+
+
+### Bug Fixes
+
+* sort imports and remove unused import (ruff) ([d58c893](https://github.com/nic2045/My-M365-Statuspage/commit/d58c893edd9f34d8a126c9ebb1e5eb220aa341b5))
+
 ## [1.2.0](https://github.com/nic2045/My-M365-Statuspage/compare/v1.1.1...v1.2.0) (2026-05-17)
 
 
