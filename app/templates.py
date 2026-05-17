@@ -20,6 +20,9 @@ templates = Jinja2Templates(directory="templates")
 templates.env.globals["L"] = LABELS
 templates.env.globals["APP_VERSION"] = __version__
 templates.env.globals["APP_TITLE"] = _settings.APP_TITLE
+templates.env.globals["BUILD_SHA"] = _settings.BUILD_SHA
+templates.env.globals["BUILD_TIME"] = _settings.BUILD_TIME
+templates.env.globals["DEBUG"] = _settings.DEBUG
 templates.env.globals["status_bar_class"] = (
     lambda s: STATUS_TAILWIND_BAR.get(s, STATUS_TAILWIND_BAR["unknown"])
 )

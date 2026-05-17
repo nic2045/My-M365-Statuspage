@@ -25,6 +25,13 @@ RUN mkdir -p /app/data && chown appuser:appuser /app/data
 
 USER appuser
 
+# Build metadata: passed via --build-arg from CI, surfaced as ENV so the app
+# can render them in the dev-only build chip (bottom-right of every page).
+ARG BUILD_SHA=""
+ARG BUILD_TIME=""
+ENV BUILD_SHA=$BUILD_SHA \
+    BUILD_TIME=$BUILD_TIME
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 

@@ -159,7 +159,11 @@ jobs:
 
       # ── 1. Build ────────────────────────────────────────────────────────────
       - name: Build Docker image
-        run: docker build -t "$IMAGE" .
+        run: |
+          docker build \
+            --build-arg BUILD_SHA="$(git rev-parse --short HEAD)" \
+            --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%MZ)" \
+            -t "$IMAGE" .
 
       # ── 2. Image size guard (container-structure-test doesn't cover size) ──
       - name: "Image size < 800 MB"
