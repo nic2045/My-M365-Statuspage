@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import settings
-from app.models import Base, MonitoredService
+from app.models import Base, MonitoredService, SourceLabel
 
 os.makedirs("data", exist_ok=True)
 
@@ -66,3 +66,15 @@ async def init_db() -> None:
             for name in settings.monitored_services_list:
                 db.add(MonitoredService(service_name=name, is_enabled=True))
             await db.commit()
+
+    # Seed system source labels (idempotent upsert)
+    _system_labels = [
+        ("manual", "Manuell"),
+        ("graph", "Microsoft (Graph)"),
+    ]
+    async with AsyncSessionLocal() as db:
+        for src, lbl in _system_labels:
+            existing = await db.get(SourceLabel, src)
+            if existing is None:
+                db.add(SourceLabel(source=src, label=lbl, is_system=True))
+        await db.commit()
