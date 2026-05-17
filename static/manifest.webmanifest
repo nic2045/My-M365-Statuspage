@@ -1,0 +1,53 @@
+{
+  "name": "M365 Dienststatus",
+  "short_name": "M365 Status",
+  "description": "Statusseite für Microsoft 365 Dienste und Wartungen",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a0a",
+  "theme_color": "#005EA8",
+  "lang": "de",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Admin",
+      "short_name": "Admin",
+      "url": "/admin",
+      "description": "Admin-Dashboard öffnen"
+    },
+    {
+      "name": "Störungen",
+      "short_name": "Störungen",
+      "url": "/admin#incidents",
+      "description": "Aktive Störungen ansehen"
+    }
+  ]
+}

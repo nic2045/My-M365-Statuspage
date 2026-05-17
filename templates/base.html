@@ -26,9 +26,30 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="/static/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+  <meta name="theme-color" content="#005EA8" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="M365 Status" />
   <style>
     [title] { cursor: default; }
     .bar-tooltip:hover { opacity: 0.75; }
+    /* Safe-area padding for notched iOS devices in standalone mode */
+    @supports (padding: env(safe-area-inset-top)) {
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
   </style>
 </head>
 <body class="h-full bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 font-sans antialiased transition-colors duration-200">
@@ -86,6 +107,16 @@
     {% block content %}{% endblock %}
   </main>
 
+  <!-- PWA install prompt (shown only after browser fires beforeinstallprompt) -->
+  <button id="pwa-install-btn"
+          aria-label="App installieren"
+          class="hidden fixed bottom-4 right-4 z-40 inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-brand text-white text-sm font-medium shadow-lg hover:bg-brand-dark transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4m-8 8h8"/>
+    </svg>
+    <span>Installieren</span>
+  </button>
+
   <script>
     // Dark mode toggle (persists to localStorage)
     const html = document.documentElement;
@@ -96,6 +127,42 @@
     document.getElementById('theme-toggle').addEventListener('click', () => {
       html.classList.toggle('dark');
       localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
+  </script>
+
+  <script>
+    // Register service worker (served from origin scope via /sw.js route)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch((err) => {
+          console.warn('SW registration failed:', err);
+        });
+      });
+    }
+
+    // PWA install prompt — caught by beforeinstallprompt, shown as floating button
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('pwa-install-btn');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (installBtn && localStorage.getItem('pwa-install-dismissed') !== '1') {
+        installBtn.classList.remove('hidden');
+      }
+    });
+    installBtn?.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'dismissed') {
+        localStorage.setItem('pwa-install-dismissed', '1');
+      }
+      installBtn.classList.add('hidden');
+      deferredPrompt = null;
+    });
+    window.addEventListener('appinstalled', () => {
+      installBtn?.classList.add('hidden');
+      localStorage.setItem('pwa-installed', '1');
     });
   </script>
   {% block scripts %}{% endblock %}

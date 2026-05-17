@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline – M365 Dienststatus</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: #f9fafb;
+      color: #111827;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #030712; color: #f3f4f6; }
+      .card { background: #111827; border-color: #1f2937; }
+      .sub { color: #9ca3af; }
+    }
+    .card {
+      max-width: 420px;
+      width: 100%;
+      background: #fff;
+      border: 1px solid #f3f4f6;
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      background: #fef3c7;
+      color: #b45309;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (prefers-color-scheme: dark) {
+      .icon { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    }
+    h1 { font-size: 18px; font-weight: 600; margin: 0 0 8px; }
+    p { font-size: 14px; margin: 0; line-height: 1.5; }
+    .sub { color: #6b7280; }
+    button {
+      margin-top: 20px;
+      padding: 8px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: #005EA8;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    button:hover { background: #004A87; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636L5.636 18.364m0-12.728L18.364 18.364"/>
+      </svg>
+    </div>
+    <h1>Keine Verbindung</h1>
+    <p class="sub">Du bist offline. Sobald die Verbindung wiederhergestellt ist, lade die Seite neu.</p>
+    <button onclick="location.reload()">Erneut versuchen</button>
+  </div>
+</body>
+</html>
