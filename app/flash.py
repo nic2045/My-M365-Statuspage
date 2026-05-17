@@ -1,4 +1,5 @@
 from typing import Literal
+
 from starlette.requests import Request
 
 Level = Literal["success", "error", "info", "warning"]

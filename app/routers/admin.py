@@ -34,18 +34,18 @@ from app.crud import (
     toggle_suppress_incident,
 )
 from app.crud import delete_incident as crud_delete_incident
-from app.flash import flash
-from app.i18n import LABELS
-from app.notifications import send_incident_notification, send_teams_notification
 from app.database import AsyncSessionLocal
 from app.dependencies import admin_nav_context, get_db
+from app.flash import flash
 from app.graph_client import (
     fetch_active_issues,
     fetch_health_overviews,
     fetch_issues_since,
     fetch_recently_resolved_issues,
 )
+from app.i18n import LABELS
 from app.models import MonitoredService
+from app.notifications import send_incident_notification, send_teams_notification
 from app.templates import templates
 
 logger = logging.getLogger(__name__)

@@ -1,18 +1,17 @@
 """Public subscription routes: subscribe, confirm, unsubscribe."""
 import logging
 import re
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated
 
 from app.config import settings
 from app.crud import (
     confirm_subscriber,
     create_subscriber,
-    get_subscriber_by_unsub_token,
     delete_subscriber,
+    get_subscriber_by_unsub_token,
 )
 from app.database import AsyncSessionLocal
 from app.notifications import send_confirmation_email
