@@ -182,10 +182,13 @@ async def get_uptime_bars(
         if row.raw_graph_status != "backfill"
     }
 
+    # Only true incidents paint the uptime bars; advisories are
+    # informational ("Updates" category) and maintenance is scheduled,
+    # so neither should ding availability.
     incidents_result = await db.execute(
         select(Incident).where(
             Incident.service_name == service_name,
-            Incident.classification != "maintenance",
+            Incident.classification == "incident",
             Incident.is_suppressed.is_(False),
             Incident.start_datetime.is_not(None),
         )

@@ -33,10 +33,16 @@ _GRAPH_SEVERITY_MAP: dict[str, str] = {
 }
 
 # Maps Graph API classification to our internal classification.
-# advisory and unknown classifications are excluded (return None → skip).
+# Unknown classifications are dropped (return None → skip).
+# - "incident":            real outages
+# - "advisory":            informational notices that don't impact uptime
+# - "plannedMaintenance":  scheduled service maintenance
+# - "planForChange":       upcoming feature/UI changes – treated as maintenance
 _GRAPH_CLASSIFICATION_MAP: dict[str, str] = {
     "incident":           "incident",
+    "advisory":           "advisory",
     "plannedMaintenance": "maintenance",
+    "planForChange":      "maintenance",
 }
 
 # Maps the Microsoft Graph issue `status` field to one of our incident phases:
@@ -65,18 +71,38 @@ def _classify_issue(issue: dict) -> str | None:
     return _GRAPH_CLASSIFICATION_MAP.get(issue.get("classification", ""))
 
 
+def _maintenance_phase(issue: dict) -> str:
+    """Compute the current phase for a maintenance/planForChange item.
+
+    Three phases mirror the existing dropdown:
+      scheduled    – future window
+      in_progress  – we are inside [start, end] right now
+      completed    – Graph marked it resolved
+    """
+    if issue.get("isResolved"):
+        return "completed"
+    start = _parse_dt(issue.get("startDateTime"))
+    end = _parse_dt(issue.get("endDateTime"))
+    now = datetime.utcnow()
+    if start and end and start <= now < end:
+        return "in_progress"
+    return "scheduled"
+
+
 def _issue_status(issue: dict, classification: str) -> str:
     """Map a Graph API issue to one of our internal phase/status strings.
 
-    Maintenance items use their own lifecycle (scheduled / completed).
-    Incidents are mapped via _GRAPH_INCIDENT_PHASE_MAP from the Graph
-    `status` field – which Microsoft updates as the incident progresses
-    from Investigating → ServiceDegradation/Interruption → RestoringService
-    → ServiceRestored. We fall back to active / resolved if Graph hasn't
-    set a recognized status.
+    - Maintenance / planForChange items roll through scheduled →
+      in_progress → completed based on their start/end window.
+    - Incidents and advisories are mapped via _GRAPH_INCIDENT_PHASE_MAP
+      from the Graph `status` field – which Microsoft updates as the
+      incident progresses from Investigating →
+      ServiceDegradation/Interruption → RestoringService → ServiceRestored.
+      Fall back to active / resolved if Graph hasn't set a recognized
+      status.
     """
     if classification == "maintenance":
-        return "completed" if issue.get("isResolved") else "scheduled"
+        return _maintenance_phase(issue)
     raw_status = issue.get("status", "")
     mapped = _GRAPH_INCIDENT_PHASE_MAP.get(raw_status)
     if mapped:
