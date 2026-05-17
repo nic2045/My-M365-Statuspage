@@ -303,9 +303,12 @@ async def create_manual_incident(
     status: str = "active",
     severity: str = "",
     description: str | None = None,
+    start_datetime: datetime | None = None,
     scheduled_start: datetime | None = None,
     scheduled_end: datetime | None = None,
 ) -> Incident:
+    now = datetime.utcnow()
+    start = start_datetime or now
     incident = Incident(
         graph_issue_id=f"manual-{uuid.uuid4().hex[:12]}",
         title=title,
@@ -314,8 +317,8 @@ async def create_manual_incident(
         status=status,
         severity=severity,
         description=description or None,
-        start_datetime=datetime.utcnow(),
-        last_modified=datetime.utcnow(),
+        start_datetime=start,
+        last_modified=now,
         is_resolved=False,
         source="manual",
         scheduled_start=scheduled_start,
@@ -341,16 +344,27 @@ async def admin_update_incident(
     return incident
 
 
+async def delete_incident(db: AsyncSession, incident_id: int) -> bool:
+    incident = await get_incident_by_id(db, incident_id)
+    if incident is None:
+        return False
+    await db.delete(incident)
+    await db.flush()
+    return True
+
+
 async def add_incident_post(
     db: AsyncSession,
     incident_id: int,
     content: str,
+    notify_subscribers: bool = True,
 ) -> IncidentUpdate:
     update = IncidentUpdate(
         incident_id=incident_id,
         content=_sanitize_html(content),
         update_type="note",
         post_created_at=datetime.utcnow(),
+        notify_subscribers=notify_subscribers,
     )
     db.add(update)
     await db.flush()

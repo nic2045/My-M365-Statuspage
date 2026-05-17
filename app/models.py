@@ -109,6 +109,9 @@ class IncidentUpdate(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     update_type: Mapped[str] = mapped_column(String(32), nullable=False, server_default="note")
     post_created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    notify_subscribers: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="0", default=False
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     incident: Mapped["Incident"] = relationship("Incident", back_populates="updates")

@@ -50,14 +50,24 @@ LABELS: dict[str, str] = {
     "admin.title_label":          "Titel",
     "admin.description_label":    "Beschreibung",
     "admin.severity_label":       "Schweregrad",
+    "admin.start_datetime":       "Beginn",
+    "admin.now":                  "Jetzt",
+    "admin.notify_subscribers":   "Subscriber benachrichtigen",
+    "admin.delete":               "Löschen",
+    "admin.delete_confirm":       "Diesen Eintrag wirklich löschen?",
     # Severity levels
     "severity.critical":          "Kritisch",
     "severity.high":              "Hoch",
     "severity.medium":            "Mittel",
     "severity.low":               "Niedrig",
-    # State change timeline entries
-    "state.active":               "Aktiv",
-    "state.acknowledged":         "Bestätigt",
+    # State change timeline entries  (Incident-Phasen)
+    # active        → Investigating  – Problem bekannt, Ursache wird gesucht
+    # acknowledged  → Identified     – Ursache gefunden, Behebung startet
+    # monitoring    → Monitoring     – Fix eingespielt, System wird beobachtet
+    # resolved      → Resolved       – Störung offiziell vorbei
+    "state.active":               "Untersuchung läuft",
+    "state.acknowledged":         "Identifiziert",
+    "state.monitoring":           "Überwachung",
     "state.resolved":             "Behoben",
     "state.scheduled":            "Geplant",
     "state.in_progress":          "In Durchführung",
