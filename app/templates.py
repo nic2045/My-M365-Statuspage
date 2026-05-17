@@ -35,6 +35,32 @@ templates.env.globals["incident_type_label"] = (
 )
 
 
+# ── Severity & status colour system ───────────────────────────────────────────
+#
+# Single source of truth for every coloured chip, dot, border, badge and bar
+# rendered anywhere in the app. Whenever a template needs a colour for one of
+# these dimensions, it should go through a helper here — not hardcode a
+# Tailwind class — so a future palette tweak only happens in one place.
+#
+# Dimensions and their colour families:
+#
+#   service status        operational   degraded   interrupted   unknown
+#                         green         amber      red           gray
+#
+#   incident severity     critical      high       medium        low
+#                         red           orange     amber         blue
+#
+#   incident phase        active        acknowledged   monitoring   resolved
+#                         yellow        orange         blue         emerald
+#
+#   incident type         incident      advisory   maintenance
+#                         red           amber      blue
+#
+# Pulse animation: an active phase (active / acknowledged / monitoring) and a
+# non-operational service status both pulse — see PULSE_PHASES below and
+# `status_dot_pulse()`. Tailwind's animate-pulse is suppressed automatically
+# under `prefers-reduced-motion: reduce` (base.html).
+
 SEVERITY_BADGE: dict[str, str] = {
     "critical": "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400",
     "high":     "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-400",
@@ -42,7 +68,7 @@ SEVERITY_BADGE: dict[str, str] = {
     "low":      "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400",
 }
 
-# Standard incident-response phases mapped to a single colour each.
+# Incident-response phases:
 # active        → Investigating  (yellow)
 # acknowledged  → Identified     (orange)
 # monitoring    → Monitoring     (blue)
@@ -58,6 +84,11 @@ PHASE_DOT: dict[str, str] = {
     "in_progress":  "bg-amber-400",
 }
 
+# Phases / statuses that should *visually pulse* to signal "something is
+# happening right now". Resolved/completed/scheduled stay static.
+PULSE_PHASES: set[str] = {"active", "acknowledged", "monitoring", "in_progress"}
+PULSE_STATUSES: set[str] = {"degraded", "interrupted"}
+
 templates.env.globals["severity_badge_class"] = (
     lambda s: SEVERITY_BADGE.get(s, "")
 )
@@ -69,6 +100,12 @@ templates.env.globals["state_label"] = (
 )
 templates.env.globals["phase_dot_class"] = (
     lambda s: PHASE_DOT.get(s, "bg-gray-300 dark:bg-gray-600")
+)
+templates.env.globals["phase_pulse_class"] = (
+    lambda s: "animate-pulse" if s in PULSE_PHASES else ""
+)
+templates.env.globals["status_pulse_class"] = (
+    lambda s: "animate-pulse" if s in PULSE_STATUSES else ""
 )
 
 
