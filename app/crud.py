@@ -17,7 +17,8 @@ from app.schemas import (
     StatusPageSchema,
 )
 
-ALLOWED_HTML_TAGS = ["p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "br", "span"]
+ALLOWED_HTML_TAGS = ["p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "br", "span",
+                     "h1", "h2", "h3", "h4", "div", "table", "thead", "tbody", "tr", "td", "th"]
 ALLOWED_HTML_ATTRS = {"a": ["href", "title"]}
 
 _STATUS_SEVERITY = {"operational": 0, "unknown": 1, "degraded": 2, "interrupted": 3}
