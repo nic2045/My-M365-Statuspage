@@ -108,17 +108,25 @@
 </section>
 {% endif %}
 
-{# ── Active incidents ─────────────────────────────────────────────────────────── #}
-{% set has_incidents = data.services | selectattr("active_incidents") | list | length > 0 %}
+{# ── Active incidents (real disruptions only) ────────────────────────────────── #}
+{% set ns = namespace(incidents=[], advisories=[]) %}
+{% for service in data.services %}
+  {% for incident in service.active_incidents %}
+    {% if incident.classification == 'advisory' %}
+      {% set _ = ns.advisories.append(incident) %}
+    {% else %}
+      {% set _ = ns.incidents.append(incident) %}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+
 <section class="mb-6">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    {{ L["page.incidents_heading"] }}
+    {{ L["page.incidents_heading_active"] }}
   </h2>
-  {% if has_incidents %}
-    {% for service in data.services %}
-      {% for incident in service.active_incidents %}
-        {% include "partials/incident_card.html" %}
-      {% endfor %}
+  {% if ns.incidents %}
+    {% for incident in ns.incidents %}
+      {% include "partials/incident_card.html" %}
     {% endfor %}
   {% else %}
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-8 shadow-sm">
@@ -131,6 +139,30 @@
     </div>
   </div>
   {% endif %}
+
+  {# ── Advisories: collapsed below active incidents ────────────────────────── #}
+  <details class="group mt-4">
+    <summary class="flex items-center gap-2 cursor-pointer list-none select-none py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+      <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ L["page.advisories_heading"] }}</span>
+      {% if ns.advisories %}
+      <span class="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[11px] font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+        {{ ns.advisories | length }}
+      </span>
+      {% else %}
+      <span class="ml-auto text-xs text-gray-400 dark:text-gray-500">{{ L["page.advisories_none"] }}</span>
+      {% endif %}
+    </summary>
+    {% if ns.advisories %}
+    <div class="mt-3 space-y-3">
+      {% for incident in ns.advisories %}
+        {% include "partials/incident_card.html" %}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </details>
 </section>
 
 {# ── Incident history (last 30 days, collapsed by default) ────────────────────── #}
@@ -154,19 +186,22 @@
     {% if recent_resolved %}
     <div class="space-y-2">
       {% for incident in recent_resolved %}
-      <details class="group/item bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
-               id="incident-{{ incident.id }}"
-               data-incident-entry
-               data-service="{{ incident.service_name }}"
-               data-start="{{ incident.start_datetime.date().isoformat() if incident.start_datetime else '' }}"
-               data-end="{{ (incident.end_datetime.date().isoformat() if incident.end_datetime else (incident.last_modified.date().isoformat() if incident.last_modified else '')) }}"
-               data-title="{{ incident.title }}"
-               data-href="#incident-{{ incident.id }}"
-               data-meta="{{ incident_type_label(incident.classification) }} · {{ incident.service_name }}">
-        <summary class="flex items-center gap-3 px-4 py-3 cursor-pointer list-none select-none hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-          <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0 transition-transform group-open/item:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-          </svg>
+      <div id="incident-{{ incident.id }}"
+           role="button" tabindex="0"
+           data-incident-entry data-incident-card
+           data-service="{{ incident.service_name }}"
+           data-start="{{ incident.start_datetime.date().isoformat() if incident.start_datetime else '' }}"
+           data-end="{{ (incident.end_datetime.date().isoformat() if incident.end_datetime else (incident.last_modified.date().isoformat() if incident.last_modified else '')) }}"
+           data-title="{{ incident.title }}"
+           data-href="#incident-{{ incident.id }}"
+           data-status="resolved"
+           data-status-label="{{ L['incident.resolved'] }}"
+           data-classification="{{ incident_type_label(incident.classification) }}"
+           data-severity-label="{{ severity_label(incident.severity) if incident.severity else '' }}"
+           data-since="{{ incident.start_datetime | strftime_de if incident.start_datetime else '' }}"
+           data-description="{{ incident.description or '' }}"
+           class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-3 px-4 py-3">
           <div class="flex items-center gap-1.5 shrink-0">
             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
               {% if incident.classification == 'incident' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400
@@ -191,42 +226,8 @@
               {{ (incident.end_datetime or incident.last_modified) | strftime_de }}
             </span>
           </div>
-        </summary>
-        <div class="px-4 pb-4 border-t border-gray-100 dark:border-gray-800 pt-3">
-          {% if incident.description %}
-          <div class="text-sm text-gray-600 dark:text-gray-300 mb-3 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline">
-            {{ incident.description | render_md | safe }}
-          </div>
-          {% endif %}
-          {% set note_updates = incident.updates | selectattr("update_type", "equalto", "note") | list %}
-          {% if note_updates %}
-          <div class="space-y-3">
-            <p class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ L["incident.updates"] }}</p>
-            {% for update in note_updates | reverse %}
-            <div class="flex gap-3">
-              <div class="shrink-0 flex flex-col items-center">
-                <div class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 mt-1.5"></div>
-                {% if not loop.last %}<div class="w-px flex-1 bg-gray-200 dark:bg-gray-700 my-1"></div>{% endif %}
-              </div>
-              <div class="pb-2 min-w-0">
-                <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ update.post_created_at | strftime_de }}</p>
-                <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline">
-                  {{ update.content | render_md | safe }}
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-xs text-gray-400 dark:text-gray-500">
-            {{ L["incident.since"] }}: {{ incident.start_datetime | strftime_de }}
-            {% if incident.end_datetime %}
-            &nbsp;·&nbsp;{{ L["admin.end_datetime"] }}: {{ incident.end_datetime | strftime_de }}
-            {% endif %}
-          </p>
-          {% endif %}
         </div>
-      </details>
+      </div>
       {% endfor %}
     </div>
     {% else %}
