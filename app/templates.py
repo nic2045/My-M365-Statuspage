@@ -94,6 +94,14 @@ PHASE_DOT: dict[str, str] = {
 PULSE_PHASES: set[str] = {"active", "acknowledged", "monitoring", "in_progress"}
 PULSE_STATUSES: set[str] = {"degraded", "interrupted"}
 
+# Incident-type badge — colour family mirrors INCIDENT_BORDER so the chip
+# and the card's left border belong to the same hue.
+INCIDENT_TYPE_BADGE: dict[str, str] = {
+    "incident":    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
+    "advisory":    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+    "maintenance": "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+}
+
 templates.env.globals["severity_badge_class"] = (
     lambda s: SEVERITY_BADGE.get(s, "")
 )
@@ -111,6 +119,9 @@ templates.env.globals["phase_pulse_class"] = (
 )
 templates.env.globals["status_pulse_class"] = (
     lambda s: "animate-pulse" if s in PULSE_STATUSES else ""
+)
+templates.env.globals["incident_type_badge_class"] = (
+    lambda c: INCIDENT_TYPE_BADGE.get(c, INCIDENT_TYPE_BADGE["incident"])
 )
 
 

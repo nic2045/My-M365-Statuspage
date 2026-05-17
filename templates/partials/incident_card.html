@@ -42,9 +42,7 @@
         {% endif %}
       </div>
       <div class="shrink-0 flex flex-col items-end gap-1">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-          {% if incident.classification == 'incident' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400
-          {% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400{% endif %}">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ incident_type_badge_class(incident.classification) }}">
           {{ incident_type_label(incident.classification) }}
         </span>
         {% if incident.severity %}

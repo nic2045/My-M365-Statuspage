@@ -90,9 +90,7 @@
         <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
         </svg>
-        <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full shrink-0
-          {% if issue.get('classification') == 'advisory' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400
-          {% else %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400{% endif %}">
+        <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ incident_type_badge_class(issue.get('classification')) }}">
           {{ issue.get("classification", "?") }}
         </span>
         {% if issue.get("severity") %}
@@ -195,9 +193,7 @@
         <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
         </svg>
-        <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full shrink-0
-          {% if issue.get('classification') == 'advisory' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400
-          {% else %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400{% endif %}">
+        <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ incident_type_badge_class(issue.get('classification')) }}">
           {{ issue.get("classification", "?") }}
         </span>
         <span class="text-sm text-gray-600 dark:text-gray-400 truncate min-w-0 flex-1">{{ issue.get("title", "?") }}</span>

@@ -237,6 +237,21 @@ FastAPI (app/main.py)
 
 ---
 
+## Severity Color Reference
+
+Alle farbigen Chips, Dots, Borders und Balken laufen über zentrale Helper in `app/templates.py` und `app/models.py` — keine hartkodierten Tailwind-Klassen in Templates. Palette-Anpassungen passieren an einer Stelle.
+
+| Dimension | Werte | Farbfamilie |
+|-----------|-------|-------------|
+| Service-Status | `operational` · `degraded` · `interrupted` · `unknown` | grün · amber · rot · grau |
+| Incident-Severity | `critical` · `high` · `medium` · `low` | rot · orange · amber · blau |
+| Incident-Phase | `active` · `acknowledged` · `monitoring` · `resolved` | gelb · orange · blau · emerald |
+| Incident-Typ | `incident` · `advisory` · `maintenance` | rot · amber · blau |
+
+Aktive Phasen (`active`/`acknowledged`/`monitoring`/`in_progress`) und nicht-operative Service-Status (`degraded`/`interrupted`) pulsieren via `animate-pulse` — automatisch unterdrückt unter `prefers-reduced-motion: reduce`. Alle Helper liefern `dark:`-Varianten mit; Kontraste sind WCAG AA gegen die jeweilige Hintergrundklasse geprüft.
+
+---
+
 ## CI / CD
 
 | Job | Beschreibung |
