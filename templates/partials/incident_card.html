@@ -11,6 +11,7 @@
      data-status="{{ 'resolved' if incident.is_resolved else incident.status }}"
      data-status-label="{{ state_label('resolved' if incident.is_resolved else incident.status) }}"
      data-classification="{{ incident_type_label(incident.classification) }}"
+     data-classification-raw="{{ incident.classification }}"
      data-severity-label="{{ severity_label(incident.severity) if incident.severity else '' }}"
      data-since="{{ incident.start_datetime | strftime_de if incident.start_datetime else '' }}"
      data-description="{{ incident.description or '' }}">
