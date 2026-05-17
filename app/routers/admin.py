@@ -29,6 +29,7 @@ from app.crud import (
     get_resolved_incidents,
     get_scheduled_maintenances,
     get_suppressed_incidents,
+    move_service,
     set_service_enabled,
     set_service_group,
     set_service_status_manual,
@@ -263,6 +264,35 @@ async def admin_delete_subscriber(
     await db.commit()
     flash(request, LABELS["toast.subscriber_deleted"])
     return RedirectResponse(url="/admin/settings#subscribers", status_code=303)
+
+
+@router.get("/incidents")
+async def admin_incidents_all(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
+):
+    """List ALL incidents (active + resolved). Suppressed shown for incidents
+    (dimmed) but hidden from advisories per UX preference."""
+    incidents = await get_all_incidents(
+        db, include_resolved=True, classification="incident"
+    )
+    advisories_all = await get_all_incidents(
+        db, include_resolved=True, classification="advisory"
+    )
+    advisories = [a for a in advisories_all if not a.is_suppressed]
+    return templates.TemplateResponse(
+        request,
+        "admin/incidents_all.html",
+        {
+            "user": user,
+            "incidents": incidents,
+            "advisories": advisories,
+            "page_title": f"Alle Störungen – {settings.APP_TITLE}",
+            **nav,
+        },
+    )
 
 
 @router.get("/incidents/new")
@@ -529,6 +559,22 @@ async def toggle_uptime_display(
     new_state = not (svc.show_uptime_percentage if svc else True)
     await set_show_uptime_percentage(db, service_name, new_state)
     await db.commit()
+    return RedirectResponse(url="/admin/settings", status_code=303)
+
+
+@router.post("/services/{service_name}/move")
+async def admin_move_service(
+    request: Request,
+    service_name: str,
+    direction: Annotated[str, Form()],
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Move service one slot up or down within its group (changes public-page order)."""
+    moved = await move_service(db, service_name, direction)
+    await db.commit()
+    if moved:
+        flash(request, LABELS["toast.service_moved"])
     return RedirectResponse(url="/admin/settings", status_code=303)
 
 

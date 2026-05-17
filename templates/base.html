@@ -203,24 +203,27 @@
         statusRow.innerHTML = '<span class="w-1.5 h-1.5 rounded-full ' + style.dot + '"></span>' + statusLabel;
         body.textContent = style.body;
 
-        // Look up incidents covering this date by scanning history entries
-        // (each entry has a data-incident block we can pattern-match against).
+        // Look up incidents covering this date by scanning incident entries
+        // on the page (active cards + history). Click on any opens the full
+        // incident detail in the same modal — no page navigation needed.
         incidentsBox.innerHTML = '';
         const matching = findIncidentsCoveringDate(service, date);
-        if (matching.length === 0) {
-          incidentsBox.innerHTML = '';
-        } else {
+        if (matching.length > 0) {
           const header = document.createElement('p');
           header.className = 'text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2';
           header.textContent = 'Zugehörige Einträge';
           incidentsBox.appendChild(header);
           matching.forEach((inc) => {
-            const link = document.createElement('a');
-            link.href = inc.href;
-            link.className = 'block px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
-            link.innerHTML = '<span class="text-sm font-medium text-gray-800 dark:text-gray-200">' + inc.title + '</span>'
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'w-full text-left block px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
+            btn.innerHTML = '<span class="text-sm font-medium text-gray-800 dark:text-gray-200">' + inc.title + '</span>'
               + '<span class="block text-xs text-gray-400 dark:text-gray-500 mt-0.5">' + inc.meta + '</span>';
-            incidentsBox.appendChild(link);
+            btn.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              if (inc.element) openIncidentCard(inc.element);
+            });
+            incidentsBox.appendChild(btn);
           });
         }
 
@@ -248,7 +251,8 @@
             out.push({
               title: el.dataset.title || '(ohne Titel)',
               href: el.dataset.href || '#',
-              meta: el.dataset.meta || '',
+              meta: el.dataset.meta || (el.dataset.classification ? el.dataset.classification + ' · ' + (el.dataset.service || '') : ''),
+              element: el,
             });
           }
         });

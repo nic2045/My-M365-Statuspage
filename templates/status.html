@@ -4,7 +4,7 @@
 
 {# ── Overall status banner ──────────────────────────────────────────────────── #}
 {% set overall = data.overall_status %}
-<div class="rounded-2xl px-5 py-4 mb-6 flex items-center justify-between
+<div class="rounded-2xl px-5 py-4 mb-4 flex items-center justify-between
   {% if overall == 'operational' %}
     bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800
   {% elif overall == 'interrupted' %}
@@ -31,6 +31,47 @@
   </span>
   {% endif %}
 </div>
+
+{# ── Top tab navigation (anchor scrolling) ──────────────────────────────────── #}
+<nav class="mb-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-x-auto">
+  <div class="flex items-stretch divide-x divide-gray-100 dark:divide-gray-800 min-w-max">
+    {% for href, label_key, icon in [
+      ('#overview',     'page.tab_overview',     'overview'),
+      ('#incidents',    'page.tab_incidents',    'incidents'),
+      ('#advisories',   'page.tab_advisories',   'advisories'),
+      ('#maintenances', 'page.tab_maintenances', 'maintenances'),
+      ('#history',      'page.tab_history',      'history'),
+    ] %}
+    <a href="{{ href }}"
+       class="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        {% if icon == 'overview' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        {% elif icon == 'incidents' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.814-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
+        {% elif icon == 'advisories' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12M19 9v6m-7-3v3m-7-3v3M3 8a4 4 0 014-4h10a4 4 0 014 4v8a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/>
+        {% elif icon == 'maintenances' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        {% elif icon == 'history' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+        {% endif %}
+      </svg>
+      <span>{{ L[label_key] }}</span>
+    </a>
+    {% endfor %}
+    <button type="button"
+            data-open-subscribe
+            class="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50/40 dark:bg-blue-950/20 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+      <span>{{ L["subscribe.tab"] }}</span>
+    </button>
+  </div>
+</nav>
+
+<a id="overview" class="block scroll-mt-20"></a>
 
 {# ── Service uptime rows ─────────────────────────────────────────────────────── #}
 <section class="mb-8">
@@ -62,6 +103,7 @@
 </section>
 
 {# ── Scheduled maintenances ───────────────────────────────────────────────────── #}
+<a id="maintenances" class="block scroll-mt-20"></a>
 {% if maintenances %}
 <section class="mb-8">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
@@ -120,6 +162,7 @@
   {% endfor %}
 {% endfor %}
 
+<a id="incidents" class="block scroll-mt-20"></a>
 <section class="mb-6">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
     {{ L["page.incidents_heading_active"] }}
@@ -139,14 +182,19 @@
     </div>
   </div>
   {% endif %}
+</section>
 
-  {# ── Advisories: collapsed below active incidents ────────────────────────── #}
-  <details class="group mt-4">
-    <summary class="flex items-center gap-2 cursor-pointer list-none select-none py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+{# ── Aktuelle Hinweise (same heading style as Aktive Störungen) ───────────── #}
+<a id="advisories" class="block scroll-mt-20"></a>
+<section class="mb-6">
+  <details class="group" {% if ns.advisories %}open{% endif %}>
+    <summary class="flex items-center gap-2 cursor-pointer list-none select-none mb-3">
       <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
       </svg>
-      <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ L["page.advisories_heading"] }}</span>
+      <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+        {{ L["page.advisories_heading"] }}
+      </h2>
       {% if ns.advisories %}
       <span class="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[11px] font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
         {{ ns.advisories | length }}
@@ -156,7 +204,7 @@
       {% endif %}
     </summary>
     {% if ns.advisories %}
-    <div class="mt-3 space-y-3">
+    <div class="space-y-3">
       {% for incident in ns.advisories %}
         {% include "partials/incident_card.html" %}
       {% endfor %}
@@ -166,6 +214,7 @@
 </section>
 
 {# ── Incident history (last 30 days, collapsed by default) ────────────────────── #}
+<a id="history" class="block scroll-mt-20"></a>
 <section>
   <details class="group">
     <summary class="flex items-center gap-2 cursor-pointer list-none select-none mb-3">
@@ -184,11 +233,29 @@
     </summary>
 
     {% if recent_resolved %}
-    <div class="space-y-2">
+    {# ── Service filter for history ─────────────────────────────────────── #}
+    {% set history_services = recent_resolved | map(attribute='service_name') | list | unique | sort %}
+    <div class="flex flex-wrap items-center gap-2 mb-3" data-history-filter>
+      <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">
+        {{ L["page.history_filter"] }}
+      </span>
+      <button type="button" data-history-filter-btn="" data-active="1"
+              class="text-xs px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-colors">
+        {{ L["page.history_filter_all"] }}
+      </button>
+      {% for svc in history_services %}
+      <button type="button" data-history-filter-btn="{{ svc }}"
+              class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+        {{ svc }}
+      </button>
+      {% endfor %}
+    </div>
+    <div class="space-y-2" data-history-entries>
       {% for incident in recent_resolved %}
       <div id="incident-{{ incident.id }}"
            role="button" tabindex="0"
            data-incident-entry data-incident-card
+           data-history-entry
            data-service="{{ incident.service_name }}"
            data-start="{{ incident.start_datetime.date().isoformat() if incident.start_datetime else '' }}"
            data-end="{{ (incident.end_datetime.date().isoformat() if incident.end_datetime else (incident.last_modified.date().isoformat() if incident.last_modified else '')) }}"
@@ -230,6 +297,42 @@
       </div>
       {% endfor %}
     </div>
+    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500 hidden" data-history-empty-filter>
+      {{ L["page.history_filter_empty"] }}
+    </p>
+    <script>
+      (function () {
+        const buttons = document.querySelectorAll('[data-history-filter-btn]');
+        const entries = document.querySelectorAll('[data-history-entry]');
+        const emptyMsg = document.querySelector('[data-history-empty-filter]');
+        function apply(filter) {
+          let visible = 0;
+          entries.forEach((el) => {
+            const match = !filter || el.dataset.service === filter;
+            el.classList.toggle('hidden', !match);
+            if (match) visible++;
+          });
+          if (emptyMsg) emptyMsg.classList.toggle('hidden', visible > 0);
+          buttons.forEach((b) => {
+            const active = (b.dataset.historyFilterBtn || '') === filter;
+            b.dataset.active = active ? '1' : '';
+            b.classList.toggle('border-blue-300', active);
+            b.classList.toggle('bg-blue-50', active);
+            b.classList.toggle('text-blue-700', active);
+            b.classList.toggle('dark:border-blue-700', active);
+            b.classList.toggle('dark:bg-blue-950/40', active);
+            b.classList.toggle('dark:text-blue-300', active);
+            b.classList.toggle('border-gray-200', !active);
+            b.classList.toggle('dark:border-gray-700', !active);
+            b.classList.toggle('text-gray-600', !active);
+            b.classList.toggle('dark:text-gray-400', !active);
+          });
+        }
+        buttons.forEach((b) => {
+          b.addEventListener('click', () => apply(b.dataset.historyFilterBtn || ''));
+        });
+      })();
+    </script>
     {% else %}
     <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-6 shadow-sm flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
       <svg class="w-5 h-5 shrink-0 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -239,28 +342,77 @@
   </details>
 </section>
 
-{# ── Subscribe ────────────────────────────────────────────────────────────────── #}
-<section class="mt-10 pt-6 border-t border-gray-100 dark:border-gray-800">
-  <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-    <div class="flex items-center gap-2.5 shrink-0">
-      <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-      </svg>
-      <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ L["subscribe.label"] }}</span>
-    </div>
-    <form method="post" action="/subscribe" class="flex items-center gap-2 flex-1 min-w-0">
-      <input type="email"
-             name="email"
-             required
-             placeholder="{{ L['subscribe.email_placeholder'] }}"
-             class="flex-1 min-w-0 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      <button type="submit"
-              class="shrink-0 text-sm px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 font-medium transition-colors">
-        {{ L["subscribe.submit"] }}
+{# ── Subscribe modal (opened by top tab) ───────────────────────────────────── #}
+<div id="subscribe-modal" role="dialog" aria-modal="true" aria-labelledby="subscribe-modal-title"
+     class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+  <div data-subscribe-modal-backdrop class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full border border-gray-100 dark:border-gray-800 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 id="subscribe-modal-title" class="text-base font-semibold text-gray-900 dark:text-white">{{ L["subscribe.modal_title"] }}</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ L["subscribe.modal_sub"] }}</p>
+        </div>
+      </div>
+      <button type="button" data-subscribe-modal-close aria-label="Schließen"
+              class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 -m-1 p-1 rounded shrink-0">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+        </svg>
       </button>
+    </div>
+    <form method="post" action="/subscribe" class="px-5 py-4 space-y-3">
+      <div>
+        <label for="subscribe-email" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["subscribe.label"] }}</label>
+        <input id="subscribe-email"
+               type="email" name="email" required autofocus
+               placeholder="{{ L['subscribe.email_placeholder'] }}"
+               class="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">{{ L["subscribe.hint"] }}</p>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" data-subscribe-modal-close
+                class="text-sm px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          {{ L["subscribe.cancel"] }}
+        </button>
+        <button type="submit"
+                class="text-sm px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">
+          {{ L["subscribe.submit"] }}
+        </button>
+      </div>
     </form>
-    <span class="text-xs text-gray-400 dark:text-gray-500 sm:shrink-0">{{ L["subscribe.hint"] }}</span>
   </div>
-</section>
+</div>
+
+<script>
+  (function () {
+    const modal = document.getElementById('subscribe-modal');
+    const open = () => {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.classList.add('overflow-hidden');
+      modal.querySelector('input[name=email]')?.focus();
+    };
+    const close = () => {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.body.classList.remove('overflow-hidden');
+    };
+    document.querySelectorAll('[data-open-subscribe]').forEach((el) => {
+      el.addEventListener('click', (e) => { e.preventDefault(); open(); });
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target.closest('[data-subscribe-modal-close], [data-subscribe-modal-backdrop]')) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+    });
+  })();
+</script>
 
 {% endblock %}

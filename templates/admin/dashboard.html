@@ -50,11 +50,11 @@
     </div>
     {% endif %}
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
       {% for svc in svc_list %}
         {% set cur = svc.current_status %}
         {% set meta = status_meta.get(cur, status_meta['unknown']) %}
-        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-3 flex items-center gap-3">
+        <div class="px-4 py-3 flex items-center gap-3">
           <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ meta.dot }} ring-4 {{ meta.ring }}"
                 title="{{ meta.label }}"></span>
           <div class="flex-1 min-w-0">
@@ -89,7 +89,8 @@
 
 {# ── Aktive Störungen ────────────────────────────────────────────────────────── #}
 {% macro incident_row(inc) %}
-<div class="flex items-center justify-between px-5 py-3 group">
+<div class="flex items-center justify-between px-5 py-3 group {{ 'opacity-60' if inc.is_suppressed else '' }}"
+     data-row data-service="{{ inc.service_name }}">
   <a href="/admin/incidents/{{ inc.id }}" class="flex-1 flex items-center gap-0 hover:opacity-80 transition-opacity min-w-0">
     {% set _phase = 'resolved' if inc.is_resolved else inc.status %}
     <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ phase_dot_class(_phase) }}"
@@ -114,11 +115,36 @@
 </div>
 {% endmacro %}
 
-<section id="incidents" class="mb-8 scroll-mt-20">
-  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    {{ L["admin.incidents_only"] }}
-  </h2>
+{% macro service_filter_pills(items, scope) %}
+  {% set svc_list = items | map(attribute='service_name') | list | unique | sort %}
+  {% if svc_list | length > 1 %}
+  <div class="flex flex-wrap items-center gap-2 mb-3" data-filter-scope="{{ scope }}">
+    <button type="button" data-filter-svc="" data-active="1"
+            class="text-xs px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-colors">
+      {{ L["admin.filter_all"] }}
+    </button>
+    {% for s in svc_list %}
+    <button type="button" data-filter-svc="{{ s }}"
+            class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+      {{ s }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endmacro %}
+
+<section id="incidents" class="mb-8 scroll-mt-20" data-filter-section="incidents">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+      {{ L["admin.incidents_only"] }}
+    </h2>
+    <a href="/admin/incidents"
+       class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+      {{ L["admin.show_all_incidents"] }} →
+    </a>
+  </div>
   {% if incidents %}
+  {{ service_filter_pills(incidents, 'incidents') }}
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
     {% for inc in incidents %}{{ incident_row(inc) }}{% endfor %}
   </div>
@@ -133,25 +159,6 @@
         <p class="text-xs text-gray-500 dark:text-gray-400">{{ L["empty.admin.incidents_sub"] }}</p>
       </div>
     </div>
-  </div>
-  {% endif %}
-</section>
-
-{# ── Hinweise (Advisories) ───────────────────────────────────────────────────── #}
-<section id="advisories" class="mb-8 scroll-mt-20">
-  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    {{ L["admin.advisories"] }}
-  </h2>
-  {% if advisories %}
-  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
-    {% for inc in advisories %}{{ incident_row(inc) }}{% endfor %}
-  </div>
-  {% else %}
-  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-400 dark:text-gray-500 shadow-sm flex items-center gap-2">
-    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
-    </svg>
-    <span>{{ L["empty.admin.advisories"] }}</span>
   </div>
   {% endif %}
 </section>
@@ -194,14 +201,16 @@
 </section>
 
 {# ── Geplante Wartungen ──────────────────────────────────────────────────────── #}
-<section id="maintenances" class="scroll-mt-20">
+<section id="maintenances" class="scroll-mt-20" data-filter-section="maintenances">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
     {{ L["admin.maintenances"] }}
   </h2>
   {% if maintenances %}
+  {{ service_filter_pills(maintenances, 'maintenances') }}
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
     {% for m in maintenances %}
     <a href="/admin/incidents/{{ m.id }}"
+       data-row data-service="{{ m.service_name }}"
        class="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
       <div>
         <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400 mr-2">
@@ -225,5 +234,36 @@
   </div>
   {% endif %}
 </section>
+
+<script>
+  // Service-filter pills: each section with [data-filter-section] has its own
+  // [data-filter-scope] pill bar and [data-row data-service=...] rows.
+  (function () {
+    document.querySelectorAll('[data-filter-section]').forEach((section) => {
+      const buttons = section.querySelectorAll('[data-filter-svc]');
+      const rows = section.querySelectorAll('[data-row]');
+      function apply(svc) {
+        rows.forEach((r) => {
+          const match = !svc || r.dataset.service === svc;
+          r.classList.toggle('hidden', !match);
+        });
+        buttons.forEach((b) => {
+          const active = (b.dataset.filterSvc || '') === svc;
+          b.classList.toggle('border-blue-300', active);
+          b.classList.toggle('bg-blue-50', active);
+          b.classList.toggle('text-blue-700', active);
+          b.classList.toggle('dark:border-blue-700', active);
+          b.classList.toggle('dark:bg-blue-950/40', active);
+          b.classList.toggle('dark:text-blue-300', active);
+          b.classList.toggle('border-gray-200', !active);
+          b.classList.toggle('dark:border-gray-700', !active);
+          b.classList.toggle('text-gray-600', !active);
+          b.classList.toggle('dark:text-gray-400', !active);
+        });
+      }
+      buttons.forEach((b) => b.addEventListener('click', () => apply(b.dataset.filterSvc || '')));
+    });
+  })();
+</script>
 
 {% endblock %}
