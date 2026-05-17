@@ -8,7 +8,14 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Incident, IncidentUpdate, MonitoredService, ServiceStatus, Subscriber
+from app.models import (
+    Incident,
+    IncidentUpdate,
+    MonitoredService,
+    ServiceStatus,
+    SourceLabel,
+    Subscriber,
+)
 from app.schemas import (
     DayStatusSchema,
     IncidentSchema,
@@ -326,6 +333,7 @@ async def create_manual_incident(
     severity: str = "",
     description: str | None = None,
     start_datetime: datetime | None = None,
+    end_datetime: datetime | None = None,
     scheduled_start: datetime | None = None,
     scheduled_end: datetime | None = None,
     source: str = "manual",
@@ -342,8 +350,9 @@ async def create_manual_incident(
         severity=severity,
         description=description or None,
         start_datetime=start,
+        end_datetime=end_datetime,
         last_modified=now,
-        is_resolved=False,
+        is_resolved=end_datetime is not None,
         source=source or "manual",
         external_id=external_id or None,
         scheduled_start=scheduled_start,
@@ -459,6 +468,31 @@ async def get_distinct_sources(db: AsyncSession) -> list[str]:
         .order_by(Incident.source)
     )
     return [row[0] for row in result.fetchall()]
+
+
+async def get_all_source_labels(db: AsyncSession) -> list[SourceLabel]:
+    result = await db.execute(
+        select(SourceLabel).order_by(SourceLabel.is_system.desc(), SourceLabel.source)
+    )
+    return list(result.scalars().all())
+
+
+async def upsert_source_label(db: AsyncSession, source: str, label: str) -> None:
+    existing = await db.get(SourceLabel, source)
+    if existing:
+        existing.label = label
+    else:
+        db.add(SourceLabel(source=source, label=label, is_system=False))
+    await db.commit()
+
+
+async def delete_source_label(db: AsyncSession, source: str) -> bool:
+    existing = await db.get(SourceLabel, source)
+    if existing and not existing.is_system:
+        await db.delete(existing)
+        await db.commit()
+        return True
+    return False
 
 
 def _service_sort_clause():

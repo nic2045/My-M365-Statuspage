@@ -23,11 +23,13 @@ from app.crud import (
     add_state_change_entry,
     admin_update_incident,
     create_manual_incident,
+    delete_source_label,
     delete_subscriber,
     ensure_service_known,
     get_all_incidents,
     get_all_maintenances,
     get_all_monitored_services,
+    get_all_source_labels,
     get_all_subscribers,
     get_confirmed_subscribers,
     get_distinct_sources,
@@ -41,6 +43,7 @@ from app.crud import (
     set_service_status_manual,
     set_show_uptime_percentage,
     toggle_suppress_incident,
+    upsert_source_label,
 )
 from app.crud import delete_incident as crud_delete_incident
 from app.database import AsyncSessionLocal
@@ -180,11 +183,14 @@ async def admin_settings(
     user: dict = Depends(require_auth),
     nav: dict = Depends(admin_nav_context),
 ):
-    all_services = await get_all_monitored_services(db)
-    known_groups = await get_known_groups(db)
-    subscribers = await get_all_subscribers(db)
-    email_cfg = await get_email_settings(db)
-    azure_cfg = await get_azure_settings(db)
+    all_services, known_groups, subscribers, email_cfg, azure_cfg, source_labels = await asyncio.gather(
+        get_all_monitored_services(db),
+        get_known_groups(db),
+        get_all_subscribers(db),
+        get_email_settings(db),
+        get_azure_settings(db),
+        get_all_source_labels(db),
+    )
     return templates.TemplateResponse(
         request,
         "admin/settings.html",
@@ -196,6 +202,7 @@ async def admin_settings(
             "teams_webhook_urls": settings.TEAMS_WEBHOOK_URLS,
             "email_cfg": email_cfg,
             "azure_cfg": azure_cfg,
+            "source_labels": source_labels,
             "page_title": f"Einstellungen – {settings.APP_TITLE}",
             **nav,
         },
@@ -289,6 +296,50 @@ async def admin_save_azure_settings(
     return RedirectResponse(url="/admin/settings#azure", status_code=303)
 
 
+@router.post("/api/source-labels")
+async def api_save_source_label(
+    request: Request,
+    source: Annotated[str, Form()],
+    label: Annotated[str, Form()],
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    src = source.strip()
+    lbl = label.strip()
+    if src and lbl:
+        await upsert_source_label(db, src, lbl)
+    from fastapi.responses import JSONResponse
+    return JSONResponse({"ok": True})
+
+
+@router.post("/settings/source-labels")
+async def settings_save_source_label(
+    request: Request,
+    source: Annotated[str, Form()],
+    label: Annotated[str, Form()],
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    src = source.strip()
+    lbl = label.strip()
+    if src and lbl:
+        await upsert_source_label(db, src, lbl)
+    flash(request, "Label gespeichert.")
+    return RedirectResponse(url="/admin/settings#source-labels", status_code=303)
+
+
+@router.post("/settings/source-labels/{source}/delete")
+async def settings_delete_source_label(
+    request: Request,
+    source: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    await delete_source_label(db, source)
+    flash(request, "Label entfernt.")
+    return RedirectResponse(url="/admin/settings#source-labels", status_code=303)
+
+
 @router.post("/subscribers/{subscriber_id}/delete")
 async def admin_delete_subscriber(
     request: Request,
@@ -376,10 +427,12 @@ async def new_incident_form(
     user: dict = Depends(require_auth),
     nav: dict = Depends(admin_nav_context),
 ):
-    enabled_services, known_sources = await asyncio.gather(
+    enabled_services, known_sources, all_labels = await asyncio.gather(
         get_enabled_services(db),
         get_distinct_sources(db),
+        get_all_source_labels(db),
     )
+    source_labels = {sl.source: sl.label for sl in all_labels}
     return templates.TemplateResponse(
         request,
         "admin/incident_form.html",
@@ -387,6 +440,7 @@ async def new_incident_form(
             "user": user,
             "services": enabled_services,
             "known_sources": known_sources,
+            "source_labels": source_labels,
             "page_title": "Neue Störung / Hinweis",
             **nav,
         },
@@ -401,6 +455,7 @@ async def create_incident(
     severity: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
     start_datetime: Annotated[str | None, Form()] = None,
+    end_datetime: Annotated[str | None, Form()] = None,
     source: Annotated[str, Form()] = "manual",
     external_id: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
@@ -414,6 +469,7 @@ async def create_incident(
         severity=severity or "",
         description=description or None,
         start_datetime=_parse_form_dt(start_datetime),
+        end_datetime=_parse_form_dt(end_datetime),
         source=source or "manual",
         external_id=external_id.strip() if external_id else None,
     )
@@ -462,10 +518,12 @@ async def incident_detail(
     incident = await get_incident_by_id(db, incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Nicht gefunden")
-    enabled_services, known_sources = await asyncio.gather(
+    enabled_services, known_sources, all_labels = await asyncio.gather(
         get_enabled_services(db),
         get_distinct_sources(db),
+        get_all_source_labels(db),
     )
+    source_labels = {sl.source: sl.label for sl in all_labels}
     return templates.TemplateResponse(
         request,
         "admin/incident_detail.html",
@@ -474,6 +532,7 @@ async def incident_detail(
             "incident": incident,
             "services": enabled_services,
             "known_sources": known_sources,
+            "source_labels": source_labels,
             "phase_segments": _compute_phase_segments(incident),
             "page_title": incident.title,
             **nav,
@@ -489,6 +548,7 @@ async def update_incident(
     severity: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
     is_resolved: Annotated[str | None, Form()] = None,
+    start_datetime: Annotated[str | None, Form()] = None,
     end_datetime: Annotated[str | None, Form()] = None,
     scheduled_start: Annotated[str | None, Form()] = None,
     scheduled_end: Annotated[str | None, Form()] = None,
@@ -516,6 +576,8 @@ async def update_incident(
         "end_datetime": parsed_end,
         "external_id": external_id.strip() if external_id else None,
     }
+    if start_datetime:
+        updates["start_datetime"] = _parse_form_dt(start_datetime)
     if source:
         updates["source"] = source
     if scheduled_start is not None or scheduled_end is not None:

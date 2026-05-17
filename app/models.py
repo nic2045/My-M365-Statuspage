@@ -153,3 +153,13 @@ class AppSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )
+
+
+class SourceLabel(Base):
+    """Human-readable labels for source/origin values on incidents.
+    System entries (manual, graph) are seeded and marked read-only via is_system."""
+    __tablename__ = "source_labels"
+
+    source: Mapped[str] = mapped_column(String(100), primary_key=True)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
