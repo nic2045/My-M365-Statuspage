@@ -94,4 +94,8 @@ LABELS: dict[str, str] = {
     "admin.service_disable":      "Deaktivieren",
     "admin.no_known_services":    "Noch keine Dienste bekannt.",
     "admin.service_backfill_hint": "90-Tage-Verlauf wird im Hintergrund geladen…",
+    "admin.uptime_shown":         "Verfügbarkeit sichtbar",
+    "admin.uptime_hidden":        "Verfügbarkeit ausgeblendet",
+    "admin.uptime_toggle_hint":   "Gesamtverfügbarkeit der letzten 90 Tage auf der Statusseite ein-/ausblenden",
+    "page.uptime_90d":            "Gesamtverfügbarkeit (90 Tage)",
 }

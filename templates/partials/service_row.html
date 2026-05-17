@@ -13,5 +13,11 @@
       {{ status_label(service.current_status) }}
     </span>
   </div>
+  {% if service.uptime_percentage is not none %}
+  <div class="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+    <span>{{ L["page.uptime_90d"] }}</span>
+    <span class="font-medium text-gray-700 dark:text-gray-200">{{ "%.2f"|format(service.uptime_percentage) }} %</span>
+  </div>
+  {% endif %}
   {% include "partials/uptime_bar.html" %}
 </div>

@@ -386,6 +386,48 @@ async def set_service_enabled(
     return svc
 
 
+async def set_show_uptime_percentage(
+    db: AsyncSession, service_name: str, show: bool
+) -> MonitoredService:
+    svc = await ensure_service_known(db, service_name)
+    svc.show_uptime_percentage = show
+    await db.flush()
+    return svc
+
+
+async def get_uptime_percentage(
+    db: AsyncSession,
+    service_name: str,
+    days: int = 90,
+) -> float | None:
+    """Return uptime % over the window. operational=1.0, degraded=0.5, interrupted=0.
+
+    no_data/unknown days are excluded from the denominator. Returns None when
+    no day in the window has data.
+    """
+    today = date.today()
+    start_date = today - timedelta(days=days - 1)
+    result = await db.execute(
+        select(ServiceStatus.status).where(
+            ServiceStatus.service_name == service_name,
+            ServiceStatus.date >= start_date,
+            ServiceStatus.date <= today,
+        )
+    )
+    weights = {"operational": 1.0, "degraded": 0.5, "interrupted": 0.0}
+    total = 0
+    score = 0.0
+    for row in result.fetchall():
+        status = row[0]
+        if status not in weights:
+            continue
+        total += 1
+        score += weights[status]
+    if total == 0:
+        return None
+    return round(score / total * 100, 2)
+
+
 async def backfill_service_status_from_issues(
     db: AsyncSession,
     service_name: str,
@@ -454,10 +496,19 @@ async def build_status_page_data(
     services: list[ServiceStatusSchema] = []
     overall_severity = 0
 
+    show_flags_result = await db.execute(
+        select(MonitoredService.service_name, MonitoredService.show_uptime_percentage)
+        .where(MonitoredService.service_name.in_(service_names))
+    )
+    show_flags = {row[0]: row[1] for row in show_flags_result.fetchall()}
+
     for name in service_names:
         current_status = await get_service_current_status(db, name)
         uptime_days = await get_uptime_bars(db, name)
         raw_incidents = await get_active_incidents(db, service_name=name)
+        uptime_pct = (
+            await get_uptime_percentage(db, name) if show_flags.get(name, True) else None
+        )
 
         incident_schemas = [
             IncidentSchema(
@@ -493,6 +544,7 @@ async def build_status_page_data(
                 current_status=current_status,
                 uptime_days=uptime_days,
                 active_incidents=incident_schemas,
+                uptime_percentage=uptime_pct,
             )
         )
 
