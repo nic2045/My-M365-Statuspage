@@ -1,5 +1,7 @@
-{# Renders 90 colored day bars. Expects `service` in scope. #}
-<div class="flex gap-px w-full mt-2" aria-label="90-Tage Verfügbarkeit">
+{# Renders colored day bars over the selected range. Expects `service` and
+   `range_days` in scope (range_days defaults to 90 for embed/legacy callers). #}
+{% set _range_days = range_days | default(service.uptime_days | length, true) %}
+<div class="flex gap-px w-full mt-2" aria-label="{{ _range_days }}-Tage Verfügbarkeit">
   {% for day in service.uptime_days %}
   <button type="button"
     data-day-bar
@@ -15,7 +17,7 @@
   {% endfor %}
 </div>
 <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
-  <span>vor 90 Tagen</span>
+  <span>{% if _range_days == 1 %}vor 24h{% else %}vor {{ _range_days }} Tagen{% endif %}</span>
   <span>heute</span>
   {% if service.uptime_percentage is not none %}
   <span class="font-medium text-gray-600 dark:text-gray-300 ml-3">{{ "%.2f"|format(service.uptime_percentage) }} %</span>

@@ -75,9 +75,25 @@
 
 {# ── Service uptime rows ─────────────────────────────────────────────────────── #}
 <section class="mb-8">
-  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    {{ L["page.uptime_heading"] }}
-  </h2>
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+      {{ L["page.uptime_heading"] }}
+    </h2>
+    <div class="flex items-center gap-2" data-range-toggle>
+      <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">{{ L["page.range.label"] }}</span>
+      {% for opt in range_options %}
+        {% set is_active = opt == selected_range %}
+        <button type="button"
+                data-range="{{ opt }}"
+                {% if is_active %}data-active="1" aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
+                class="text-xs px-2.5 py-1 rounded-full border transition-colors
+                  {% if is_active %}border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300
+                  {% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500{% endif %}">
+          {{ L["page.range." ~ opt] }}
+        </button>
+      {% endfor %}
+    </div>
+  </div>
   {# Services are pre-sorted by (group, name) in get_enabled_services.
      group_services() buckets them while preserving that order — Jinja's
      groupby would re-sort and fail on mixed None/str keys. Headers shown
@@ -440,6 +456,42 @@
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+    });
+  })();
+</script>
+
+<script>
+  // Uptime range toggle: URL ?range=… wins on first load, otherwise LocalStorage.
+  // Clicking a pill navigates with the new range and persists the choice.
+  (function () {
+    const STORAGE_KEY = 'm365-statuspage:range';
+    const VALID = {{ range_options | tojson }};
+    const current = {{ selected_range | tojson }};
+    const urlParam = new URLSearchParams(window.location.search).get('range');
+
+    try {
+      if (urlParam && VALID.includes(urlParam)) {
+        localStorage.setItem(STORAGE_KEY, urlParam);
+      } else {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored && VALID.includes(stored) && stored !== current) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('range', stored);
+          window.location.replace(url.toString());
+          return;
+        }
+      }
+    } catch (_) { /* localStorage unavailable */ }
+
+    document.querySelectorAll('[data-range-toggle] [data-range]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const value = btn.dataset.range;
+        if (!VALID.includes(value) || value === current) return;
+        try { localStorage.setItem(STORAGE_KEY, value); } catch (_) {}
+        const url = new URL(window.location.href);
+        url.searchParams.set('range', value);
+        window.location.assign(url.toString());
+      });
     });
   })();
 </script>

@@ -679,6 +679,7 @@ async def set_service_status_manual(
 async def build_status_page_data(
     db: AsyncSession,
     service_names: list[str],
+    days: int = 90,
 ) -> StatusPageSchema:
     services: list[ServiceStatusSchema] = []
     overall_severity = 0
@@ -695,11 +696,11 @@ async def build_status_page_data(
 
     for name in service_names:
         current_status = await get_service_current_status(db, name)
-        uptime_days = await get_uptime_bars(db, name)
+        uptime_days = await get_uptime_bars(db, name, days=days)
         raw_incidents = await get_active_incidents(db, service_name=name)
         meta = svc_meta.get(name, {})
         uptime_pct = (
-            await get_uptime_percentage(db, name) if meta.get("show_uptime", True) else None
+            await get_uptime_percentage(db, name, days=days) if meta.get("show_uptime", True) else None
         )
 
         incident_schemas = [
