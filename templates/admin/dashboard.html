@@ -163,6 +163,25 @@
   {% endif %}
 </section>
 
+{# ── Aktuelle Hinweise ───────────────────────────────────────────────────────── #}
+<section id="advisories" class="mb-8 scroll-mt-20" data-filter-section="advisories">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+      {{ L["admin.advisories"] }}
+    </h2>
+  </div>
+  {% if advisories %}
+  {{ service_filter_pills(advisories, 'advisories') }}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
+    {% for inc in advisories %}{{ incident_row(inc) }}{% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-400 dark:text-gray-500 shadow-sm">
+    {{ L["empty.admin.advisories"] }}
+  </div>
+  {% endif %}
+</section>
+
 {# ── Ignorierte Meldungen ────────────────────────────────────────────────────── #}
 <section class="mb-8">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
