@@ -222,6 +222,13 @@ LABELS: dict[str, str] = {
     # Notification send
     "notify.new_incident":            "Neue Störung",
     "notify.update":                  "Status-Update",
+    # Source / reference on incidents
+    "admin.source_label":            "Quelle",
+    "admin.source_microsoft":        "Microsoft (Graph)",
+    "admin.source_manual":           "Manuell",
+    "admin.source_other":            "Sonstige",
+    "admin.external_id_label":       "Referenz / ID",
+    "admin.external_id_placeholder": "z. B. MO1310977",
     # Azure AD settings
     "admin.azure_heading":            "Azure AD App",
     "admin.azure_hint":               "Credentials der Azure-AD-App für Microsoft Graph API und E-Mail-Versand.",

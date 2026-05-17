@@ -12,7 +12,7 @@
   <form method="post" action="/admin/incidents" class="space-y-4">
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
         {{ L["admin.title_label"] }}
       </label>
       <input type="text" name="title" required
@@ -21,7 +21,7 @@
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
         {{ L["admin.service_label"] }}
       </label>
       <select name="service_name" required
@@ -34,7 +34,7 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
           {{ L["admin.classification_label"] }}
         </label>
         <select name="classification"
@@ -44,7 +44,7 @@
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
           {{ L["admin.severity_label"] }}
         </label>
         <select name="severity"
@@ -60,7 +60,7 @@
 
     <div>
       <div class="flex items-center justify-between mb-1">
-        <label for="start_datetime" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label for="start_datetime" class="block text-xs font-medium text-gray-500 dark:text-gray-400">
           {{ L["admin.start_datetime"] }}
         </label>
         <button type="button" id="start-now-btn"
@@ -73,13 +73,36 @@
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
         {{ L["admin.description_label"] }}
         <span class="font-normal text-gray-400">(optional)</span>
       </label>
       <textarea name="description" rows="3"
                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 placeholder="Detailbeschreibung der Störung…"></textarea>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          {{ L["admin.source_label"] }}
+        </label>
+        <select name="source"
+                class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="manual" selected>{{ L["admin.source_manual"] }}</option>
+          <option value="graph">{{ L["admin.source_microsoft"] }}</option>
+          <option value="other">{{ L["admin.source_other"] }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          {{ L["admin.external_id_label"] }}
+          <span class="font-normal text-gray-400">(optional)</span>
+        </label>
+        <input type="text" name="external_id"
+               placeholder="{{ L['admin.external_id_placeholder'] }}"
+               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+      </div>
     </div>
 
     <div class="pt-2">

@@ -34,18 +34,13 @@
 </div>
 
 {% if all_services | length > 1 %}
-<div class="flex flex-wrap items-center gap-2 mb-4">
-  <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">{{ L["page.history_filter"] }}</span>
-  <button type="button" data-filter-svc="" data-active="1"
-          class="text-xs px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-colors">
-    {{ L["admin.filter_all"] }}
-  </button>
-  {% for s in all_services %}
-  <button type="button" data-filter-svc="{{ s }}"
-          class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-    {{ s }}
-  </button>
-  {% endfor %}
+<div class="flex items-center gap-2 mb-4">
+  <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">{{ L["admin.filter_state"] }}</span>
+  <select id="svc-filter-select"
+          class="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+    <option value="">{{ L["admin.filter_all"] }}</option>
+    {% for s in all_services %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+  </select>
 </div>
 {% endif %}
 
@@ -117,19 +112,44 @@
 
 <script>
   (function () {
-    const buttons = document.querySelectorAll('[data-filter]');
+    const stateButtons = document.querySelectorAll('[data-filter]');
+    const svcSelect = document.getElementById('svc-filter-select');
     const rows = document.querySelectorAll('[data-incident-row]');
     const emptyMsg = document.querySelector('[data-filter-empty]');
-    function apply(filter) {
+    let activeState = 'all';
+
+    function applyFilters() {
+      const svc = svcSelect ? svcSelect.value : '';
       let visible = 0;
       rows.forEach((row) => {
-        const match = filter === 'all' || row.dataset.state === filter;
-        row.classList.toggle('hidden', !match);
-        if (match) visible++;
+        const stateMatch = activeState === 'all' || row.dataset.state === activeState;
+        const svcMatch = !svc || row.dataset.service === svc;
+        const show = stateMatch && svcMatch;
+        row.classList.toggle('hidden', !show);
+        if (show) visible++;
       });
       if (emptyMsg) emptyMsg.classList.toggle('hidden', visible > 0);
-      buttons.forEach((b) => {
-        const active = b.dataset.filter === filter;
+
+      // Update service select: hide options for services with no visible rows
+      // (regardless of current svc filter, look at state-only visible rows)
+      if (svcSelect) {
+        const visibleSvcs = new Set();
+        rows.forEach((row) => {
+          const stateMatch = activeState === 'all' || row.dataset.state === activeState;
+          if (stateMatch) visibleSvcs.add(row.dataset.service);
+        });
+        Array.from(svcSelect.options).forEach((opt) => {
+          if (!opt.value) return;
+          opt.hidden = !visibleSvcs.has(opt.value);
+        });
+        if (svcSelect.value && !visibleSvcs.has(svcSelect.value)) {
+          svcSelect.value = '';
+        }
+      }
+
+      // Update state button styles
+      stateButtons.forEach((b) => {
+        const active = b.dataset.filter === activeState;
         b.classList.toggle('border-blue-300', active);
         b.classList.toggle('bg-blue-50', active);
         b.classList.toggle('text-blue-700', active);
@@ -142,7 +162,12 @@
         b.classList.toggle('dark:text-gray-400', !active);
       });
     }
-    buttons.forEach((b) => b.addEventListener('click', () => apply(b.dataset.filter)));
+
+    stateButtons.forEach((b) => b.addEventListener('click', () => {
+      activeState = b.dataset.filter;
+      applyFilters();
+    }));
+    if (svcSelect) svcSelect.addEventListener('change', applyFilters);
   })();
 </script>
 {% endblock %}

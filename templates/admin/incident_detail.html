@@ -136,6 +136,28 @@
         </div>
         {% endif %}
 
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ L["admin.source_label"] }}</label>
+            <select name="source"
+                    class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="manual"  {% if incident.source == 'manual'  %}selected{% endif %}>{{ L["admin.source_manual"] }}</option>
+              <option value="graph"   {% if incident.source == 'graph'   %}selected{% endif %}>{{ L["admin.source_microsoft"] }}</option>
+              <option value="other"   {% if incident.source not in ('manual','graph') %}selected{% endif %}>{{ L["admin.source_other"] }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {{ L["admin.external_id_label"] }}
+              <span class="font-normal text-gray-400">(optional)</span>
+            </label>
+            <input type="text" name="external_id"
+                   value="{{ incident.external_id or '' }}"
+                   placeholder="{{ L['admin.external_id_placeholder'] }}"
+                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+          </div>
+        </div>
+
         <div class="flex items-center gap-3 pt-1">
           <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
             <input type="checkbox" name="is_resolved" value="on"
@@ -237,8 +259,16 @@
       {% if incident.end_datetime %}
       <p>{{ L["admin.end_datetime"] }}: {{ incident.end_datetime | strftime_de }}</p>
       {% endif %}
-      <p>Quelle: {{ incident.source }}</p>
-      <p class="font-mono truncate">ID: {{ incident.graph_issue_id }}</p>
+      <p>
+        {{ L["admin.source_label"] }}:
+        {% if incident.source == 'graph' %}{{ L["admin.source_microsoft"] }}
+        {% elif incident.source == 'manual' %}{{ L["admin.source_manual"] }}
+        {% else %}{{ incident.source }}{% endif %}
+      </p>
+      {% if incident.external_id %}
+      <p>{{ L["admin.external_id_label"] }}: <span class="font-mono">{{ incident.external_id }}</span></p>
+      {% endif %}
+      <p class="font-mono truncate opacity-60">Graph-ID: {{ incident.graph_issue_id }}</p>
     </div>
   </div>
 
