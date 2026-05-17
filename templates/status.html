@@ -182,15 +182,19 @@
     </div>
   </div>
   {% endif %}
+</section>
 
-  {# ── Advisories: collapsed below active incidents ────────────────────────── #}
-  <a id="advisories" class="block scroll-mt-20"></a>
-  <details class="group mt-4">
-    <summary class="flex items-center gap-2 cursor-pointer list-none select-none py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+{# ── Aktuelle Hinweise (same heading style as Aktive Störungen) ───────────── #}
+<a id="advisories" class="block scroll-mt-20"></a>
+<section class="mb-6">
+  <details class="group" {% if ns.advisories %}open{% endif %}>
+    <summary class="flex items-center gap-2 cursor-pointer list-none select-none mb-3">
       <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
       </svg>
-      <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ L["page.advisories_heading"] }}</span>
+      <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+        {{ L["page.advisories_heading"] }}
+      </h2>
       {% if ns.advisories %}
       <span class="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[11px] font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
         {{ ns.advisories | length }}
@@ -200,7 +204,7 @@
       {% endif %}
     </summary>
     {% if ns.advisories %}
-    <div class="mt-3 space-y-3">
+    <div class="space-y-3">
       {% for incident in ns.advisories %}
         {% include "partials/incident_card.html" %}
       {% endfor %}
