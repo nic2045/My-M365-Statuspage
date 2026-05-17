@@ -25,7 +25,7 @@ async def admin_nav_context(
 
     incidents_q = select(func.count(Incident.id)).where(
         Incident.is_resolved.is_(False),
-        Incident.classification != "maintenance",
+        Incident.classification == "incident",
         Incident.is_suppressed.is_(False),
     )
     maintenances_q = select(func.count(Incident.id)).where(
