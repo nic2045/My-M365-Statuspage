@@ -139,3 +139,15 @@ class Subscriber(Base):
     unsubscribe_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class AppSetting(Base):
+    """Key-value store for runtime-editable settings. Use for configuration
+    that must be changeable without redeploying (SMTP host/port/auth, etc.)."""
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )

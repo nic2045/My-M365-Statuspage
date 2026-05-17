@@ -1,4 +1,4 @@
-"""Async notification dispatch: Email (SMTP) and MS Teams webhooks."""
+"""Async notification dispatch: Email (SMTP / MS Graph) and MS Teams webhooks."""
 from __future__ import annotations
 
 import logging
@@ -7,45 +7,135 @@ from email.mime.text import MIMEText
 
 import httpx
 
+from app.app_settings import EmailSettings, get_email_settings
 from app.config import settings
+from app.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
 
 # ── Email ─────────────────────────────────────────────────────────────────────
 
-def _build_email(to: str, subject: str, html_body: str, text_body: str) -> MIMEMultipart:
+def _build_email(cfg: EmailSettings, to: str, subject: str, html_body: str, text_body: str) -> MIMEMultipart:
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = settings.SMTP_FROM or settings.SMTP_USER
+    msg["From"] = cfg.smtp_from or cfg.smtp_user or cfg.graph_from_address
     msg["To"] = to
     msg.attach(MIMEText(text_body, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
     return msg
 
 
-async def send_email(to: str, subject: str, html_body: str, text_body: str) -> bool:
-    """Send one email. Returns True on success, False on failure."""
-    if not settings.SMTP_HOST:
-        logger.debug("SMTP_HOST not configured — skipping email to %s", to)
+async def _send_via_smtp(cfg: EmailSettings, to: str, subject: str, html_body: str, text_body: str) -> bool:
+    if not cfg.smtp_host:
         return False
     try:
-        import aiosmtplib  # optional dependency
+        import aiosmtplib
 
-        msg = _build_email(to, subject, html_body, text_body)
+        msg = _build_email(cfg, to, subject, html_body, text_body)
         await aiosmtplib.send(
             msg,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            username=settings.SMTP_USER or None,
-            password=settings.SMTP_PASS or None,
-            start_tls=settings.SMTP_TLS,
+            hostname=cfg.smtp_host,
+            port=cfg.smtp_port,
+            username=cfg.smtp_user or None,
+            password=cfg.smtp_pass or None,
+            start_tls=cfg.smtp_tls,
         )
-        logger.info("Email sent to %s: %s", to, subject)
+        logger.info("Email (SMTP) sent to %s: %s", to, subject)
         return True
     except Exception:
-        logger.exception("Failed to send email to %s", to)
+        logger.exception("Failed to send SMTP email to %s", to)
         return False
+
+
+async def _get_graph_token() -> str | None:
+    """Acquire Graph token with client_credentials (Mail.Send permission)."""
+    try:
+        import msal
+
+        app = msal.ConfidentialClientApplication(
+            settings.AZURE_CLIENT_ID,
+            authority=f"https://login.microsoftonline.com/{settings.AZURE_TENANT_ID}",
+            client_credential=settings.AZURE_CLIENT_SECRET,
+        )
+        result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
+        if "access_token" not in result:
+            logger.error("MSAL token acquisition failed: %s", result.get("error_description"))
+            return None
+        return result["access_token"]
+    except Exception:
+        logger.exception("Failed to acquire Graph token")
+        return None
+
+
+async def _send_via_graph(cfg: EmailSettings, to: str, subject: str, html_body: str, text_body: str) -> bool:
+    """Send email via Microsoft Graph /users/{from}/sendMail.
+
+    Requires Mail.Send application permission on the Azure AD app and admin
+    consent. The cfg.graph_from_address must be a real mailbox in the tenant.
+    """
+    if not cfg.graph_from_address:
+        return False
+    token = await _get_graph_token()
+    if not token:
+        return False
+    url = f"https://graph.microsoft.com/v1.0/users/{cfg.graph_from_address}/sendMail"
+    payload = {
+        "message": {
+            "subject": subject,
+            "body": {"contentType": "HTML", "content": html_body or text_body},
+            "toRecipients": [{"emailAddress": {"address": to}}],
+        },
+        "saveToSentItems": False,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(
+                url,
+                json=payload,
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            )
+            if r.status_code in (200, 202):
+                logger.info("Email (Graph) sent to %s: %s", to, subject)
+                return True
+            logger.error("Graph sendMail failed %s: %s", r.status_code, r.text[:200])
+            return False
+    except Exception:
+        logger.exception("Failed to send Graph email to %s", to)
+        return False
+
+
+async def _load_cfg() -> EmailSettings:
+    async with AsyncSessionLocal() as db:
+        return await get_email_settings(db)
+
+
+async def send_email(to: str, subject: str, html_body: str, text_body: str) -> bool:
+    """Dispatch one email via the currently-configured method."""
+    cfg = await _load_cfg()
+    if cfg.auth_method == "none" or not cfg.is_configured:
+        logger.debug("Email not configured (method=%s) — skipping send to %s", cfg.auth_method, to)
+        return False
+    if cfg.auth_method == "graph_oauth2":
+        return await _send_via_graph(cfg, to, subject, html_body, text_body)
+    return await _send_via_smtp(cfg, to, subject, html_body, text_body)
+
+
+async def send_test_email(to: str) -> tuple[bool, str]:
+    """Used by admin UI to validate the configured method. Returns (ok, message)."""
+    cfg = await _load_cfg()
+    if cfg.auth_method == "none":
+        return False, "Versandmethode ist auf 'Deaktiviert' gesetzt."
+    if not cfg.is_configured:
+        return False, "Konfiguration unvollständig — bitte Pflichtfelder ausfüllen."
+    subject = "M365 Statuspage – Test-E-Mail"
+    html = "<p>Diese Testnachricht bestätigt, dass dein E-Mail-Versand funktioniert.</p>"
+    text = "Diese Testnachricht bestätigt, dass dein E-Mail-Versand funktioniert.\n"
+    ok = await send_email(to, subject, html, text)
+    if ok:
+        method = "Microsoft Graph (OAuth2)" if cfg.auth_method == "graph_oauth2" else "SMTP"
+        return True, f"Test-E-Mail via {method} an {to} verschickt."
+    return False, "Versand fehlgeschlagen – siehe Server-Log."
 
 
 async def send_confirmation_email(email: str, confirm_url: str) -> bool:
