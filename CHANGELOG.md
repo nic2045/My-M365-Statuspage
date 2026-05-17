@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/nic2045/My-M365-Statuspage/compare/v1.1.0...v1.1.1) (2026-05-17)
+
+
+### Bug Fixes
+
+* backfill OData filter, uptime % position, version visibility ([6c48771](https://github.com/nic2045/My-M365-Statuspage/commit/6c48771da7ab1ed7fe1d235718b4976155ad9505))
+
 ## [1.1.0](https://github.com/nic2045/My-M365-Statuspage/compare/v1.0.0...v1.1.0) (2026-05-17)
 
 
