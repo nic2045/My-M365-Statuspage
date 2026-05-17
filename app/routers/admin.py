@@ -29,7 +29,7 @@ from app.crud import (
     toggle_suppress_incident,
 )
 from app.database import AsyncSessionLocal
-from app.dependencies import get_db
+from app.dependencies import admin_nav_context, get_db
 from app.graph_client import (
     fetch_active_issues,
     fetch_health_overviews,
@@ -110,6 +110,7 @@ async def admin_dashboard(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
 ):
     incidents = await get_all_incidents(db, include_resolved=False)
     resolved = await get_resolved_incidents(db, limit=10)
@@ -127,6 +128,7 @@ async def admin_dashboard(
             "maintenances": maintenances,
             "services": enabled_services,
             "page_title": f"Admin – {settings.APP_TITLE}",
+            **nav,
         },
     )
 
@@ -136,6 +138,7 @@ async def admin_settings(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
 ):
     all_services = await get_all_monitored_services(db)
     return templates.TemplateResponse(
@@ -145,6 +148,7 @@ async def admin_settings(
             "user": user,
             "all_services": all_services,
             "page_title": f"Einstellungen – {settings.APP_TITLE}",
+            **nav,
         },
     )
 
@@ -154,6 +158,7 @@ async def new_incident_form(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
 ):
     enabled_services = await get_enabled_services(db)
     return templates.TemplateResponse(
@@ -163,6 +168,7 @@ async def new_incident_form(
             "user": user,
             "services": enabled_services,
             "page_title": "Neue Störung / Hinweis",
+            **nav,
         },
     )
 
@@ -195,6 +201,7 @@ async def incident_detail(
     incident_id: int,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
 ):
     incident = await get_incident_by_id(db, incident_id)
     if incident is None:
@@ -208,6 +215,7 @@ async def incident_detail(
             "incident": incident,
             "services": enabled_services,
             "page_title": incident.title,
+            **nav,
         },
     )
 
@@ -368,6 +376,7 @@ async def new_maintenance_form(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
 ):
     enabled_services = await get_enabled_services(db)
     return templates.TemplateResponse(
@@ -377,6 +386,7 @@ async def new_maintenance_form(
             "user": user,
             "services": enabled_services,
             "page_title": "Neue Wartung",
+            **nav,
         },
     )
 
@@ -412,6 +422,7 @@ async def debug_page(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
 ):
     enabled = await get_enabled_services(db)
     return templates.TemplateResponse(
@@ -425,6 +436,7 @@ async def debug_page(
             "overviews": None,
             "errors": [],
             "page_title": "Debug – Graph API",
+            **nav,
         },
     )
 
@@ -434,6 +446,7 @@ async def debug_fetch(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
 ):
     """Live-fetch all Microsoft service health data and display raw results."""
     enabled = await get_enabled_services(db)
@@ -468,5 +481,6 @@ async def debug_fetch(
             "resolved_issues": resolved_issues,
             "errors": errors,
             "page_title": "Debug – Graph API",
+            **nav,
         },
     )

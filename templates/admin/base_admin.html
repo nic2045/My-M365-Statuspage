@@ -1,59 +1,137 @@
 {% extends "base.html" %}
 
-{% block container_class %}max-w-6xl{% endblock %}
+{% block container_class %}max-w-7xl{% endblock %}
 
 {% block content %}
+{% set _path = request.url.path %}
+{% set _items = [
+  ('/admin',                L['admin.nav.dashboard'],    None,                          'dashboard'),
+  ('/admin#incidents',      L['admin.nav.incidents'],    nav_active_incidents,          'incidents'),
+  ('/admin#maintenances',   L['admin.nav.maintenances'], nav_scheduled_maintenances,    'maintenances'),
+  ('/admin/settings',       L['admin.nav.settings'],     None,                          'settings'),
+  ('/admin/debug',          L['admin.nav.debug'],        None,                          'debug'),
+] %}
+
 <div class="flex gap-6 items-start">
 
-  {# ── Main content area ────────────────────────────────────────── #}
+  {# ── Mobile drawer overlay ─────────────────────────────────────── #}
+  <div id="admin-sidebar-overlay"
+       class="fixed inset-0 bg-black/40 z-20 lg:hidden hidden"
+       aria-hidden="true"></div>
+
+  {# ── Sidebar (left, sticky on desktop, drawer on mobile) ──────── #}
+  <aside id="admin-sidebar"
+         class="fixed lg:sticky top-0 lg:top-20 left-0 z-30
+                w-60 lg:w-52 h-screen lg:h-auto shrink-0
+                bg-white dark:bg-gray-900 lg:bg-transparent dark:lg:bg-transparent
+                border-r border-gray-200 dark:border-gray-800 lg:border-0
+                -translate-x-full lg:translate-x-0 transition-transform duration-200">
+    <nav class="lg:bg-white lg:dark:bg-gray-900 lg:rounded-2xl lg:border lg:border-gray-100 lg:dark:border-gray-800 lg:shadow-sm overflow-hidden h-full lg:h-auto flex flex-col">
+
+      <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ L["admin.title"] }}</span>
+        <button type="button"
+                id="admin-sidebar-close"
+                aria-label="{{ L['admin.nav.close'] }}"
+                class="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="px-2 pt-3 pb-2 space-y-0.5 flex-1">
+        <p class="hidden lg:block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">
+          {{ L["admin.title"] }}
+        </p>
+
+        {% for href, label, counter, key in _items %}
+          {% set is_active = (key == 'dashboard' and _path == '/admin')
+                          or (key == 'incidents'    and _path.startswith('/admin/incidents'))
+                          or (key == 'maintenances' and _path.startswith('/admin/maintenance'))
+                          or (key == 'settings'     and _path == '/admin/settings')
+                          or (key == 'debug'        and _path.startswith('/admin/debug')) %}
+          <a href="{{ href }}"
+             class="flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors
+               {% if is_active %}bg-blue-50 text-[#005EA8] dark:bg-blue-950/30 dark:text-blue-300 font-medium
+               {% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200{% endif %}">
+            <span class="flex items-center gap-2.5 min-w-0">
+              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                {% if key == 'dashboard' %}
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-9 9 9M5 10v10h4v-6h6v6h4V10"/>
+                {% elif key == 'incidents' %}
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.814-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
+                {% elif key == 'maintenances' %}
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437"/>
+                {% elif key == 'settings' %}
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.149-.894z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                {% elif key == 'debug' %}
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+                {% endif %}
+              </svg>
+              <span class="truncate">{{ label }}</span>
+            </span>
+            {% if counter is not none and counter > 0 %}
+              <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[11px] font-semibold rounded-full
+                {% if key == 'incidents' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300
+                {% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300{% endif %}">
+                {{ counter }}
+              </span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+
+      <p class="hidden lg:block text-[10px] text-gray-400 dark:text-gray-500 text-right pr-3 pb-2 select-none">
+        v{{ APP_VERSION }}
+      </p>
+    </nav>
+  </aside>
+
+  {# ── Main content ──────────────────────────────────────────────── #}
   <div class="flex-1 min-w-0">
+    <button type="button"
+            id="admin-sidebar-toggle"
+            aria-label="{{ L['admin.nav.toggle'] }}"
+            class="lg:hidden inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+      <span>{{ L["admin.title"] }}</span>
+    </button>
+
     {% block admin_content %}{% endblock %}
   </div>
 
-  {# ── Right sidebar navigation ──────────────────────────────────── #}
-  <aside class="w-44 shrink-0 sticky top-20">
-    <nav class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-      <div class="px-2 pt-3 pb-2 space-y-0.5">
-        <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">Admin</p>
-
-        {# Allgemein #}
-        <a href="/admin"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors
-             {% if request.url.path == '/admin' %}bg-blue-50 text-[#005EA8] dark:bg-blue-950/30 dark:text-blue-300 font-medium
-             {% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200{% endif %}">
-          <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h8M4 18h16"/>
-          </svg>
-          Allgemein
-        </a>
-
-        {# Einstellungen #}
-        <a href="/admin/settings"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors
-             {% if request.url.path == '/admin/settings' %}bg-blue-50 text-[#005EA8] dark:bg-blue-950/30 dark:text-blue-300 font-medium
-             {% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200{% endif %}">
-          <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-          </svg>
-          Einstellungen
-        </a>
-
-        {# Debug #}
-        <a href="/admin/debug"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors
-             {% if request.url.path.startswith('/admin/debug') %}bg-blue-50 text-[#005EA8] dark:bg-blue-950/30 dark:text-blue-300 font-medium
-             {% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200{% endif %}">
-          <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
-          </svg>
-          Debug
-        </a>
-      </div>
-    </nav>
-    <p class="text-[10px] text-gray-400 dark:text-gray-500 text-right mt-2 pr-1 select-none">
-      v{{ APP_VERSION }}
-    </p>
-  </aside>
-
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+  const sidebar  = document.getElementById('admin-sidebar');
+  const overlay  = document.getElementById('admin-sidebar-overlay');
+  const openBtn  = document.getElementById('admin-sidebar-toggle');
+  const closeBtn = document.getElementById('admin-sidebar-close');
+  if (!sidebar || !overlay) return;
+
+  const open = () => {
+    sidebar.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+  };
+  const close = () => {
+    sidebar.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
+  };
+
+  openBtn  && openBtn.addEventListener('click', open);
+  closeBtn && closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+})();
+</script>
 {% endblock %}

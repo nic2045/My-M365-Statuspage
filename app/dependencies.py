@@ -1,6 +1,7 @@
 from collections.abc import AsyncGenerator
 
-from fastapi import HTTPException, Query
+from fastapi import Depends, HTTPException, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
@@ -12,6 +13,28 @@ from app.database import AsyncSessionLocal
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
+
+
+async def admin_nav_context(db: AsyncSession = Depends(get_db)) -> dict:
+    """Counters for the admin sidebar — kept in one place so every route
+    can splat the result into its template context."""
+    from app.models import Incident
+
+    incidents_q = select(func.count(Incident.id)).where(
+        Incident.is_resolved.is_(False),
+        Incident.classification != "maintenance",
+        Incident.is_suppressed.is_(False),
+    )
+    maintenances_q = select(func.count(Incident.id)).where(
+        Incident.classification == "maintenance",
+        Incident.is_resolved.is_(False),
+    )
+    incidents_count = (await db.execute(incidents_q)).scalar_one()
+    maintenances_count = (await db.execute(maintenances_q)).scalar_one()
+    return {
+        "nav_active_incidents": incidents_count,
+        "nav_scheduled_maintenances": maintenances_count,
+    }
 
 
 async def require_embed_access(
