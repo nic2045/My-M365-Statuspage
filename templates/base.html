@@ -162,6 +162,14 @@
     <span>Installieren</span>
   </button>
 
+  {# ── Build info chip — only in DEV mode (DEBUG=True); never in production ── #}
+  {% if DEBUG %}
+  <div title="App-Version · Commit · Build-Zeit (UTC)"
+       class="fixed bottom-2 right-2 z-30 text-[10px] font-mono px-2 py-1 rounded-md bg-gray-900/70 text-white/80 backdrop-blur select-text pointer-events-auto">
+    v{{ APP_VERSION }}{% if BUILD_SHA %} · {{ BUILD_SHA }}{% endif %}{% if BUILD_TIME %} · {{ BUILD_TIME }}{% endif %}
+  </div>
+  {% endif %}
+
   <script>
     // Dark mode toggle (persists to localStorage)
     const html = document.documentElement;

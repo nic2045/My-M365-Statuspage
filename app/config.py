@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     # Public base URL (used in email links)
     BASE_URL: str = "http://localhost:8000"
 
+    # Build metadata (injected by Docker build args; empty in local dev)
+    BUILD_SHA: str = ""
+    BUILD_TIME: str = ""
+
     @property
     def teams_webhook_list(self) -> list[str]:
         return [u.strip() for u in self.TEAMS_WEBHOOK_URLS.split(",") if u.strip()]
