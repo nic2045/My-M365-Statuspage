@@ -42,6 +42,22 @@ SEVERITY_BADGE: dict[str, str] = {
     "low":      "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400",
 }
 
+# Standard incident-response phases mapped to a single colour each.
+# active        → Investigating  (yellow)
+# acknowledged  → Identified     (orange)
+# monitoring    → Monitoring     (blue)
+# resolved/completed → Resolved  (green)
+# scheduled/in_progress (maintenance) → blue / amber
+PHASE_DOT: dict[str, str] = {
+    "active":       "bg-yellow-400",
+    "acknowledged": "bg-orange-400",
+    "monitoring":   "bg-blue-400",
+    "resolved":     "bg-emerald-500",
+    "completed":    "bg-emerald-500",
+    "scheduled":    "bg-blue-400",
+    "in_progress":  "bg-amber-400",
+}
+
 templates.env.globals["severity_badge_class"] = (
     lambda s: SEVERITY_BADGE.get(s, "")
 )
@@ -50,6 +66,9 @@ templates.env.globals["severity_label"] = (
 )
 templates.env.globals["state_label"] = (
     lambda s: LABELS.get(f"state.{s}", s)
+)
+templates.env.globals["phase_dot_class"] = (
+    lambda s: PHASE_DOT.get(s, "bg-gray-300 dark:bg-gray-600")
 )
 
 # ── Filters ───────────────────────────────────────────────────────────────────

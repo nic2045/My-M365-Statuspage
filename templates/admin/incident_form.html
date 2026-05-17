@@ -59,6 +59,20 @@
     </div>
 
     <div>
+      <div class="flex items-center justify-between mb-1">
+        <label for="start_datetime" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {{ L["admin.start_datetime"] }}
+        </label>
+        <button type="button" id="start-now-btn"
+                class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+          {{ L["admin.now"] }}
+        </button>
+      </div>
+      <input type="datetime-local" name="start_datetime" id="start_datetime"
+             class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
         {{ L["admin.description_label"] }}
         <span class="font-normal text-gray-400">(optional)</span>
@@ -77,4 +91,18 @@
 
   </form>
 </div>
+
+<script>
+  (function () {
+    const fmtLocal = (d) => {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    const input = document.getElementById("start_datetime");
+    const btn = document.getElementById("start-now-btn");
+    const setNow = () => { input.value = fmtLocal(new Date()); };
+    setNow();
+    btn.addEventListener("click", setNow);
+  })();
+</script>
 {% endblock %}

@@ -28,6 +28,7 @@ from app.crud import (
     set_show_uptime_percentage,
     toggle_suppress_incident,
 )
+from app.crud import delete_incident as crud_delete_incident
 from app.database import AsyncSessionLocal
 from app.dependencies import get_db
 from app.graph_client import (
@@ -51,6 +52,36 @@ def _parse_form_dt(val: str | None) -> datetime | None:
         return datetime.fromisoformat(val)
     except (ValueError, TypeError):
         return None
+
+
+def _compute_phase_segments(incident) -> list[dict]:
+    """Build proportional phase segments for an incident's lifetime.
+
+    Each segment is {"status": str, "weight": float} where weight is the
+    duration of that phase in seconds (or 1 if start/end is unknown).
+    The first phase is "active" from incident.start_datetime; each
+    state-change update splits into a new phase; the last phase runs
+    until end_datetime (or now if still open).
+    """
+    if incident.start_datetime is None:
+        return []
+    state_changes = sorted(
+        [u for u in incident.updates if u.update_type == "state_change" and u.post_created_at],
+        key=lambda u: u.post_created_at,
+    )
+    end = incident.end_datetime or datetime.utcnow()
+    boundaries: list[tuple[datetime, str]] = [(incident.start_datetime, "active")]
+    for sc in state_changes:
+        boundaries.append((sc.post_created_at, sc.content))
+    boundaries.append((end, boundaries[-1][1]))
+
+    segments: list[dict] = []
+    for i in range(len(boundaries) - 1):
+        t0, status = boundaries[i]
+        t1, _ = boundaries[i + 1]
+        duration = max((t1 - t0).total_seconds(), 1.0)
+        segments.append({"status": status, "weight": duration})
+    return segments
 
 
 async def _backfill_service(service_name: str) -> None:
@@ -174,6 +205,7 @@ async def create_incident(
     classification: Annotated[str, Form()],
     severity: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
+    start_datetime: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
@@ -184,6 +216,7 @@ async def create_incident(
         classification=classification,
         severity=severity or "",
         description=description or None,
+        start_datetime=_parse_form_dt(start_datetime),
     )
     await db.commit()
     return RedirectResponse(url=f"/admin/incidents/{incident.id}", status_code=303)
@@ -207,6 +240,7 @@ async def incident_detail(
             "user": user,
             "incident": incident,
             "services": enabled_services,
+            "phase_segments": _compute_phase_segments(incident),
             "page_title": incident.title,
         },
     )
@@ -259,14 +293,33 @@ async def update_incident(
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
 
+@router.post("/incidents/{incident_id}/delete")
+async def delete_incident(
+    incident_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    deleted = await crud_delete_incident(db, incident_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Nicht gefunden")
+    await db.commit()
+    return RedirectResponse(url="/admin", status_code=303)
+
+
 @router.post("/incidents/{incident_id}/posts")
 async def add_post(
     incident_id: int,
     content: Annotated[str, Form()],
+    notify_subscribers: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
-    await add_incident_post(db, incident_id, content)
+    await add_incident_post(
+        db,
+        incident_id,
+        content,
+        notify_subscribers=notify_subscribers == "on",
+    )
     await db.commit()
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
