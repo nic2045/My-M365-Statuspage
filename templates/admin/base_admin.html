@@ -4,13 +4,52 @@
 
 {% block content %}
 {% set _path = request.url.path %}
-{% set _items = [
-  ('/admin',                L['admin.nav.dashboard'],    None,                          'dashboard'),
-  ('/admin#incidents',      L['admin.nav.incidents'],    nav_active_incidents,          'incidents'),
-  ('/admin#maintenances',   L['admin.nav.maintenances'], nav_scheduled_maintenances,    'maintenances'),
-  ('/admin/settings',       L['admin.nav.settings'],     None,                          'settings'),
-  ('/admin/debug',          L['admin.nav.debug'],        None,                          'debug'),
-] %}
+{% set _query = request.query_params.get('source', '') %}
+
+{# Helper macro for a single nav link #}
+{% macro nav_link(href, label, key, counter=None, counter_color='red') %}
+  {% set is_active = (key == 'dashboard'    and _path == '/admin' and not _query)
+                  or (key == 'incidents'    and _path.startswith('/admin/incidents') and not _query)
+                  or (key == 'maintenances' and _path.startswith('/admin/maintenance'))
+                  or (key == 'settings'     and _path == '/admin/settings')
+                  or (key == 'debug'        and _path.startswith('/admin/debug'))
+                  or (key == 'own'          and _path.startswith('/admin/incidents') and _query == 'manual')
+                  or (key == 'new_incident' and _path == '/admin/incidents/new') %}
+  <a href="{{ href }}"
+     class="flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors
+       {% if is_active %}bg-blue-50 text-[#005EA8] dark:bg-blue-950/30 dark:text-blue-300 font-medium
+       {% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200{% endif %}">
+    <span class="flex items-center gap-2.5 min-w-0">
+      <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        {% if key == 'dashboard' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-9 9 9M5 10v10h4v-6h6v6h4V10"/>
+        {% elif key == 'incidents' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.814-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
+        {% elif key == 'maintenances' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437"/>
+        {% elif key == 'settings' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.149-.894z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        {% elif key == 'debug' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+        {% elif key == 'own' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+        {% elif key == 'new_incident' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        {% endif %}
+      </svg>
+      <span class="truncate">{{ label }}</span>
+    </span>
+    {% if counter is not none and counter > 0 %}
+      <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[11px] font-semibold rounded-full
+        {% if counter_color == 'red' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300
+        {% elif counter_color == 'amber' %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300
+        {% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300{% endif %}">
+        {{ counter }}
+      </span>
+    {% endif %}
+  </a>
+{% endmacro %}
 
 <div class="flex gap-6 items-start">
 
@@ -40,57 +79,47 @@
         </button>
       </div>
 
-      <div class="px-2 pt-3 pb-2 space-y-0.5 flex-1">
-        <p class="hidden lg:block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">
-          {{ L["admin.title"] }}
-        </p>
+      <div class="px-2 pt-3 pb-2 flex-1 space-y-4">
 
-        {% for href, label, counter, key in _items %}
-          {% set is_active = (key == 'dashboard' and _path == '/admin')
-                          or (key == 'incidents'    and _path.startswith('/admin/incidents'))
-                          or (key == 'maintenances' and _path.startswith('/admin/maintenance'))
-                          or (key == 'settings'     and _path == '/admin/settings')
-                          or (key == 'debug'        and _path.startswith('/admin/debug')) %}
-          <a href="{{ href }}"
-             class="flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors
-               {% if is_active %}bg-blue-50 text-[#005EA8] dark:bg-blue-950/30 dark:text-blue-300 font-medium
-               {% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200{% endif %}">
-            <span class="flex items-center gap-2.5 min-w-0">
-              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                {% if key == 'dashboard' %}
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-9 9 9M5 10v10h4v-6h6v6h4V10"/>
-                {% elif key == 'incidents' %}
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.814-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
-                {% elif key == 'maintenances' %}
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437"/>
-                {% elif key == 'settings' %}
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.149-.894z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                {% elif key == 'debug' %}
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
-                {% endif %}
-              </svg>
-              <span class="truncate">{{ label }}</span>
-            </span>
-            {% if counter is not none and counter > 0 %}
-              <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[11px] font-semibold rounded-full
-                {% if key == 'incidents' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300
-                {% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300{% endif %}">
-                {{ counter }}
-              </span>
-            {% endif %}
-          </a>
-        {% endfor %}
+        {# ── Microsoft 365 ─────────────────────────────────────────── #}
+        <div class="space-y-0.5">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">
+            {{ L["admin.nav.m365_section"] }}
+          </p>
+          {{ nav_link('/admin', L['admin.nav.dashboard'], 'dashboard') }}
+          {{ nav_link('/admin#incidents', L['admin.nav.incidents'], 'incidents', nav_active_incidents, 'red') }}
+          {{ nav_link('/admin#maintenances', L['admin.nav.maintenances'], 'maintenances', nav_scheduled_maintenances, 'blue') }}
+        </div>
+
+        {# ── Eigene Einträge ────────────────────────────────────────── #}
+        <div class="space-y-0.5">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">
+            {{ L["admin.nav.own_section"] }}
+          </p>
+          {{ nav_link('/admin/incidents?source=manual', L['admin.nav.own_incidents'], 'own', nav_manual_active, 'amber') }}
+          {{ nav_link('/admin/incidents/new', L['admin.nav.new_incident'], 'new_incident') }}
+        </div>
+
+        {# ── System ────────────────────────────────────────────────── #}
+        <div class="space-y-0.5">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">
+            {{ L["admin.nav.system_section"] }}
+          </p>
+          {{ nav_link('/admin/settings', L['admin.nav.settings'], 'settings') }}
+          {{ nav_link('/admin/debug', L['admin.nav.debug'], 'debug') }}
+        </div>
 
         {# ── Back to public statuspage ─────────────────────────────── #}
-        <div class="my-2 border-t border-gray-100 dark:border-gray-800"></div>
-        <a href="/"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
-          <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-          </svg>
-          <span class="truncate">{{ L["admin.nav.public_page"] }}</span>
-        </a>
+        <div class="border-t border-gray-100 dark:border-gray-800 pt-2">
+          <a href="/"
+             class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            <span class="truncate">{{ L["admin.nav.public_page"] }}</span>
+          </a>
+        </div>
+
       </div>
 
       <p class="hidden lg:block text-[10px] text-gray-400 dark:text-gray-500 text-right pr-3 pb-2 select-none">

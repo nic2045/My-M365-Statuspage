@@ -320,17 +320,20 @@ async def admin_delete_subscriber(
 @router.get("/incidents")
 async def admin_incidents_all(
     request: Request,
+    source: str | None = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
     nav: dict = Depends(admin_nav_context),
 ):
-    """List ALL incidents (active + resolved). Suppressed shown for incidents
-    (dimmed) but hidden from advisories per UX preference."""
+    """List ALL incidents (active + resolved). Pass ?source=manual to show
+    only manually created entries. Suppressed shown for incidents (dimmed)
+    but hidden from advisories per UX preference."""
+    src_filter = source if source in ("manual", "graph") else None
     incidents = await get_all_incidents(
-        db, include_resolved=True, classification="incident"
+        db, include_resolved=True, classification="incident", source=src_filter
     )
     advisories_all = await get_all_incidents(
-        db, include_resolved=True, classification="advisory"
+        db, include_resolved=True, classification="advisory", source=src_filter
     )
     advisories = [a for a in advisories_all if not a.is_suppressed]
     return templates.TemplateResponse(
@@ -340,6 +343,7 @@ async def admin_incidents_all(
             "user": user,
             "incidents": incidents,
             "advisories": advisories,
+            "source_filter": src_filter,
             "page_title": f"Alle Störungen – {settings.APP_TITLE}",
             **nav,
         },
