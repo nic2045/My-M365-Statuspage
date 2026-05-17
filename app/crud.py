@@ -113,22 +113,38 @@ async def upsert_incident_updates(
         )
 
 
-async def count_status_days_in_window(
-    db: AsyncSession,
-    service_name: str,
-    days: int = 90,
-) -> int:
-    from sqlalchemy import func
-    today = date.today()
-    start_date = today - timedelta(days=days - 1)
-    result = await db.execute(
-        select(func.count(ServiceStatus.id)).where(
-            ServiceStatus.service_name == service_name,
-            ServiceStatus.date >= start_date,
-            ServiceStatus.date <= today,
-        )
-    )
-    return int(result.scalar_one() or 0)
+CRITICAL_SEVERITIES = {"critical"}
+
+
+def _incident_bar_status(severity: str | None) -> str:
+    """Map an incident's severity to the bar color it imposes.
+
+    Incidents with severity 'critical' make the day red (interrupted);
+    all other severities (including high/medium/low/empty) make it yellow
+    (degraded). Real ServiceStatus DB rows always override this.
+    """
+    sev = (severity or "").lower()
+    return "interrupted" if sev in CRITICAL_SEVERITIES else "degraded"
+
+
+def _incident_date_range(incident: Incident, today: date) -> tuple[date, date] | None:
+    """Return (start, end) date range an incident covers, or None to skip.
+
+    - Skips incidents without a start_datetime.
+    - End preference: end_datetime → last_modified (if resolved) → today.
+    """
+    if incident.start_datetime is None:
+        return None
+    start = incident.start_datetime.date()
+    if incident.end_datetime is not None:
+        end = incident.end_datetime.date()
+    elif incident.is_resolved and incident.last_modified is not None:
+        end = incident.last_modified.date()
+    else:
+        end = today
+    if end < start:
+        end = start
+    return start, end
 
 
 async def get_uptime_bars(
@@ -136,24 +152,71 @@ async def get_uptime_bars(
     service_name: str,
     days: int = 90,
 ) -> list[DayStatusSchema]:
+    """Build 90 day-bars for a service.
+
+    Logic:
+      1. Default every day to 'operational' (green) – missing data means
+         the service was healthy.
+      2. Overlay each non-maintenance, non-suppressed Incident across its
+         [start, end] date range:
+           - severity 'critical' → 'interrupted' (red)
+           - any other severity → 'degraded' (yellow)
+         Higher severity wins when ranges overlap.
+      3. Real entries from the service_status table (excluding synthetic
+         'backfill' rows) override everything – they're authoritative.
+    """
     today = date.today()
     start_date = today - timedelta(days=days - 1)
 
-    result = await db.execute(
-        select(ServiceStatus.date, ServiceStatus.status)
+    real_result = await db.execute(
+        select(ServiceStatus.date, ServiceStatus.status, ServiceStatus.raw_graph_status)
         .where(
             ServiceStatus.service_name == service_name,
             ServiceStatus.date >= start_date,
             ServiceStatus.date <= today,
         )
-        .order_by(ServiceStatus.date)
     )
-    rows = {r.date: r.status for r in result.fetchall()}
+    real_entries: dict[date, str] = {
+        row.date: row.status
+        for row in real_result.fetchall()
+        if row.raw_graph_status != "backfill"
+    }
+
+    incidents_result = await db.execute(
+        select(Incident).where(
+            Incident.service_name == service_name,
+            Incident.classification != "maintenance",
+            Incident.is_suppressed.is_(False),
+            Incident.start_datetime.is_not(None),
+        )
+    )
+    incidents = list(incidents_result.scalars().all())
+
+    computed: dict[date, str] = {}
+    for inc in incidents:
+        date_range = _incident_date_range(inc, today)
+        if date_range is None:
+            continue
+        inc_start, inc_end = date_range
+        if inc_end < start_date or inc_start > today:
+            continue
+        inc_status = _incident_bar_status(inc.severity)
+        cursor = max(inc_start, start_date)
+        end_clamped = min(inc_end, today)
+        while cursor <= end_clamped:
+            current = computed.get(cursor, "operational")
+            if _STATUS_SEVERITY.get(inc_status, 0) > _STATUS_SEVERITY.get(current, 0):
+                computed[cursor] = inc_status
+            cursor += timedelta(days=1)
 
     bars: list[DayStatusSchema] = []
     for i in range(days):
         d = start_date + timedelta(days=i)
-        bars.append(DayStatusSchema(date=d, status=rows.get(d, "no_data")))
+        if d in real_entries:
+            status = real_entries[d]
+        else:
+            status = computed.get(d, "operational")
+        bars.append(DayStatusSchema(date=d, status=status))
     return bars
 
 
@@ -402,83 +465,22 @@ async def get_uptime_percentage(
 ) -> float | None:
     """Return uptime % over the window. operational=1.0, degraded=0.5, interrupted=0.
 
-    no_data/unknown days are excluded from the denominator. Returns None when
-    no day in the window has data.
+    Derived from the same bar logic as get_uptime_bars so values stay
+    consistent with what's rendered. Returns None when no bar in the
+    window has a weighted status.
     """
-    today = date.today()
-    start_date = today - timedelta(days=days - 1)
-    result = await db.execute(
-        select(ServiceStatus.status).where(
-            ServiceStatus.service_name == service_name,
-            ServiceStatus.date >= start_date,
-            ServiceStatus.date <= today,
-        )
-    )
+    bars = await get_uptime_bars(db, service_name, days)
     weights = {"operational": 1.0, "degraded": 0.5, "interrupted": 0.0}
     total = 0
     score = 0.0
-    for row in result.fetchall():
-        status = row[0]
-        if status not in weights:
+    for bar in bars:
+        if bar.status not in weights:
             continue
         total += 1
-        score += weights[status]
+        score += weights[bar.status]
     if total == 0:
         return None
     return round(score / total * 100, 2)
-
-
-async def backfill_service_status_from_issues(
-    db: AsyncSession,
-    service_name: str,
-    issues: list[dict],
-    days: int = 90,
-) -> None:
-    today = date.today()
-    start_date = today - timedelta(days=days - 1)
-
-    _severity = {"operational": 0, "unknown": 1, "degraded": 2, "interrupted": 3}
-
-    def _parse_issue_date(val: str | None) -> date | None:
-        if not val:
-            return None
-        try:
-            dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
-            return dt.date()
-        except (ValueError, AttributeError):
-            return None
-
-    day_status: dict[date, str] = {}
-    for issue in issues:
-        issue_start = _parse_issue_date(issue.get("startDateTime"))
-        issue_end = _parse_issue_date(issue.get("endDateTime") or issue.get("lastModifiedDateTime"))
-        if not issue_start:
-            continue
-        if issue_end is None or issue_end < issue_start:
-            issue_end = today
-        classification = issue.get("classification", "incident")
-        status = "interrupted" if classification == "incident" else "degraded"
-
-        cursor = max(issue_start, start_date)
-        end_clamped = min(issue_end, today)
-        while cursor <= end_clamped:
-            if _severity.get(status, 0) > _severity.get(day_status.get(cursor, "operational"), 0):
-                day_status[cursor] = status
-            cursor += timedelta(days=1)
-
-    result = await db.execute(
-        select(ServiceStatus.date).where(
-            ServiceStatus.service_name == service_name,
-            ServiceStatus.date >= start_date,
-        )
-    )
-    existing_dates = {row[0] for row in result.fetchall()}
-
-    for i in range(days):
-        d = start_date + timedelta(days=i)
-        if d not in existing_dates:
-            status = day_status.get(d, "operational")
-            await upsert_service_status(db, service_name, d, status, "backfill")
 
 
 async def set_service_status_manual(
