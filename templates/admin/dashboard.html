@@ -55,7 +55,7 @@
         {% set cur = svc.current_status %}
         {% set meta = status_meta.get(cur, status_meta['unknown']) %}
         <div class="px-4 py-3 flex items-center gap-3">
-          <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ meta.dot }} ring-4 {{ meta.ring }}"
+          <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ meta.dot }} ring-4 {{ meta.ring }} {{ status_pulse_class(cur) }}"
                 title="{{ meta.label }}"></span>
           <div class="flex-1 min-w-0">
             <a href="/#svc-{{ svc.service_name | lower | replace(' ', '-') | replace('/', '-') | replace('_', '-') }}"
