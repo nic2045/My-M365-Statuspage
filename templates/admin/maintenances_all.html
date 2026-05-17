@@ -1,0 +1,67 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_content %}
+<div class="mb-6 flex items-center justify-between">
+  <div>
+    <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ L["admin.maintenances"] }}</h1>
+    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Geplante, laufende und abgeschlossene Wartungen</p>
+  </div>
+  <a href="/admin/maintenance/new"
+     class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 font-medium transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    {{ L["admin.new_maintenance"] }}
+  </a>
+</div>
+
+{% set status_dot = {
+  'scheduled':   'bg-blue-400',
+  'in_progress': 'bg-amber-400',
+  'completed':   'bg-emerald-400',
+} %}
+{% set status_label = {
+  'scheduled':   L['maintenance.scheduled'],
+  'in_progress': L['maintenance.in_progress'],
+  'completed':   L['maintenance.completed'],
+} %}
+
+{% if maintenances %}
+<div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
+  {% for m in maintenances %}
+  {% set phase = 'completed' if m.is_resolved else m.status %}
+  <a href="/admin/incidents/{{ m.id }}"
+     class="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+    <div class="flex items-center gap-0 min-w-0 flex-1">
+      <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ status_dot.get(phase, 'bg-gray-400') }}"
+            title="{{ status_label.get(phase, phase) }}"></span>
+      <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5 bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400">
+        {{ L["incident.type.maintenance"] }}
+      </span>
+      <span class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{{ m.title }}</span>
+      <span class="text-sm text-gray-400 dark:text-gray-500 ml-2 shrink-0">· {{ m.service_name }}</span>
+    </div>
+    <div class="flex items-center gap-2 shrink-0 ml-3">
+      {% if m.is_resolved %}
+      <span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+        {{ L["maintenance.completed"] }}
+      </span>
+      {% elif m.status == 'in_progress' %}
+      <span class="text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+        {{ L["maintenance.in_progress"] }}
+      </span>
+      {% endif %}
+      <span class="text-xs text-gray-400 dark:text-gray-500">
+        {{ (m.scheduled_start or m.start_datetime) | strftime_de }}
+      </span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-8 shadow-sm text-center">
+  <p class="text-sm text-gray-500 dark:text-gray-400">{{ L["admin.no_maintenances"] }}</p>
+</div>
+{% endif %}
+
+{% endblock %}

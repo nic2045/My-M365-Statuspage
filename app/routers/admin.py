@@ -26,6 +26,7 @@ from app.crud import (
     delete_subscriber,
     ensure_service_known,
     get_all_incidents,
+    get_all_maintenances,
     get_all_monitored_services,
     get_all_subscribers,
     get_confirmed_subscribers,
@@ -34,9 +35,6 @@ from app.crud import (
     get_enabled_services_with_status,
     get_incident_by_id,
     get_known_groups,
-    get_resolved_incidents,
-    get_scheduled_maintenances,
-    get_suppressed_incidents,
     move_service,
     set_service_enabled,
     set_service_group,
@@ -162,27 +160,12 @@ async def admin_dashboard(
     user: dict = Depends(require_auth),
     nav: dict = Depends(admin_nav_context),
 ):
-    incidents = await get_all_incidents(
-        db, include_resolved=False, classification="incident"
-    )
-    all_advisories = await get_all_incidents(
-        db, include_resolved=False, classification="advisory"
-    )
-    resolved = await get_resolved_incidents(db, limit=10)
-    suppressed = await get_suppressed_incidents(db)
-    maintenances = await get_scheduled_maintenances(db)
     services_with_status = await get_enabled_services_with_status(db)
     return templates.TemplateResponse(
         request,
         "admin/dashboard.html",
         {
             "user": user,
-            "incidents": incidents,
-            "advisories": all_advisories[:5],
-            "advisories_total": len(all_advisories),
-            "resolved_incidents": resolved,
-            "suppressed_incidents": suppressed,
-            "maintenances": maintenances,
             "services": services_with_status,
             "page_title": f"Admin – {settings.APP_TITLE}",
             **nav,
@@ -361,6 +344,26 @@ async def admin_incidents_all(
             "source_filter": src_filter,
             "classification_filter": cls_filter,
             "page_title": f"Alle Störungen – {settings.APP_TITLE}",
+            **nav,
+        },
+    )
+
+
+@router.get("/maintenances")
+async def admin_maintenances_all(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
+):
+    maintenances = await get_all_maintenances(db)
+    return templates.TemplateResponse(
+        request,
+        "admin/maintenances_all.html",
+        {
+            "user": user,
+            "maintenances": maintenances,
+            "page_title": f"Wartungen – {settings.APP_TITLE}",
             **nav,
         },
     )
