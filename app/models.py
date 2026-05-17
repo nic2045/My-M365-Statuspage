@@ -87,6 +87,9 @@ class Incident(Base):
     end_datetime: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     scheduled_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     scheduled_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    owner_email: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    acknowledged_by_email: Mapped[str | None] = mapped_column(String(256), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

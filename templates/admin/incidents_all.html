@@ -88,6 +88,12 @@
     <span class="text-sm text-gray-400 dark:text-gray-500 ml-2 shrink-0">· {{ inc.service_name }}</span>
   </div>
   <div class="flex items-center gap-2 shrink-0 ml-3">
+    {% if inc.owner_email %}
+    {% set _owner_parts = (inc.owner_email.split('@')[0] | replace('.', ' ') | replace('_', ' ')).split() %}
+    {% set _owner_initials = ((_owner_parts[0][0] if _owner_parts else '?') ~ (_owner_parts[1][0] if _owner_parts|length > 1 else '')) | upper %}
+    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-semibold"
+          title="{{ L['admin.owner'] }}: {{ inc.owner_email }}">{{ _owner_initials }}</span>
+    {% endif %}
     {% if inc.is_resolved %}
     <span class="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
       {{ L["incident.resolved"] }}

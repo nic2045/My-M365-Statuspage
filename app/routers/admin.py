@@ -778,6 +778,52 @@ async def unsuppress_incident(
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
 
+def _user_email(user: dict) -> str | None:
+    return user.get("email") or user.get("preferred_username")
+
+
+@router.post("/incidents/{incident_id}/acknowledge")
+async def acknowledge_incident(
+    request: Request,
+    incident_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    email = _user_email(user)
+    if email is None:
+        raise HTTPException(status_code=400, detail="Kein Benutzer-Identifier verfügbar")
+    now = datetime.utcnow()
+    await admin_update_incident(
+        db,
+        incident_id,
+        owner_email=email,
+        acknowledged_at=now,
+        acknowledged_by_email=email,
+    )
+    await db.commit()
+    flash(request, LABELS["toast.acknowledged"])
+    return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
+
+
+@router.post("/incidents/{incident_id}/release")
+async def release_incident(
+    request: Request,
+    incident_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    await admin_update_incident(
+        db,
+        incident_id,
+        owner_email=None,
+        acknowledged_at=None,
+        acknowledged_by_email=None,
+    )
+    await db.commit()
+    flash(request, LABELS["toast.released"])
+    return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
+
+
 @router.get("/maintenance/new")
 async def new_maintenance_form(
     request: Request,
