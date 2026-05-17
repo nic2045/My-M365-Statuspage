@@ -380,7 +380,7 @@
           return;
         }
         const card = e.target.closest('[data-incident-card]');
-        if (card && !e.target.closest('a, button, summary, details')) {
+        if (card && !e.target.closest('a, button, summary')) {
           openIncidentCard(card);
           return;
         }

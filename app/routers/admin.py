@@ -8,7 +8,14 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.app_settings import get_email_settings, save_email_settings
+from app.app_settings import (
+    get_azure_settings,
+    get_email_settings,
+    save_azure_settings,
+    save_email_settings,
+    verify_azure_connection,
+    verify_smtp_connection,
+)
 from app.auth import require_auth
 from app.config import settings
 from app.crud import (
@@ -192,6 +199,7 @@ async def admin_settings(
     known_groups = await get_known_groups(db)
     subscribers = await get_all_subscribers(db)
     email_cfg = await get_email_settings(db)
+    azure_cfg = await get_azure_settings(db)
     return templates.TemplateResponse(
         request,
         "admin/settings.html",
@@ -202,6 +210,7 @@ async def admin_settings(
             "subscribers": subscribers,
             "teams_webhook_urls": settings.TEAMS_WEBHOOK_URLS,
             "email_cfg": email_cfg,
+            "azure_cfg": azure_cfg,
             "page_title": f"Einstellungen – {settings.APP_TITLE}",
             **nav,
         },
@@ -224,6 +233,7 @@ async def admin_save_email_settings(
 ):
     if auth_method not in {"none", "password", "graph_oauth2"}:
         auth_method = "none"
+    effective_pass = smtp_pass if smtp_pass else None
     await save_email_settings(
         db,
         auth_method=auth_method,  # type: ignore[arg-type]
@@ -231,13 +241,28 @@ async def admin_save_email_settings(
         smtp_port=smtp_port,
         smtp_user=smtp_user.strip(),
         # Treat empty submit as "keep existing password" (form shows placeholder)
-        smtp_pass=smtp_pass if smtp_pass else None,
+        smtp_pass=effective_pass,
         smtp_from=smtp_from.strip(),
         smtp_tls=smtp_tls == "on",
         graph_from_address=graph_from_address.strip(),
     )
     await db.commit()
     flash(request, LABELS["toast.email_saved"])
+    # Verify connection after save
+    if auth_method == "password":
+        # Reload to get the effective password (may have been preserved)
+        from app.app_settings import get_email_settings as _get_cfg  # noqa: PLC0415
+        cfg = await _get_cfg(db)
+        ok, msg = await verify_smtp_connection(
+            cfg.smtp_host, cfg.smtp_port, cfg.smtp_user, cfg.smtp_pass, cfg.smtp_tls
+        )
+        flash(request, msg, "success" if ok else "error")
+    elif auth_method == "graph_oauth2":
+        azure_cfg = await get_azure_settings(db)
+        ok, msg = await verify_azure_connection(
+            azure_cfg.tenant_id, azure_cfg.client_id, azure_cfg.client_secret
+        )
+        flash(request, msg, "success" if ok else "error")
     return RedirectResponse(url="/admin/settings#email", status_code=303)
 
 
@@ -251,6 +276,32 @@ async def admin_send_test_email(
     ok, message = await send_test_email(to.strip())
     flash(request, message, "success" if ok else "error")
     return RedirectResponse(url="/admin/settings#email", status_code=303)
+
+
+@router.post("/settings/azure")
+async def admin_save_azure_settings(
+    request: Request,
+    tenant_id: Annotated[str, Form()] = "",
+    client_id: Annotated[str, Form()] = "",
+    client_secret: Annotated[str, Form()] = "",
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    await save_azure_settings(
+        db,
+        tenant_id=tenant_id.strip(),
+        client_id=client_id.strip(),
+        client_secret=client_secret if client_secret else None,
+    )
+    await db.commit()
+    flash(request, LABELS["toast.azure_saved"])
+    # Verify connection with the saved credentials
+    azure_cfg = await get_azure_settings(db)
+    ok, msg = await verify_azure_connection(
+        azure_cfg.tenant_id, azure_cfg.client_id, azure_cfg.client_secret
+    )
+    flash(request, msg, "success" if ok else "error")
+    return RedirectResponse(url="/admin/settings#azure", status_code=303)
 
 
 @router.post("/subscribers/{subscriber_id}/delete")
