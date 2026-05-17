@@ -27,7 +27,11 @@
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
           <span class="font-medium">{{ L["incident.affects"] }}:</span> {{ incident.service_name }}
           &nbsp;·&nbsp;
-          <span class="font-medium">{{ L["incident.since"] }}:</span> {{ incident.start_datetime | strftime_de }}
+          {% if incident.is_resolved and incident.end_datetime %}
+            {{ incident.start_datetime | strftime_de }} → {{ incident.end_datetime | strftime_de }}
+          {% else %}
+            <span class="font-medium">{{ L["incident.since"] }}:</span> {{ incident.start_datetime | strftime_de }}
+          {% endif %}
         </p>
         {% if incident.description %}
         <div class="text-sm text-gray-600 dark:text-gray-300 mt-2 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline">

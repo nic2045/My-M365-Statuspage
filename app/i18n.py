@@ -25,6 +25,7 @@ LABELS: dict[str, str] = {
     "incident.type.advisory":     "Hinweis",
     "incident.affects":           "Betrifft",
     "incident.since":             "Seit",
+    "incident.until":             "bis",
     "incident.updates":           "Updates",
     "incident.resolved":          "Behoben",
     # Embed
