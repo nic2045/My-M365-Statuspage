@@ -8,6 +8,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.app_settings import get_email_settings, save_email_settings
 from app.auth import require_auth
 from app.config import settings
 from app.crud import (
@@ -46,7 +47,7 @@ from app.graph_client import (
 )
 from app.i18n import LABELS
 from app.models import MonitoredService
-from app.notifications import send_incident_notification, send_teams_notification
+from app.notifications import send_incident_notification, send_teams_notification, send_test_email
 from app.templates import templates
 
 logger = logging.getLogger(__name__)
@@ -189,6 +190,7 @@ async def admin_settings(
     all_services = await get_all_monitored_services(db)
     known_groups = await get_known_groups(db)
     subscribers = await get_all_subscribers(db)
+    email_cfg = await get_email_settings(db)
     return templates.TemplateResponse(
         request,
         "admin/settings.html",
@@ -198,10 +200,56 @@ async def admin_settings(
             "known_groups": known_groups,
             "subscribers": subscribers,
             "teams_webhook_urls": settings.TEAMS_WEBHOOK_URLS,
+            "email_cfg": email_cfg,
             "page_title": f"Einstellungen – {settings.APP_TITLE}",
             **nav,
         },
     )
+
+
+@router.post("/settings/email")
+async def admin_save_email_settings(
+    request: Request,
+    auth_method: Annotated[str, Form()],
+    smtp_host: Annotated[str, Form()] = "",
+    smtp_port: Annotated[int, Form()] = 587,
+    smtp_user: Annotated[str, Form()] = "",
+    smtp_pass: Annotated[str, Form()] = "",
+    smtp_from: Annotated[str, Form()] = "",
+    smtp_tls: Annotated[str | None, Form()] = None,
+    graph_from_address: Annotated[str, Form()] = "",
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    if auth_method not in {"none", "password", "graph_oauth2"}:
+        auth_method = "none"
+    await save_email_settings(
+        db,
+        auth_method=auth_method,  # type: ignore[arg-type]
+        smtp_host=smtp_host.strip(),
+        smtp_port=smtp_port,
+        smtp_user=smtp_user.strip(),
+        # Treat empty submit as "keep existing password" (form shows placeholder)
+        smtp_pass=smtp_pass if smtp_pass else None,
+        smtp_from=smtp_from.strip(),
+        smtp_tls=smtp_tls == "on",
+        graph_from_address=graph_from_address.strip(),
+    )
+    await db.commit()
+    flash(request, LABELS["toast.email_saved"])
+    return RedirectResponse(url="/admin/settings#email", status_code=303)
+
+
+@router.post("/settings/email/test")
+async def admin_send_test_email(
+    request: Request,
+    to: Annotated[str, Form()],
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    ok, message = await send_test_email(to.strip())
+    flash(request, message, "success" if ok else "error")
+    return RedirectResponse(url="/admin/settings#email", status_code=303)
 
 
 @router.post("/subscribers/{subscriber_id}/delete")

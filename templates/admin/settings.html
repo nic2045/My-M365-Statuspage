@@ -146,6 +146,128 @@
   {% endif %}
 </section>
 
+{# ── E-Mail-Versand ──────────────────────────────────────────────────────────── #}
+{% set method = email_cfg.auth_method %}
+{% set status_pill = ('admin.email_status_configured' if email_cfg.is_configured else ('admin.email_status_disabled' if method == 'none' else 'admin.email_status_pending')) %}
+{% set status_color = ('bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' if email_cfg.is_configured else ('bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' if method == 'none' else 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400')) %}
+<section id="email" class="mb-8 scroll-mt-20">
+  <div class="flex items-baseline justify-between mb-1">
+    <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+      {{ L["admin.email_heading"] }}
+    </h2>
+    <span class="text-[11px] font-medium px-2 py-0.5 rounded-full {{ status_color }}">{{ L[status_pill] }}</span>
+  </div>
+  <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">{{ L["admin.email_hint"] }}</p>
+
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+    <form method="post" action="/admin/settings/email" class="p-5 space-y-4">
+
+      {# Versandmethode #}
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["admin.email_method"] }}</label>
+        <div class="flex flex-wrap gap-2">
+          {% for value, label_key in [('none', 'admin.email_method_none'), ('password', 'admin.email_method_password'), ('graph_oauth2', 'admin.email_method_oauth2')] %}
+          <label class="cursor-pointer">
+            <input type="radio" name="auth_method" value="{{ value }}" class="peer sr-only" {% if method == value %}checked{% endif %} data-email-method />
+            <span class="inline-block text-xs px-3 py-1.5 rounded-lg border transition-colors
+              peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:border-blue-300
+              peer-checked:dark:bg-blue-950/40 peer-checked:dark:text-blue-300 peer-checked:dark:border-blue-800
+              border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500">
+              {{ L[label_key] }}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# SMTP-Felder — sichtbar wenn Methode = password #}
+      <div data-email-section="password" class="space-y-3 {% if method != 'password' %}hidden{% endif %}">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["admin.email_smtp_host"] }}</label>
+            <input type="text" name="smtp_host" value="{{ email_cfg.smtp_host }}" placeholder="smtp.example.com"
+                   class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["admin.email_smtp_port"] }}</label>
+            <input type="number" name="smtp_port" value="{{ email_cfg.smtp_port }}" min="1" max="65535"
+                   class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["admin.email_smtp_user"] }}</label>
+            <input type="text" name="smtp_user" value="{{ email_cfg.smtp_user }}" autocomplete="username"
+                   class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["admin.email_smtp_pass"] }}</label>
+            <input type="password" name="smtp_pass" value="" autocomplete="new-password"
+                   placeholder="{% if email_cfg.smtp_pass %}••••••••{% endif %}"
+                   class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{{ L["admin.email_smtp_pass_hint"] }}</p>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["admin.email_smtp_from"] }}</label>
+          <input type="email" name="smtp_from" value="{{ email_cfg.smtp_from }}" placeholder="statuspage@example.com"
+                 class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input type="checkbox" name="smtp_tls" {% if email_cfg.smtp_tls %}checked{% endif %}
+                 class="rounded text-blue-600 focus:ring-blue-500" />
+          {{ L["admin.email_smtp_tls"] }}
+        </label>
+      </div>
+
+      {# Graph-OAuth2-Feld #}
+      <div data-email-section="graph_oauth2" class="space-y-3 {% if method != 'graph_oauth2' %}hidden{% endif %}">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["admin.email_graph_from"] }}</label>
+          <input type="email" name="graph_from_address" value="{{ email_cfg.graph_from_address }}" placeholder="statuspage@tenant.onmicrosoft.com"
+                 class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{{ L["admin.email_graph_hint"] }}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end pt-2 border-t border-gray-100 dark:border-gray-800">
+        <button type="submit"
+                class="text-sm px-4 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 font-medium transition-colors">
+          {{ L["admin.email_save"] }}
+        </button>
+      </div>
+    </form>
+
+    {# Test-Versand #}
+    <div class="border-t border-gray-100 dark:border-gray-800 px-5 py-4 bg-gray-50/50 dark:bg-gray-900/40">
+      <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">{{ L["admin.email_test_heading"] }}</p>
+      <form method="post" action="/admin/settings/email/test" class="flex flex-wrap items-center gap-2">
+        <input type="email" name="to" required placeholder="{{ L['admin.email_test_to'] }}"
+               class="flex-1 min-w-[200px] text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <button type="submit"
+                class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 hover:text-gray-900 hover:border-gray-400 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+          {{ L["admin.email_test_send"] }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Toggle SMTP / Graph field visibility based on radio selection
+    (function () {
+      const radios = document.querySelectorAll('[data-email-method]');
+      const sections = document.querySelectorAll('[data-email-section]');
+      radios.forEach((r) => {
+        r.addEventListener('change', () => {
+          sections.forEach((s) => {
+            s.classList.toggle('hidden', s.dataset.emailSection !== r.value);
+          });
+        });
+      });
+    })();
+  </script>
+</section>
+
 {# ── MS Teams Webhook ────────────────────────────────────────────────────────── #}
 <section class="mb-8">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
