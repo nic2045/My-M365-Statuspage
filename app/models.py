@@ -127,6 +127,7 @@ class MonitoredService(Base):
         Boolean, nullable=False, server_default="1", default=True
     )
     group_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0", default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

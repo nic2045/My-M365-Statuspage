@@ -434,39 +434,34 @@ async def get_suppressed_incidents(db: AsyncSession) -> list[Incident]:
     return list(result.scalars().all())
 
 
-async def get_enabled_services(db: AsyncSession) -> list[str]:
-    # NULL group sorts last (asc nulls last is not portable on SQLite,
-    # so we coerce NULL -> "￿" which sorts after any real string)
+def _service_sort_clause():
+    """Sort: group (NULL last) → admin-set sort_order → service_name."""
     from sqlalchemy import case
     group_sort = case(
         (MonitoredService.group_name.is_(None), "￿"),
         else_=MonitoredService.group_name,
     )
+    return [group_sort, MonitoredService.sort_order, MonitoredService.service_name]
+
+
+async def get_enabled_services(db: AsyncSession) -> list[str]:
     result = await db.execute(
         select(MonitoredService.service_name)
         .where(MonitoredService.is_enabled.is_(True))
-        .order_by(group_sort, MonitoredService.service_name)
+        .order_by(*_service_sort_clause())
     )
     return [row[0] for row in result.fetchall()]
 
 
 async def get_enabled_services_with_status(db: AsyncSession) -> list[dict]:
-    """Same order as get_enabled_services, enriched with current status + group.
-
-    Used by the admin dashboard to render status-aware quick-action tiles.
-    """
-    from sqlalchemy import case
-    group_sort = case(
-        (MonitoredService.group_name.is_(None), "￿"),
-        else_=MonitoredService.group_name,
-    )
+    """Same order as get_enabled_services, enriched with current status + group."""
     result = await db.execute(
         select(
             MonitoredService.service_name,
             MonitoredService.group_name,
         )
         .where(MonitoredService.is_enabled.is_(True))
-        .order_by(group_sort, MonitoredService.service_name)
+        .order_by(*_service_sort_clause())
     )
     rows = result.fetchall()
     enriched: list[dict] = []
@@ -481,15 +476,56 @@ async def get_enabled_services_with_status(db: AsyncSession) -> list[dict]:
 
 
 async def get_all_monitored_services(db: AsyncSession) -> list[MonitoredService]:
-    from sqlalchemy import case
-    group_sort = case(
-        (MonitoredService.group_name.is_(None), "￿"),
-        else_=MonitoredService.group_name,
-    )
     result = await db.execute(
-        select(MonitoredService).order_by(group_sort, MonitoredService.service_name)
+        select(MonitoredService).order_by(*_service_sort_clause())
     )
     return list(result.scalars().all())
+
+
+async def move_service(db: AsyncSession, service_name: str, direction: str) -> bool:
+    """Swap sort_order with the adjacent service in the same group.
+
+    direction: 'up' or 'down'. Returns True if swap happened.
+    Falls back to setting an explicit sort_order based on neighbor positions
+    if multiple services share the same sort_order (legacy default 0).
+    """
+    if direction not in {"up", "down"}:
+        return False
+    result = await db.execute(
+        select(MonitoredService).order_by(*_service_sort_clause())
+    )
+    all_svcs = list(result.scalars().all())
+
+    idx = next((i for i, s in enumerate(all_svcs) if s.service_name == service_name), None)
+    if idx is None:
+        return False
+    cur = all_svcs[idx]
+    # Find adjacent in same group
+    if direction == "up":
+        prev_idx = idx - 1
+        while prev_idx >= 0 and all_svcs[prev_idx].group_name != cur.group_name:
+            prev_idx -= 1
+        if prev_idx < 0:
+            return False
+        neighbor = all_svcs[prev_idx]
+    else:
+        next_idx = idx + 1
+        while next_idx < len(all_svcs) and all_svcs[next_idx].group_name != cur.group_name:
+            next_idx += 1
+        if next_idx >= len(all_svcs):
+            return False
+        neighbor = all_svcs[next_idx]
+
+    # If both have the same sort_order, assign a stable spread first
+    if cur.sort_order == neighbor.sort_order:
+        group_members = [s for s in all_svcs if s.group_name == cur.group_name]
+        for i, s in enumerate(group_members):
+            s.sort_order = i * 10
+        await db.flush()
+
+    cur.sort_order, neighbor.sort_order = neighbor.sort_order, cur.sort_order
+    await db.flush()
+    return True
 
 
 async def ensure_service_known(db: AsyncSession, service_name: str) -> MonitoredService:

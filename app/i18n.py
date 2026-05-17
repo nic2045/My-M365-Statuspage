@@ -192,6 +192,9 @@ LABELS: dict[str, str] = {
     "admin.teams_hint":               "Incoming Webhook URLs (kommasepariert). Leer = deaktiviert.",
     "admin.teams_save":               "Speichern",
     "toast.subscriber_deleted":       "Abonnent entfernt.",
+    "toast.service_moved":            "Reihenfolge angepasst.",
+    "admin.move_up":                  "Nach oben",
+    "admin.move_down":                "Nach unten",
     "toast.email_saved":              "E-Mail-Einstellungen gespeichert.",
     # Email settings
     "admin.email_heading":            "E-Mail-Versand",
