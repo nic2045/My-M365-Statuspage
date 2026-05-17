@@ -142,6 +142,30 @@ def _date_de(d, fmt: str = "%d.%m.%Y") -> str:
     return d.strftime(fmt)
 
 
+def _duration_de(start: datetime | None, end: datetime | None) -> str:
+    if start is None or end is None:
+        return ""
+    seconds = int((end - start).total_seconds())
+    if seconds < 0:
+        return ""
+    if seconds < 60:
+        return f"{seconds} Sek"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes} Min"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} Std"
+    days = hours // 24
+    if days < 7:
+        return "1 Tag" if days == 1 else f"{days} Tage"
+    weeks = days // 7
+    if weeks < 5:
+        return "1 Woche" if weeks == 1 else f"{weeks} Wochen"
+    months = days // 30
+    return "1 Monat" if months == 1 else f"{months} Monate"
+
+
 def _render_md(text: str | None) -> str:
     if not text:
         return ""
@@ -152,3 +176,4 @@ def _render_md(text: str | None) -> str:
 templates.env.filters["strftime_de"] = _strftime_de
 templates.env.filters["date_de"] = _date_de
 templates.env.filters["render_md"] = _render_md
+templates.env.globals["duration_de"] = _duration_de

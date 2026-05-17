@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Background-agent worktrees (transient, never check in)
+.claude/worktrees/
