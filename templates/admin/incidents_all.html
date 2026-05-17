@@ -93,8 +93,12 @@
       {{ L["incident.resolved"] }}
     </span>
     {% endif %}
-    <span class="text-xs text-gray-400 dark:text-gray-500">
-      {{ (inc.end_datetime or inc.last_modified or inc.start_datetime) | strftime_de }}
+    <span class="text-xs text-gray-400 dark:text-gray-500" title="{% if inc.start_datetime %}Start: {{ inc.start_datetime | strftime_de }}{% endif %}{% if inc.end_datetime %} · Ende: {{ inc.end_datetime | strftime_de }}{% endif %}">
+      {% if inc.is_resolved and inc.end_datetime and inc.start_datetime %}
+        {{ inc.start_datetime | strftime_de }} → {{ inc.end_datetime | strftime_de }}
+      {% else %}
+        {{ (inc.end_datetime or inc.last_modified or inc.start_datetime) | strftime_de }}
+      {% endif %}
     </span>
   </div>
 </a>
