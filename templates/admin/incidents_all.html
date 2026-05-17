@@ -74,9 +74,7 @@
     {% set _phase = 'resolved' if inc.is_resolved else inc.status %}
     <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ phase_dot_class(_phase) }}"
           title="{{ state_label(_phase) }}"></span>
-    <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5
-      {% if inc.classification == 'advisory' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400
-      {% else %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400{% endif %}">
+    <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5 {{ incident_type_badge_class(inc.classification) }}">
       {{ incident_type_label(inc.classification) }}
     </span>
     {% if inc.severity %}
