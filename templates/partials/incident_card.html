@@ -27,8 +27,10 @@
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
           <span class="font-medium">{{ L["incident.affects"] }}:</span> {{ incident.service_name }}
           &nbsp;·&nbsp;
-          {% if incident.is_resolved and incident.end_datetime %}
-            {{ incident.start_datetime | strftime_de }} → {{ incident.end_datetime | strftime_de }}
+          {% if incident.is_resolved and incident.end_datetime and incident.start_datetime %}
+            <span title="{{ incident.start_datetime | strftime_de }} → {{ incident.end_datetime | strftime_de }}">
+              {{ incident.start_datetime | date_de }} · {{ duration_de(incident.start_datetime, incident.end_datetime) }}
+            </span>
           {% else %}
             <span class="font-medium">{{ L["incident.since"] }}:</span> {{ incident.start_datetime | strftime_de }}
           {% endif %}
