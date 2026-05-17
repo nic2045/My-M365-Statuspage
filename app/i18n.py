@@ -247,4 +247,12 @@ LABELS: dict[str, str] = {
     "admin.azure_status_configured":  "Verbunden",
     "admin.azure_status_pending":     "Unvollständig",
     "toast.azure_saved":              "Azure AD App gespeichert.",
+    # Admin – global search palette (Cmd+K / Ctrl+K)
+    "admin.search.placeholder":        "Suchen…",
+    "admin.search.group.incidents":    "Störungen",
+    "admin.search.group.updates":      "Updates",
+    "admin.search.group.services":     "Dienste",
+    "admin.search.group.subscribers":  "Subscriber",
+    "admin.search.no_results":         "Keine Treffer.",
+    "admin.search.hint":               "Cmd+K oder Strg+K zum Öffnen",
 }

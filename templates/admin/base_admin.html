@@ -193,6 +193,30 @@
 </div>
 {% endif %}
 
+{# ── Global Cmd+K / Ctrl+K search palette ───────────────────────────────── #}
+<div id="admin-search-modal"
+     class="hidden fixed inset-0 z-50 flex items-start justify-center p-4 pt-[10vh]"
+     role="dialog" aria-modal="true" aria-label="{{ L['admin.search.placeholder'] }}">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" id="admin-search-backdrop"></div>
+  <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-xl overflow-hidden">
+    <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+      <svg class="w-5 h-5 text-gray-400 dark:text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/>
+      </svg>
+      <input type="text" id="admin-search-input"
+             autocomplete="off"
+             placeholder="{{ L['admin.search.placeholder'] }}"
+             class="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none" />
+      <kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">Esc</kbd>
+    </div>
+    <div id="admin-search-results" class="max-h-[60vh] overflow-y-auto py-2"></div>
+    <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gray-400 dark:text-gray-500 flex items-center justify-between">
+      <span>{{ L['admin.search.hint'] }}</span>
+      <span class="hidden sm:inline">&uarr; &darr; &crarr;</span>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -232,6 +256,154 @@
   closeBtn && closeBtn.addEventListener('click', close);
   overlay.addEventListener('click', close);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+})();
+</script>
+<script>
+(function () {
+  const modal     = document.getElementById('admin-search-modal');
+  const backdrop  = document.getElementById('admin-search-backdrop');
+  const input     = document.getElementById('admin-search-input');
+  const resultsEl = document.getElementById('admin-search-results');
+  if (!modal || !input || !resultsEl) return;
+
+  const LABELS = {
+    'admin.search.group.incidents':   {{ L['admin.search.group.incidents']   | tojson }},
+    'admin.search.group.updates':     {{ L['admin.search.group.updates']     | tojson }},
+    'admin.search.group.services':    {{ L['admin.search.group.services']    | tojson }},
+    'admin.search.group.subscribers': {{ L['admin.search.group.subscribers'] | tojson }},
+    'admin.search.no_results':        {{ L['admin.search.no_results']        | tojson }},
+    'admin.subscriber_pending':       {{ L['admin.subscriber_pending']       | tojson }},
+  };
+  const tr = (k) => LABELS[k] || k;
+
+  let items = [];
+  let active = -1;
+  let debounce = null;
+  let lastQuery = '';
+
+  function openModal() {
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+    if (input.value.trim().length >= 2) runSearch(input.value);
+    else renderEmpty();
+  }
+  function closeModal() {
+    modal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+    items = []; active = -1;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function renderEmpty() {
+    resultsEl.innerHTML = '';
+    items = []; active = -1;
+  }
+
+  function renderNoResults() {
+    resultsEl.innerHTML =
+      '<div class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">'
+      + escapeHtml(tr('admin.search.no_results')) + '</div>';
+    items = []; active = -1;
+  }
+
+  function renderGroups(groups) {
+    if (!groups || !groups.length) { renderNoResults(); return; }
+    items = [];
+    const parts = [];
+    groups.forEach((g) => {
+      parts.push(
+        '<div class="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">'
+        + escapeHtml(tr(g.label)) + '</div>'
+      );
+      g.items.forEach((it) => {
+        const idx = items.length;
+        items.push(it);
+        const sub = it.sub ? (tr(it.sub) || it.sub) : '';
+        parts.push(
+          '<a href="' + escapeHtml(it.href) + '" data-idx="' + idx + '"'
+          + ' class="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">'
+          + '<div class="text-gray-900 dark:text-white truncate">' + escapeHtml(it.label) + '</div>'
+          + (sub ? '<div class="text-xs text-gray-500 dark:text-gray-400 truncate">' + escapeHtml(sub) + '</div>' : '')
+          + '</a>'
+        );
+      });
+    });
+    resultsEl.innerHTML = parts.join('');
+    active = items.length ? 0 : -1;
+    updateActive();
+  }
+
+  function updateActive() {
+    resultsEl.querySelectorAll('a[data-idx]').forEach((el) => {
+      const i = Number(el.dataset.idx);
+      if (i === active) {
+        el.classList.add('bg-blue-50', 'dark:bg-blue-950/40');
+        el.scrollIntoView({ block: 'nearest' });
+      } else {
+        el.classList.remove('bg-blue-50', 'dark:bg-blue-950/40');
+      }
+    });
+  }
+
+  async function runSearch(q) {
+    const trimmed = q.trim();
+    if (trimmed.length < 2) { renderEmpty(); return; }
+    if (trimmed === lastQuery) return;
+    lastQuery = trimmed;
+    try {
+      const resp = await fetch('/admin/search?q=' + encodeURIComponent(trimmed), {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!resp.ok) { renderNoResults(); return; }
+      const data = await resp.json();
+      renderGroups(data.groups || []);
+    } catch (_e) {
+      renderNoResults();
+    }
+  }
+
+  input.addEventListener('input', () => {
+    if (debounce) clearTimeout(debounce);
+    debounce = setTimeout(() => runSearch(input.value), 120);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (items.length) { active = (active + 1) % items.length; updateActive(); }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (items.length) { active = (active - 1 + items.length) % items.length; updateActive(); }
+    } else if (e.key === 'Enter') {
+      if (active >= 0 && items[active]) {
+        e.preventDefault();
+        window.location.href = items[active].href;
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModal();
+    }
+  });
+
+  backdrop.addEventListener('click', closeModal);
+
+  document.addEventListener('keydown', (e) => {
+    const isShortcut = (e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey);
+    if (isShortcut) {
+      e.preventDefault();
+      if (modal.classList.contains('hidden')) openModal();
+      else closeModal();
+    } else if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
 })();
 </script>
 {% endblock %}
