@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 import bleach
-from sqlalchemy import desc, select
+from sqlalchemy import desc, or_, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -809,3 +809,127 @@ async def get_confirmed_subscribers(db: AsyncSession) -> list[Subscriber]:
         .order_by(Subscriber.email)
     )
     return list(result.scalars().all())
+
+
+async def search_global(db: AsyncSession, q: str) -> dict:
+    """Run a multi-table LIKE search and group hits for the admin Cmd+K palette.
+
+    Returns a dict shaped for direct JSON serialisation:
+    ``{"groups": [{"label": str, "items": [{"label", "href", "sub"}, ...]}, ...]}``.
+    Empty / very short queries return an empty result set so we don't flood
+    the palette while the user is still typing the first character.
+    """
+    query = (q or "").strip()
+    if len(query) < 2:
+        return {"groups": []}
+
+    pattern = f"%{query}%"
+    per_group = 5
+    total_cap = 20
+
+    incidents_res = await db.execute(
+        select(Incident)
+        .where(
+            Incident.classification != "maintenance",
+            or_(
+                Incident.title.like(pattern),
+                Incident.description.like(pattern),
+                Incident.service_name.like(pattern),
+            ),
+        )
+        .order_by(desc(Incident.last_modified))
+        .limit(per_group)
+    )
+    incidents = list(incidents_res.scalars().all())
+
+    updates_res = await db.execute(
+        select(IncidentUpdate)
+        .where(IncidentUpdate.content.like(pattern))
+        .order_by(desc(IncidentUpdate.post_created_at))
+        .limit(per_group)
+    )
+    updates = list(updates_res.scalars().all())
+
+    services_res = await db.execute(
+        select(MonitoredService)
+        .where(MonitoredService.service_name.like(pattern))
+        .order_by(MonitoredService.service_name)
+        .limit(per_group)
+    )
+    services = list(services_res.scalars().all())
+
+    subscribers_res = await db.execute(
+        select(Subscriber)
+        .where(Subscriber.email.like(pattern))
+        .order_by(Subscriber.email)
+        .limit(per_group)
+    )
+    subscribers = list(subscribers_res.scalars().all())
+
+    groups: list[dict] = []
+    if incidents:
+        groups.append({
+            "label": "admin.search.group.incidents",
+            "items": [
+                {
+                    "label": inc.title,
+                    "href": f"/admin/incidents/{inc.id}",
+                    "sub": inc.service_name or "",
+                }
+                for inc in incidents
+            ],
+        })
+    if updates:
+        # Need parent incidents to build hrefs; fetch in one go to avoid N+1
+        parent_ids = sorted({u.incident_id for u in updates})
+        parents_res = await db.execute(
+            select(Incident).where(Incident.id.in_(parent_ids))
+        )
+        parents = {i.id: i for i in parents_res.scalars().all()}
+        items: list[dict] = []
+        for upd in updates:
+            parent = parents.get(upd.incident_id)
+            snippet = upd.content[:120] + ("…" if len(upd.content) > 120 else "")
+            items.append({
+                "label": snippet,
+                "href": f"/admin/incidents/{upd.incident_id}",
+                "sub": parent.title if parent else "",
+            })
+        groups.append({"label": "admin.search.group.updates", "items": items})
+    if services:
+        groups.append({
+            "label": "admin.search.group.services",
+            "items": [
+                {
+                    "label": svc.service_name,
+                    "href": "/admin/settings#services",
+                    "sub": svc.group_name or "",
+                }
+                for svc in services
+            ],
+        })
+    if subscribers:
+        groups.append({
+            "label": "admin.search.group.subscribers",
+            "items": [
+                {
+                    "label": sub.email,
+                    "href": "/admin/settings#subscribers",
+                    "sub": "" if sub.confirmed_at else "admin.subscriber_pending",
+                }
+                for sub in subscribers
+            ],
+        })
+
+    # Enforce global cap by trimming groups in order
+    remaining = total_cap
+    capped: list[dict] = []
+    for g in groups:
+        if remaining <= 0:
+            break
+        items = g["items"][:remaining]
+        if items:
+            capped.append({"label": g["label"], "items": items})
+            remaining -= len(items)
+
+    return {"groups": capped}

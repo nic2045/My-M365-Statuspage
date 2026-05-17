@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,7 @@ from app.crud import (
     get_incident_by_id,
     get_known_groups,
     move_service,
+    search_global,
     set_service_enabled,
     set_service_group,
     set_service_status_manual,
@@ -174,6 +175,16 @@ async def admin_dashboard(
             **nav,
         },
     )
+
+
+@router.get("/search")
+async def admin_search(
+    q: str = "",
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """JSON endpoint backing the Cmd+K palette in the admin area."""
+    return JSONResponse(await search_global(db, q))
 
 
 @router.get("/settings")
