@@ -32,8 +32,8 @@
   {% endif %}
 </div>
 
-{# ── Top tab navigation (anchor scrolling) ──────────────────────────────────── #}
-<nav class="mb-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-x-auto">
+{# ── Top tab navigation (sticky, smooth-scrolls to sections) ────────────────── #}
+<nav id="tab-nav" class="mb-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-x-auto sticky top-2 z-10 transition-shadow">
   <div class="flex items-stretch divide-x divide-gray-100 dark:divide-gray-800 min-w-max">
     {% for href, label_key, icon in [
       ('#overview',     'page.tab_overview',     'overview'),
@@ -106,9 +106,14 @@
 <a id="maintenances" class="block scroll-mt-20"></a>
 {% if maintenances %}
 <section class="mb-8">
-  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    {{ L["page.maintenance_heading"] }}
-  </h2>
+  <div class="flex items-center gap-2 mb-3">
+    <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+      {{ L["page.maintenance_heading"] }}
+    </h2>
+    <span class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 text-xs font-bold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+      {{ maintenances | length }}
+    </span>
+  </div>
   {% for m in maintenances %}
   <div class="bg-white dark:bg-gray-900 rounded-2xl border-l-4 border-blue-400 border border-gray-100 dark:border-gray-800 px-5 py-4 mb-3 shadow-sm">
     <div class="flex items-start justify-between gap-3">
@@ -164,9 +169,16 @@
 
 <a id="incidents" class="block scroll-mt-20"></a>
 <section class="mb-6">
-  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    {{ L["page.incidents_heading_active"] }}
-  </h2>
+  <div class="flex items-center gap-2 mb-3">
+    <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+      {{ L["page.incidents_heading_active"] }}
+    </h2>
+    {% if ns.incidents %}
+    <span class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 text-xs font-bold rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+      {{ ns.incidents | length }}
+    </span>
+    {% endif %}
+  </div>
   {% if ns.incidents %}
     {% for incident in ns.incidents %}
       {% include "partials/incident_card.html" %}
@@ -187,7 +199,7 @@
 {# ── Aktuelle Hinweise (same heading style as Aktive Störungen) ───────────── #}
 <a id="advisories" class="block scroll-mt-20"></a>
 <section class="mb-6">
-  <details class="group" {% if ns.advisories %}open{% endif %}>
+  <details class="group">
     <summary class="flex items-center gap-2 cursor-pointer list-none select-none mb-3">
       <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -196,7 +208,7 @@
         {{ L["page.advisories_heading"] }}
       </h2>
       {% if ns.advisories %}
-      <span class="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[11px] font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+      <span class="ml-auto inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 text-xs font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
         {{ ns.advisories | length }}
       </span>
       {% else %}
@@ -226,7 +238,7 @@
       </span>
       <span class="text-xs text-gray-400 dark:text-gray-500">&middot; {{ L["page.history_subheading"] }}</span>
       {% if recent_resolved %}
-      <span class="ml-auto text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+      <span class="ml-auto inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 text-xs font-bold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
         {{ recent_resolved | length }}
       </span>
       {% endif %}
@@ -235,21 +247,16 @@
     {% if recent_resolved %}
     {# ── Service filter for history ─────────────────────────────────────── #}
     {% set history_services = recent_resolved | map(attribute='service_name') | list | unique | sort %}
-    <div class="flex flex-wrap items-center gap-2 mb-3" data-history-filter>
-      <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">
-        {{ L["page.history_filter"] }}
-      </span>
-      <button type="button" data-history-filter-btn="" data-active="1"
-              class="text-xs px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-colors">
-        {{ L["page.history_filter_all"] }}
-      </button>
-      {% for svc in history_services %}
-      <button type="button" data-history-filter-btn="{{ svc }}"
-              class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-        {{ svc }}
-      </button>
-      {% endfor %}
+    {% if history_services | length > 1 %}
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">{{ L["page.history_filter"] }}</span>
+      <select data-history-filter-select
+              class="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+        <option value="">{{ L["page.history_filter_all"] }}</option>
+        {% for svc in history_services %}<option value="{{ svc }}">{{ svc }}</option>{% endfor %}
+      </select>
     </div>
+    {% endif %}
     <div class="space-y-2" data-history-entries>
       {% for incident in recent_resolved %}
       <div id="incident-{{ incident.id }}"
@@ -296,10 +303,12 @@
     </p>
     <script>
       (function () {
-        const buttons = document.querySelectorAll('[data-history-filter-btn]');
+        const sel = document.querySelector('[data-history-filter-select]');
         const entries = document.querySelectorAll('[data-history-entry]');
         const emptyMsg = document.querySelector('[data-history-empty-filter]');
-        function apply(filter) {
+        if (!sel) return;
+        sel.addEventListener('change', () => {
+          const filter = sel.value;
           let visible = 0;
           entries.forEach((el) => {
             const match = !filter || el.dataset.service === filter;
@@ -307,23 +316,6 @@
             if (match) visible++;
           });
           if (emptyMsg) emptyMsg.classList.toggle('hidden', visible > 0);
-          buttons.forEach((b) => {
-            const active = (b.dataset.historyFilterBtn || '') === filter;
-            b.dataset.active = active ? '1' : '';
-            b.classList.toggle('border-blue-300', active);
-            b.classList.toggle('bg-blue-50', active);
-            b.classList.toggle('text-blue-700', active);
-            b.classList.toggle('dark:border-blue-700', active);
-            b.classList.toggle('dark:bg-blue-950/40', active);
-            b.classList.toggle('dark:text-blue-300', active);
-            b.classList.toggle('border-gray-200', !active);
-            b.classList.toggle('dark:border-gray-700', !active);
-            b.classList.toggle('text-gray-600', !active);
-            b.classList.toggle('dark:text-gray-400', !active);
-          });
-        }
-        buttons.forEach((b) => {
-          b.addEventListener('click', () => apply(b.dataset.historyFilterBtn || ''));
         });
       })();
     </script>
@@ -406,6 +398,30 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
     });
+  })();
+</script>
+
+<script>
+  // Smooth scroll for tab nav links + elevated shadow while sticky
+  (function () {
+    const nav = document.getElementById('tab-nav');
+    document.querySelectorAll('#tab-nav a[href^="#"]').forEach((a) => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    if (nav) {
+      const observer = new IntersectionObserver(
+        ([entry]) => nav.classList.toggle('shadow-md', !entry.isIntersecting),
+        { threshold: 1.0, rootMargin: '-2px 0px 0px 0px' }
+      );
+      // observe a sentinel just above the nav
+      const sentinel = document.createElement('div');
+      nav.parentNode.insertBefore(sentinel, nav);
+      observer.observe(sentinel);
+    }
   })();
 </script>
 

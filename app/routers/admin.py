@@ -374,6 +374,8 @@ async def create_incident(
     severity: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
     start_datetime: Annotated[str | None, Form()] = None,
+    source: Annotated[str, Form()] = "manual",
+    external_id: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
@@ -385,6 +387,8 @@ async def create_incident(
         severity=severity or "",
         description=description or None,
         start_datetime=_parse_form_dt(start_datetime),
+        source=source or "manual",
+        external_id=external_id.strip() if external_id else None,
     )
     await db.commit()
 
@@ -457,6 +461,8 @@ async def update_incident(
     end_datetime: Annotated[str | None, Form()] = None,
     scheduled_start: Annotated[str | None, Form()] = None,
     scheduled_end: Annotated[str | None, Form()] = None,
+    source: Annotated[str | None, Form()] = None,
+    external_id: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
@@ -477,7 +483,10 @@ async def update_incident(
         "description": description or None,
         "is_resolved": new_resolved,
         "end_datetime": parsed_end,
+        "external_id": external_id.strip() if external_id else None,
     }
+    if source:
+        updates["source"] = source
     if scheduled_start is not None or scheduled_end is not None:
         updates["scheduled_start"] = _parse_form_dt(scheduled_start)
         updates["scheduled_end"] = _parse_form_dt(scheduled_end)

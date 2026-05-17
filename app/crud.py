@@ -314,6 +314,8 @@ async def create_manual_incident(
     start_datetime: datetime | None = None,
     scheduled_start: datetime | None = None,
     scheduled_end: datetime | None = None,
+    source: str = "manual",
+    external_id: str | None = None,
 ) -> Incident:
     now = datetime.utcnow()
     start = start_datetime or now
@@ -328,7 +330,8 @@ async def create_manual_incident(
         start_datetime=start,
         last_modified=now,
         is_resolved=False,
-        source="manual",
+        source=source or "manual",
+        external_id=external_id or None,
         scheduled_start=scheduled_start,
         scheduled_end=scheduled_end,
     )

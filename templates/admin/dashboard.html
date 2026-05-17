@@ -118,17 +118,13 @@
 {% macro service_filter_pills(items, scope) %}
   {% set svc_list = items | map(attribute='service_name') | list | unique | sort %}
   {% if svc_list | length > 1 %}
-  <div class="flex flex-wrap items-center gap-2 mb-3" data-filter-scope="{{ scope }}">
-    <button type="button" data-filter-svc="" data-active="1"
-            class="text-xs px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-colors">
-      {{ L["admin.filter_all"] }}
-    </button>
-    {% for s in svc_list %}
-    <button type="button" data-filter-svc="{{ s }}"
-            class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-      {{ s }}
-    </button>
-    {% endfor %}
+  <div class="flex items-center gap-2 mb-3">
+    <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">{{ L["admin.filter_state"] }}</span>
+    <select data-filter-svc-select data-filter-scope="{{ scope }}"
+            class="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+      <option value="">{{ L["admin.filter_all"] }}</option>
+      {% for s in svc_list %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
   </div>
   {% endif %}
 {% endmacro %}
@@ -255,32 +251,15 @@
 </section>
 
 <script>
-  // Service-filter pills: each section with [data-filter-section] has its own
-  // [data-filter-scope] pill bar and [data-row data-service=...] rows.
   (function () {
     document.querySelectorAll('[data-filter-section]').forEach((section) => {
-      const buttons = section.querySelectorAll('[data-filter-svc]');
+      const sel = section.querySelector('[data-filter-svc-select]');
       const rows = section.querySelectorAll('[data-row]');
-      function apply(svc) {
-        rows.forEach((r) => {
-          const match = !svc || r.dataset.service === svc;
-          r.classList.toggle('hidden', !match);
-        });
-        buttons.forEach((b) => {
-          const active = (b.dataset.filterSvc || '') === svc;
-          b.classList.toggle('border-blue-300', active);
-          b.classList.toggle('bg-blue-50', active);
-          b.classList.toggle('text-blue-700', active);
-          b.classList.toggle('dark:border-blue-700', active);
-          b.classList.toggle('dark:bg-blue-950/40', active);
-          b.classList.toggle('dark:text-blue-300', active);
-          b.classList.toggle('border-gray-200', !active);
-          b.classList.toggle('dark:border-gray-700', !active);
-          b.classList.toggle('text-gray-600', !active);
-          b.classList.toggle('dark:text-gray-400', !active);
-        });
-      }
-      buttons.forEach((b) => b.addEventListener('click', () => apply(b.dataset.filterSvc || '')));
+      if (!sel) return;
+      sel.addEventListener('change', () => {
+        const svc = sel.value;
+        rows.forEach((r) => r.classList.toggle('hidden', !(!svc || r.dataset.service === svc)));
+      });
     });
   })();
 </script>
