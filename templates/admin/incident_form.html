@@ -1,124 +1,177 @@
 {% extends "admin/base_admin.html" %}
 
 {% block admin_content %}
-<div class="mb-6 flex items-center gap-3">
-  <a href="/admin" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
-    ← {{ L["admin.back"] }}
+<div class="mb-6 flex items-center gap-2">
+  <a href="/admin/incidents"
+     class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200 transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+    </svg>
   </a>
   <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ L["admin.new_incident"] }}</h1>
 </div>
 
-<div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 max-w-xl">
-  <form method="post" action="/admin/incidents" class="space-y-4">
+<form method="post" action="/admin/incidents" class="max-w-2xl space-y-6">
 
-    <div>
-      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-        {{ L["admin.title_label"] }}
-      </label>
-      <input type="text" name="title" required
-             class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-             placeholder="Kurze Beschreibung der Störung…">
+  {# ── Abschnitt 1: Grunddaten ─────────────────────────────────────── #}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Grunddaten</h2>
     </div>
+    <div class="px-5 py-4 space-y-4">
 
-    <div>
-      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-        {{ L["admin.service_label"] }}
-      </label>
-      <select name="service_name" required
-              class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        {% for svc in services %}
-        <option value="{{ svc }}">{{ svc }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4">
       <div>
         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-          {{ L["admin.classification_label"] }}
+          {{ L["admin.title_label"] }}
         </label>
-        <select name="classification"
-                class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="incident">{{ L["incident.type.incident"] }}</option>
-          <option value="advisory">{{ L["incident.type.advisory"] }}</option>
-        </select>
+        <input type="text" name="title" required autofocus
+               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+               placeholder="Kurze Beschreibung der Störung…">
       </div>
-      <div>
-        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-          {{ L["admin.severity_label"] }}
-        </label>
-        <select name="severity"
-                class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="">—</option>
-          <option value="critical">{{ L["severity.critical"] }}</option>
-          <option value="high">{{ L["severity.high"] }}</option>
-          <option value="medium">{{ L["severity.medium"] }}</option>
-          <option value="low">{{ L["severity.low"] }}</option>
-        </select>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            {{ L["admin.service_label"] }}
+          </label>
+          <select name="service_name" required
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            {% for svc in services %}
+            <option value="{{ svc }}">{{ svc }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            {{ L["admin.classification_label"] }}
+          </label>
+          <select name="classification"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="incident">{{ L["incident.type.incident"] }}</option>
+            <option value="advisory">{{ L["incident.type.advisory"] }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            {{ L["admin.severity_label"] }}
+            <span class="font-normal text-gray-400">(optional)</span>
+          </label>
+          <select name="severity"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">—</option>
+            <option value="critical">{{ L["severity.critical"] }}</option>
+            <option value="high">{{ L["severity.high"] }}</option>
+            <option value="medium">{{ L["severity.medium"] }}</option>
+            <option value="low">{{ L["severity.low"] }}</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {# ── Abschnitt 2: Zeitraum ───────────────────────────────────────── #}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Zeitraum</h2>
+    </div>
+    <div class="px-5 py-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label for="start_datetime" class="text-xs font-medium text-gray-500 dark:text-gray-400">
+              {{ L["admin.start_datetime"] }}
+            </label>
+            <button type="button" id="start-now-btn"
+                    class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+              {{ L["admin.now"] }}
+            </button>
+          </div>
+          <input type="datetime-local" name="start_datetime" id="start_datetime"
+                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label for="end_datetime" class="text-xs font-medium text-gray-500 dark:text-gray-400">
+              {{ L["admin.end_datetime"] }}
+              <span class="font-normal text-gray-400">(optional)</span>
+            </label>
+            <button type="button" id="end-now-btn"
+                    class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+              {{ L["admin.now"] }}
+            </button>
+          </div>
+          <input type="datetime-local" name="end_datetime" id="end_datetime"
+                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
       </div>
     </div>
+  </div>
 
-    <div>
-      <div class="flex items-center justify-between mb-1">
-        <label for="start_datetime" class="block text-xs font-medium text-gray-500 dark:text-gray-400">
-          {{ L["admin.start_datetime"] }}
-        </label>
-        <button type="button" id="start-now-btn"
-                class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
-          {{ L["admin.now"] }}
-        </button>
-      </div>
-      <input type="datetime-local" name="start_datetime" id="start_datetime"
-             class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+  {# ── Abschnitt 3: Details ────────────────────────────────────────── #}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Details</h2>
     </div>
+    <div class="px-5 py-4 space-y-4">
 
-    <div>
-      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-        {{ L["admin.description_label"] }}
-        <span class="font-normal text-gray-400">(optional)</span>
-      </label>
-      <textarea name="description" rows="3"
-                class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                placeholder="Detailbeschreibung der Störung…"></textarea>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4">
       <div>
         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-          {{ L["admin.source_label"] }}
-        </label>
-        <input type="text" name="source" value="manual"
-               list="source-list"
-               autocomplete="off"
-               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <datalist id="source-list">
-          {% for src in known_sources %}
-          <option value="{{ src }}">{{ source_labels.get(src, '') }}</option>
-          {% endfor %}
-          {% if 'manual' not in known_sources %}<option value="manual">{{ L["admin.source_manual"] }}</option>{% endif %}
-          {% if 'graph' not in known_sources %}<option value="graph">{{ L["admin.source_microsoft"] }}</option>{% endif %}
-        </datalist>
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-          {{ L["admin.external_id_label"] }}
+          {{ L["admin.description_label"] }}
           <span class="font-normal text-gray-400">(optional)</span>
         </label>
-        <input type="text" name="external_id"
-               placeholder="{{ L['admin.external_id_placeholder'] }}"
-               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+        <textarea name="description" rows="3"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="Detailbeschreibung der Störung…"></textarea>
       </div>
-    </div>
 
-    <div class="pt-2">
-      <button type="submit"
-              class="px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium transition-colors">
-        {{ L["admin.create"] }}
-      </button>
-    </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            {{ L["admin.source_label"] }}
+          </label>
+          <input type="text" name="source" value="manual"
+                 list="source-list"
+                 autocomplete="off"
+                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <datalist id="source-list">
+            {% for src in known_sources %}
+            <option value="{{ src }}">{{ source_labels.get(src, '') }}</option>
+            {% endfor %}
+            {% if 'manual' not in known_sources %}<option value="manual">{{ L["admin.source_manual"] }}</option>{% endif %}
+            {% if 'graph' not in known_sources %}<option value="graph">{{ L["admin.source_microsoft"] }}</option>{% endif %}
+          </datalist>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            {{ L["admin.external_id_label"] }}
+            <span class="font-normal text-gray-400">(optional)</span>
+          </label>
+          <input type="text" name="external_id"
+                 placeholder="{{ L['admin.external_id_placeholder'] }}"
+                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+        </div>
+      </div>
 
-  </form>
-</div>
+    </div>
+  </div>
+
+  {# ── Submit ──────────────────────────────────────────────────────── #}
+  <div class="flex items-center gap-3">
+    <button type="submit"
+            class="px-5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium transition-colors">
+      {{ L["admin.create"] }}
+    </button>
+    <a href="/admin/incidents"
+       class="text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors">
+      Abbrechen
+    </a>
+  </div>
+
+</form>
 
 {# ── Neues Quellen-Label Modal ──────────────────────────────────────────────── #}
 <div id="src-label-modal"
@@ -157,11 +210,14 @@
       const pad = (n) => String(n).padStart(2, "0");
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
-    const input = document.getElementById("start_datetime");
-    const btn = document.getElementById("start-now-btn");
-    const setNow = () => { input.value = fmtLocal(new Date()); };
-    setNow();
-    btn.addEventListener("click", setNow);
+    const startInput = document.getElementById("start_datetime");
+    const startBtn = document.getElementById("start-now-btn");
+    const endInput = document.getElementById("end_datetime");
+    const endBtn = document.getElementById("end-now-btn");
+    const setNow = (el) => () => { el.value = fmtLocal(new Date()); };
+    setNow(startInput)(); // pre-fill start with current time
+    startBtn.addEventListener("click", setNow(startInput));
+    endBtn.addEventListener("click", setNow(endInput));
 
     // Source label modal
     const knownSources = {{ known_sources | tojson }};
