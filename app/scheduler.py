@@ -6,8 +6,6 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
 from app.crud import (
-    backfill_service_status_from_issues,
-    count_status_days_in_window,
     ensure_service_known,
     get_enabled_services,
     upsert_incident,
@@ -18,7 +16,6 @@ from app.database import AsyncSessionLocal
 from app.graph_client import (
     fetch_active_issues,
     fetch_health_overviews,
-    fetch_issues_since,
     fetch_recently_resolved_issues,
 )
 from app.models import GRAPH_STATUS_MAP
@@ -63,6 +60,36 @@ def _parse_dt(value: str | None) -> datetime | None:
         return dt.replace(tzinfo=None)
     except (ValueError, AttributeError):
         return None
+
+
+async def sync_issue_as_incident(db, issue: dict) -> None:
+    """Upsert a Graph API issue as an Incident (and its posts, if present).
+
+    Returns silently if the issue should be skipped (advisory, falsePositive,
+    or unknown classification). Posts are only synced when present on the
+    issue dict – historical fetches may omit them for performance.
+    """
+    classification = _classify_issue(issue)
+    if classification is None:
+        return
+    severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
+    fields: dict = {
+        "title": issue.get("title", ""),
+        "service_name": issue.get("service", ""),
+        "classification": classification,
+        "status": _issue_status(issue, classification),
+        "start_datetime": _parse_dt(issue.get("startDateTime")),
+        "last_modified": _parse_dt(issue.get("lastModifiedDateTime")),
+        "is_resolved": issue.get("isResolved", False),
+        "severity": severity,
+    }
+    if classification == "maintenance":
+        fields["scheduled_start"] = _parse_dt(issue.get("startDateTime"))
+        fields["scheduled_end"] = _parse_dt(issue.get("endDateTime"))
+    incident = await upsert_incident(db, graph_issue_id=issue["id"], **fields)
+    posts = issue.get("posts")
+    if posts:
+        await upsert_incident_updates(db, incident.id, posts)
 
 
 async def poll_graph_api() -> None:
@@ -115,26 +142,9 @@ async def poll_graph_api() -> None:
             for issue in active_issues:
                 if issue.get("service") not in monitored:
                     continue
-                classification = _classify_issue(issue)
-                if classification is None:
-                    continue  # advisory, falsePositive, or unknown – skip
-                severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
-                fields: dict = {
-                    "title": issue.get("title", ""),
-                    "service_name": issue.get("service", ""),
-                    "classification": classification,
-                    "status": _issue_status(issue, classification),
-                    "start_datetime": _parse_dt(issue.get("startDateTime")),
-                    "last_modified": _parse_dt(issue.get("lastModifiedDateTime")),
-                    "is_resolved": issue.get("isResolved", False),
-                    "severity": severity,
-                }
-                if classification == "maintenance":
-                    fields["scheduled_start"] = _parse_dt(issue.get("startDateTime"))
-                    fields["scheduled_end"] = _parse_dt(issue.get("endDateTime"))
-                incident = await upsert_incident(db, graph_issue_id=issue["id"], **fields)
-                posts = issue.get("posts") or []
-                await upsert_incident_updates(db, incident.id, posts)
+                if _classify_issue(issue) is None:
+                    continue
+                await sync_issue_as_incident(db, issue)
                 synced += 1
             await db.commit()
             logger.info("Active issues committed: %d synced (of %d fetched).", synced, len(active_issues))
@@ -143,6 +153,10 @@ async def poll_graph_api() -> None:
             logger.exception("Active issues poll failed")
 
     # ── Phase 3: Recently resolved (30 days) – independent, safe to fail ────────
+    # The uptime bars compute live from Incidents in get_uptime_bars; keeping
+    # the last 30 days of resolved issues here means the bars stay accurate
+    # without a separate ServiceStatus backfill phase. For deeper history
+    # (30–90 days) admins trigger a one-shot sync when enabling a service.
     async with AsyncSessionLocal() as db:
         try:
             resolved_issues = await fetch_recently_resolved_issues(days=30)
@@ -150,54 +164,15 @@ async def poll_graph_api() -> None:
             for issue in resolved_issues:
                 if issue.get("service") not in monitored:
                     continue
-                classification = _classify_issue(issue)
-                if classification is None:
-                    continue  # advisory, falsePositive, or unknown – skip
-                severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
-                fields = {
-                    "title": issue.get("title", ""),
-                    "service_name": issue.get("service", ""),
-                    "classification": classification,
-                    "status": _issue_status(issue, classification),
-                    "start_datetime": _parse_dt(issue.get("startDateTime")),
-                    "last_modified": _parse_dt(issue.get("lastModifiedDateTime")),
-                    "is_resolved": issue.get("isResolved", False),
-                    "severity": severity,
-                }
-                if classification == "maintenance":
-                    fields["scheduled_start"] = _parse_dt(issue.get("startDateTime"))
-                    fields["scheduled_end"] = _parse_dt(issue.get("endDateTime"))
-                incident = await upsert_incident(db, graph_issue_id=issue["id"], **fields)
-                posts = issue.get("posts") or []
-                await upsert_incident_updates(db, incident.id, posts)
+                if _classify_issue(issue) is None:
+                    continue
+                await sync_issue_as_incident(db, issue)
                 synced += 1
             await db.commit()
             logger.info("Recently resolved committed: %d synced (of %d fetched).", synced, len(resolved_issues))
         except Exception:
             await db.rollback()
             logger.exception("Recently resolved issues poll failed – active issues unaffected")
-
-    # ── Phase 4: 90-day history backfill (only if gaps exist) ───────────────────
-    # After a container restart with a fresh volume, service_status is empty and
-    # the 90-day uptime bars show "no_data". Reconstruct missing days from the
-    # Graph API issue history: days with no incident → operational; days covered
-    # by an incident → degraded/interrupted.
-    for name in monitored:
-        async with AsyncSessionLocal() as db:
-            try:
-                existing = await count_status_days_in_window(db, name, days=90)
-                if existing >= 90:
-                    continue
-                issues = await fetch_issues_since(name, days=90)
-                await backfill_service_status_from_issues(db, name, issues, days=90)
-                await db.commit()
-                logger.info(
-                    "Backfill committed for %s: %d issues, filled %d missing days.",
-                    name, len(issues), 90 - existing,
-                )
-            except Exception:
-                await db.rollback()
-                logger.exception("Backfill failed for %s", name)
 
 
 def start_scheduler() -> None:

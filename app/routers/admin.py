@@ -14,7 +14,6 @@ from app.crud import (
     add_incident_post,
     add_state_change_entry,
     admin_update_incident,
-    backfill_service_status_from_issues,
     create_manual_incident,
     ensure_service_known,
     get_all_incidents,
@@ -55,15 +54,25 @@ def _parse_form_dt(val: str | None) -> datetime | None:
 
 
 async def _backfill_service(service_name: str) -> None:
-    """Background task: fetch 90-day issue history and fill in missing status rows."""
+    """Background task: fetch 90-day issue history and store as Incidents.
+
+    The uptime bars on the status page derive their colors live from
+    Incidents (see get_uptime_bars in crud.py), so pre-populating the
+    Incidents table for the past 90 days seeds the bars immediately
+    after a service is enabled – no synthetic ServiceStatus rows needed.
+    """
+    from app.scheduler import sync_issue_as_incident  # local import: avoids circular dep
     try:
         issues = await fetch_issues_since(service_name, days=90)
+        synced = 0
         async with AsyncSessionLocal() as db:
-            await backfill_service_status_from_issues(db, service_name, issues, days=90)
+            for issue in issues:
+                await sync_issue_as_incident(db, issue)
+                synced += 1
             await db.commit()
-        logger.info("Backfill completed for %s (%d issues)", service_name, len(issues))
+        logger.info("Historical incident sync completed for %s (%d of %d issues)", service_name, synced, len(issues))
     except Exception:
-        logger.exception("Backfill failed for %s", service_name)
+        logger.exception("Historical incident sync failed for %s", service_name)
 
 
 # Tracks a pending delayed poll so it can be cancelled and restarted when
