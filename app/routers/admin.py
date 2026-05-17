@@ -29,6 +29,7 @@ from app.crud import (
     get_all_monitored_services,
     get_all_subscribers,
     get_confirmed_subscribers,
+    get_distinct_sources,
     get_enabled_services,
     get_enabled_services_with_status,
     get_incident_by_id,
@@ -372,13 +373,17 @@ async def new_incident_form(
     user: dict = Depends(require_auth),
     nav: dict = Depends(admin_nav_context),
 ):
-    enabled_services = await get_enabled_services(db)
+    enabled_services, known_sources = await asyncio.gather(
+        get_enabled_services(db),
+        get_distinct_sources(db),
+    )
     return templates.TemplateResponse(
         request,
         "admin/incident_form.html",
         {
             "user": user,
             "services": enabled_services,
+            "known_sources": known_sources,
             "page_title": "Neue Störung / Hinweis",
             **nav,
         },
@@ -454,7 +459,10 @@ async def incident_detail(
     incident = await get_incident_by_id(db, incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Nicht gefunden")
-    enabled_services = await get_enabled_services(db)
+    enabled_services, known_sources = await asyncio.gather(
+        get_enabled_services(db),
+        get_distinct_sources(db),
+    )
     return templates.TemplateResponse(
         request,
         "admin/incident_detail.html",
@@ -462,6 +470,7 @@ async def incident_detail(
             "user": user,
             "incident": incident,
             "services": enabled_services,
+            "known_sources": known_sources,
             "phase_segments": _compute_phase_segments(incident),
             "page_title": incident.title,
             **nav,

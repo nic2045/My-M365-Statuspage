@@ -441,6 +441,16 @@ async def get_suppressed_incidents(db: AsyncSession) -> list[Incident]:
     return list(result.scalars().all())
 
 
+async def get_distinct_sources(db: AsyncSession) -> list[str]:
+    result = await db.execute(
+        select(Incident.source)
+        .where(Incident.source.is_not(None), Incident.source != "")
+        .distinct()
+        .order_by(Incident.source)
+    )
+    return [row[0] for row in result.fetchall()]
+
+
 def _service_sort_clause():
     """Sort: group (NULL last) → admin-set sort_order → service_name."""
     from sqlalchemy import case
