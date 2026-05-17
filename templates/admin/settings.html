@@ -80,13 +80,97 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-500 dark:text-gray-400 shadow-sm">
-    {{ L["admin.no_known_services"] }}
-    <form method="post" action="/admin/services/refresh" class="inline ml-1">
-      <button type="submit" class="text-blue-600 dark:text-blue-400 hover:underline">{{ L["admin.discover_services"] }}</button>
-    </form>
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-8 shadow-sm">
+    <div class="flex flex-col items-center text-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
+      </div>
+      <p class="text-sm text-gray-600 dark:text-gray-300">{{ L["empty.admin.services"] }}</p>
+      <form method="post" action="/admin/services/refresh">
+        <button type="submit"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 text-sm font-medium transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          {{ L["empty.admin.services_cta"] }}
+        </button>
+      </form>
+    </div>
   </div>
   {% endif %}
+</section>
+
+{# ── E-Mail-Abonnenten ───────────────────────────────────────────────────────── #}
+<section id="subscribers" class="mb-8 scroll-mt-20">
+  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
+    {{ L["admin.subscribers_heading"] }}
+  </h2>
+  <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">{{ L["admin.subscribers_hint"] }}</p>
+
+  {% if subscribers %}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
+    {% for sub in subscribers %}
+    <div class="flex items-center justify-between px-5 py-3 gap-4 {{ '' if sub.confirmed_at else 'opacity-60' }}">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+          <svg class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{{ sub.email }}</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500">
+            {% if sub.confirmed_at %}
+              {{ L["admin.subscriber_confirmed"] }}: {{ sub.confirmed_at | strftime_de }}
+            {% else %}
+              {{ L["admin.subscriber_pending"] }}
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      <form method="post" action="/admin/subscribers/{{ sub.id }}/delete">
+        <button type="submit"
+                onclick="return confirm('{{ L['admin.delete_confirm'] }}')"
+                class="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-red-600 hover:border-red-300 dark:text-gray-500 dark:hover:text-red-400 transition-colors shrink-0">
+          {{ L["admin.subscriber_delete"] }}
+        </button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-400 dark:text-gray-500 shadow-sm flex items-center gap-2">
+    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+    </svg>
+    <span>Noch keine Abonnenten.</span>
+  </div>
+  {% endif %}
+</section>
+
+{# ── MS Teams Webhook ────────────────────────────────────────────────────────── #}
+<section class="mb-8">
+  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
+    {{ L["admin.teams_heading"] }}
+  </h2>
+  <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">{{ L["admin.teams_hint"] }}</p>
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 shadow-sm">
+    <div class="flex items-start gap-2">
+      <svg class="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+      </svg>
+      <div class="text-sm text-gray-600 dark:text-gray-300">
+        <p class="font-medium mb-1">Konfiguration via Umgebungsvariable</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">TEAMS_WEBHOOK_URLS=https://...</p>
+        {% if teams_webhook_urls %}
+        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          {{ teams_webhook_urls.split(',')|length }} Webhook(s) konfiguriert
+        </p>
+        {% else %}
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Nicht konfiguriert – Teams-Benachrichtigungen deaktiviert.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </section>
 
 {% endblock %}

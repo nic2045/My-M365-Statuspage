@@ -128,3 +128,14 @@ class MonitoredService(Base):
     )
     group_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Subscriber(Base):
+    __tablename__ = "subscribers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(256), unique=True, nullable=False, index=True)
+    confirm_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    unsubscribe_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

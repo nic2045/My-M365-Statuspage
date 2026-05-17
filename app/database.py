@@ -49,6 +49,8 @@ async def init_db() -> None:
             "ALTER TABLE monitored_services ADD COLUMN show_uptime_percentage BOOLEAN NOT NULL DEFAULT 1",
             "ALTER TABLE monitored_services ADD COLUMN group_name VARCHAR(64)",
             "ALTER TABLE incident_updates ADD COLUMN notify_subscribers BOOLEAN NOT NULL DEFAULT 0",
+            # subscribers table is created by metadata.create_all above;
+            # these stmts only fire if it already existed without the column
         ]:
             try:
                 await conn.execute(text(stmt))

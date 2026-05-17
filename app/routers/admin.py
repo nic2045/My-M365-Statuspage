@@ -15,9 +15,12 @@ from app.crud import (
     add_state_change_entry,
     admin_update_incident,
     create_manual_incident,
+    delete_subscriber,
     ensure_service_known,
     get_all_incidents,
     get_all_monitored_services,
+    get_all_subscribers,
+    get_confirmed_subscribers,
     get_enabled_services,
     get_incident_by_id,
     get_known_groups,
@@ -33,13 +36,16 @@ from app.crud import (
 from app.crud import delete_incident as crud_delete_incident
 from app.database import AsyncSessionLocal
 from app.dependencies import admin_nav_context, get_db
+from app.flash import flash
 from app.graph_client import (
     fetch_active_issues,
     fetch_health_overviews,
     fetch_issues_since,
     fetch_recently_resolved_issues,
 )
+from app.i18n import LABELS
 from app.models import MonitoredService
+from app.notifications import send_incident_notification, send_teams_notification
 from app.templates import templates
 
 logger = logging.getLogger(__name__)
@@ -175,6 +181,7 @@ async def admin_settings(
 ):
     all_services = await get_all_monitored_services(db)
     known_groups = await get_known_groups(db)
+    subscribers = await get_all_subscribers(db)
     return templates.TemplateResponse(
         request,
         "admin/settings.html",
@@ -182,10 +189,25 @@ async def admin_settings(
             "user": user,
             "all_services": all_services,
             "known_groups": known_groups,
+            "subscribers": subscribers,
+            "teams_webhook_urls": settings.TEAMS_WEBHOOK_URLS,
             "page_title": f"Einstellungen – {settings.APP_TITLE}",
             **nav,
         },
     )
+
+
+@router.post("/subscribers/{subscriber_id}/delete")
+async def admin_delete_subscriber(
+    request: Request,
+    subscriber_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    await delete_subscriber(db, subscriber_id)
+    await db.commit()
+    flash(request, LABELS["toast.subscriber_deleted"])
+    return RedirectResponse(url="/admin/settings#subscribers", status_code=303)
 
 
 @router.get("/incidents/new")
@@ -229,6 +251,36 @@ async def create_incident(
         start_datetime=_parse_form_dt(start_datetime),
     )
     await db.commit()
+
+    # Send notifications for new incidents (not advisories / maintenance)
+    if classification == "incident":
+        confirmed = await get_confirmed_subscribers(db)
+        if confirmed:
+            unsub_urls = {
+                s.email: f"{settings.BASE_URL}/unsubscribe/{s.unsubscribe_token}"
+                for s in confirmed
+            }
+            asyncio.create_task(
+                send_incident_notification(
+                    subscribers=[s.email for s in confirmed],
+                    subject=LABELS["notify.new_incident"],
+                    incident_title=title,
+                    service_name=service_name,
+                    description=description or "",
+                    status_url=settings.BASE_URL,
+                    unsubscribe_urls=unsub_urls,
+                )
+            )
+        asyncio.create_task(
+            send_teams_notification(
+                incident_title=title,
+                service_name=service_name,
+                status="interrupted",
+                description=description or "",
+                status_url=settings.BASE_URL,
+            )
+        )
+
     return RedirectResponse(url=f"/admin/incidents/{incident.id}", status_code=303)
 
 
@@ -326,13 +378,44 @@ async def add_post(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
+    do_notify = notify_subscribers == "on"
     await add_incident_post(
         db,
         incident_id,
         content,
-        notify_subscribers=notify_subscribers == "on",
+        notify_subscribers=do_notify,
     )
+    incident = await get_incident_by_id(db, incident_id)
     await db.commit()
+
+    if do_notify and incident:
+        confirmed = await get_confirmed_subscribers(db)
+        if confirmed:
+            unsub_urls = {
+                s.email: f"{settings.BASE_URL}/unsubscribe/{s.unsubscribe_token}"
+                for s in confirmed
+            }
+            asyncio.create_task(
+                send_incident_notification(
+                    subscribers=[s.email for s in confirmed],
+                    subject=LABELS["notify.update"],
+                    incident_title=incident.title,
+                    service_name=incident.service_name,
+                    description=content,
+                    status_url=settings.BASE_URL,
+                    unsubscribe_urls=unsub_urls,
+                )
+            )
+        asyncio.create_task(
+            send_teams_notification(
+                incident_title=incident.title,
+                service_name=incident.service_name,
+                status=incident.status,
+                description=content,
+                status_url=settings.BASE_URL,
+            )
+        )
+
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
 

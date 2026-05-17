@@ -105,10 +105,58 @@
   </div>
 
 </div>
+
+{# ── Toast notifications (server-flashed via session) ────────────────────── #}
+{% if flashes %}
+<div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+  {% for f in flashes %}
+  <div role="status"
+       data-toast
+       class="pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm
+         transition-all duration-300 translate-x-0 opacity-100
+         {% if f.level == 'error' %}bg-red-50 border-red-200 text-red-800 dark:bg-red-950/60 dark:border-red-800 dark:text-red-200
+         {% elif f.level == 'warning' %}bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/60 dark:border-amber-800 dark:text-amber-200
+         {% elif f.level == 'info' %}bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-950/60 dark:border-blue-800 dark:text-blue-200
+         {% else %}bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/60 dark:border-emerald-800 dark:text-emerald-200{% endif %}">
+    <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      {% if f.level == 'error' %}
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.814-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
+      {% elif f.level == 'warning' %}
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+      {% elif f.level == 'info' %}
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+      {% else %}
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      {% endif %}
+    </svg>
+    <span class="flex-1 leading-snug">{{ f.message }}</span>
+    <button type="button" data-toast-close aria-label="{{ L['toast.dismiss'] }}"
+            class="shrink-0 p-0.5 -m-0.5 rounded text-current opacity-60 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-current">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
+<script>
+(function () {
+  document.querySelectorAll('[data-toast]').forEach((el, i) => {
+    const dismiss = () => {
+      el.classList.add('translate-x-4', 'opacity-0');
+      setTimeout(() => el.remove(), 320);
+    };
+    el.querySelector('[data-toast-close]')?.addEventListener('click', dismiss);
+    setTimeout(dismiss, 4000 + i * 200);
+  });
+})();
+</script>
 <script>
 (function () {
   const sidebar  = document.getElementById('admin-sidebar');
