@@ -265,6 +265,35 @@ async def admin_delete_subscriber(
     return RedirectResponse(url="/admin/settings#subscribers", status_code=303)
 
 
+@router.get("/incidents")
+async def admin_incidents_all(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+    nav: dict = Depends(admin_nav_context),
+):
+    """List ALL incidents (active + resolved). Suppressed shown for incidents
+    (dimmed) but hidden from advisories per UX preference."""
+    incidents = await get_all_incidents(
+        db, include_resolved=True, classification="incident"
+    )
+    advisories_all = await get_all_incidents(
+        db, include_resolved=True, classification="advisory"
+    )
+    advisories = [a for a in advisories_all if not a.is_suppressed]
+    return templates.TemplateResponse(
+        request,
+        "admin/incidents_all.html",
+        {
+            "user": user,
+            "incidents": incidents,
+            "advisories": advisories,
+            "page_title": f"Alle Störungen – {settings.APP_TITLE}",
+            **nav,
+        },
+    )
+
+
 @router.get("/incidents/new")
 async def new_incident_form(
     request: Request,
