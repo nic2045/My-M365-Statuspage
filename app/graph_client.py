@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from urllib.parse import quote
 
 import httpx
 import msal
@@ -82,10 +81,9 @@ async def fetch_issues_since(service_name: str, days: int = 90) -> list[dict]:
     """Fetch all issues (including resolved) for a service over the past N days, for backfill."""
     token = await _get_access_token()
     since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
-    name_encoded = quote(service_name, safe="")
     base_url = (
         f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
-        f"?$filter=service eq '{name_encoded}' and startDateTime ge {since}"
+        f"?$filter=service eq '{service_name}' and startDateTime ge {since}"
         f"&$select=id,service,classification,startDateTime,endDateTime,lastModifiedDateTime,isResolved,severity"
         f"&$top=100"
     )
