@@ -137,25 +137,6 @@
   {% endif %}
 </section>
 
-{# ── Hinweise (Advisories) ───────────────────────────────────────────────────── #}
-<section id="advisories" class="mb-8 scroll-mt-20">
-  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    {{ L["admin.advisories"] }}
-  </h2>
-  {% if advisories %}
-  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
-    {% for inc in advisories %}{{ incident_row(inc) }}{% endfor %}
-  </div>
-  {% else %}
-  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-400 dark:text-gray-500 shadow-sm flex items-center gap-2">
-    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
-    </svg>
-    <span>{{ L["empty.admin.advisories"] }}</span>
-  </div>
-  {% endif %}
-</section>
-
 {# ── Ignorierte Meldungen ────────────────────────────────────────────────────── #}
 <section class="mb-8">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
