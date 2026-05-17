@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0](https://github.com/nic2045/My-M365-Statuspage/compare/v1.1.1...v1.2.0) (2026-05-17)
+
+
+### Features
+
+* admin sidebar navigation with live counters ([21e778e](https://github.com/nic2045/My-M365-Statuspage/commit/21e778ee9f369a6e99d9bc11cec08a1b19be78a6)), closes [#40](https://github.com/nic2045/My-M365-Statuspage/issues/40)
+* advisory + planForChange + maintenance in_progress ([be2907a](https://github.com/nic2045/My-M365-Statuspage/commit/be2907a73d4c60690540eb576611aa4d549a9b98))
+* compute uptime bars live from incidents ([cc53384](https://github.com/nic2045/My-M365-Statuspage/commit/cc53384e7a15f081729f40d7856820240d9ce2b6))
+* incident form polish, phase visualization, delete ([ab5bd00](https://github.com/nic2045/My-M365-Statuspage/commit/ab5bd00754ef2a1a1ced15315d6ae2e2a97bdd4e))
+* map Graph issue status to incident phases ([9ed0ae1](https://github.com/nic2045/My-M365-Statuspage/commit/9ed0ae14f50c6d1e88175b52171590a62483e178))
+
 ## [1.1.1](https://github.com/nic2045/My-M365-Statuspage/compare/v1.1.0...v1.1.1) (2026-05-17)
 
 
