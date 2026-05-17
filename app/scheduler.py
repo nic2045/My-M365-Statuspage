@@ -3,9 +3,11 @@ from datetime import date, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from sqlalchemy import select as sa_select
 
 from app.config import settings
 from app.crud import (
+    add_state_change_entry,
     ensure_service_known,
     get_enabled_services,
     upsert_incident,
@@ -18,7 +20,7 @@ from app.graph_client import (
     fetch_health_overviews,
     fetch_recently_resolved_issues,
 )
-from app.models import GRAPH_STATUS_MAP
+from app.models import GRAPH_STATUS_MAP, Incident
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +33,34 @@ _GRAPH_SEVERITY_MAP: dict[str, str] = {
 }
 
 # Maps Graph API classification to our internal classification.
-# advisory and unknown classifications are excluded (return None → skip).
+# Unknown classifications are dropped (return None → skip).
+# - "incident":            real outages
+# - "advisory":            informational notices that don't impact uptime
+# - "plannedMaintenance":  scheduled service maintenance
+# - "planForChange":       upcoming feature/UI changes – treated as maintenance
 _GRAPH_CLASSIFICATION_MAP: dict[str, str] = {
     "incident":           "incident",
+    "advisory":           "advisory",
     "plannedMaintenance": "maintenance",
+    "planForChange":      "maintenance",
+}
+
+# Maps the Microsoft Graph issue `status` field to one of our incident phases:
+#   active        – Investigating  (Untersuchung läuft)
+#   acknowledged  – Identified     (Ursache bekannt, Behebung startet)
+#   monitoring    – Monitoring     (Fix eingespielt, System wird beobachtet)
+#   resolved      – Resolved       (Behoben)
+# falsePositive is intentionally omitted; _classify_issue filters those out.
+_GRAPH_INCIDENT_PHASE_MAP: dict[str, str] = {
+    "investigating":               "active",
+    "investigationSuspended":      "active",
+    "serviceDegradation":          "acknowledged",
+    "serviceInterruption":         "acknowledged",
+    "restoringService":            "monitoring",
+    "extendedRecovery":            "monitoring",
+    "serviceRestored":             "resolved",
+    "postIncidentReportPublished": "resolved",
+    "resolved":                    "resolved",
 }
 
 
@@ -45,11 +71,43 @@ def _classify_issue(issue: dict) -> str | None:
     return _GRAPH_CLASSIFICATION_MAP.get(issue.get("classification", ""))
 
 
-def _issue_status(issue: dict, classification: str) -> str:
-    """Map Graph API issue to our internal status string."""
+def _maintenance_phase(issue: dict) -> str:
+    """Compute the current phase for a maintenance/planForChange item.
+
+    Three phases mirror the existing dropdown:
+      scheduled    – future window
+      in_progress  – we are inside [start, end] right now
+      completed    – Graph marked it resolved
+    """
     if issue.get("isResolved"):
-        return "completed" if classification == "maintenance" else "resolved"
-    return "scheduled" if classification == "maintenance" else "active"
+        return "completed"
+    start = _parse_dt(issue.get("startDateTime"))
+    end = _parse_dt(issue.get("endDateTime"))
+    now = datetime.utcnow()
+    if start and end and start <= now < end:
+        return "in_progress"
+    return "scheduled"
+
+
+def _issue_status(issue: dict, classification: str) -> str:
+    """Map a Graph API issue to one of our internal phase/status strings.
+
+    - Maintenance / planForChange items roll through scheduled →
+      in_progress → completed based on their start/end window.
+    - Incidents and advisories are mapped via _GRAPH_INCIDENT_PHASE_MAP
+      from the Graph `status` field – which Microsoft updates as the
+      incident progresses from Investigating →
+      ServiceDegradation/Interruption → RestoringService → ServiceRestored.
+      Fall back to active / resolved if Graph hasn't set a recognized
+      status.
+    """
+    if classification == "maintenance":
+        return _maintenance_phase(issue)
+    raw_status = issue.get("status", "")
+    mapped = _GRAPH_INCIDENT_PHASE_MAP.get(raw_status)
+    if mapped:
+        return mapped
+    return "resolved" if issue.get("isResolved") else "active"
 
 
 def _parse_dt(value: str | None) -> datetime | None:
@@ -68,16 +126,29 @@ async def sync_issue_as_incident(db, issue: dict) -> None:
     Returns silently if the issue should be skipped (advisory, falsePositive,
     or unknown classification). Posts are only synced when present on the
     issue dict – historical fetches may omit them for performance.
+
+    When the mapped phase changes between two consecutive polls we record
+    a state_change timeline entry so the incident detail phase-bar reflects
+    Microsoft's progression (Investigating → Identified → Monitoring →
+    Resolved) as proper segments.
     """
     classification = _classify_issue(issue)
     if classification is None:
         return
     severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
+    new_status = _issue_status(issue, classification)
+
+    existing = await db.execute(
+        sa_select(Incident).where(Incident.graph_issue_id == issue["id"])
+    )
+    existing_incident = existing.scalar_one_or_none()
+    old_status = existing_incident.status if existing_incident else None
+
     fields: dict = {
         "title": issue.get("title", ""),
         "service_name": issue.get("service", ""),
         "classification": classification,
-        "status": _issue_status(issue, classification),
+        "status": new_status,
         "start_datetime": _parse_dt(issue.get("startDateTime")),
         "last_modified": _parse_dt(issue.get("lastModifiedDateTime")),
         "is_resolved": issue.get("isResolved", False),
@@ -87,6 +158,10 @@ async def sync_issue_as_incident(db, issue: dict) -> None:
         fields["scheduled_start"] = _parse_dt(issue.get("startDateTime"))
         fields["scheduled_end"] = _parse_dt(issue.get("endDateTime"))
     incident = await upsert_incident(db, graph_issue_id=issue["id"], **fields)
+
+    if old_status is not None and old_status != new_status:
+        await add_state_change_entry(db, incident.id, new_status)
+
     posts = issue.get("posts")
     if posts:
         await upsert_incident_updates(db, incident.id, posts)
