@@ -113,6 +113,24 @@ async def upsert_incident_updates(
         )
 
 
+async def count_status_days_in_window(
+    db: AsyncSession,
+    service_name: str,
+    days: int = 90,
+) -> int:
+    from sqlalchemy import func
+    today = date.today()
+    start_date = today - timedelta(days=days - 1)
+    result = await db.execute(
+        select(func.count(ServiceStatus.id)).where(
+            ServiceStatus.service_name == service_name,
+            ServiceStatus.date >= start_date,
+            ServiceStatus.date <= today,
+        )
+    )
+    return int(result.scalar_one() or 0)
+
+
 async def get_uptime_bars(
     db: AsyncSession,
     service_name: str,
