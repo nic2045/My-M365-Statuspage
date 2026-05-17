@@ -16,8 +16,11 @@ _md = mistune.create_markdown(escape=False)
 templates = Jinja2Templates(directory="templates")
 
 # ── Globals ───────────────────────────────────────────────────────────────────
+from app.config import settings as _settings
+
 templates.env.globals["L"] = LABELS
 templates.env.globals["APP_VERSION"] = __version__
+templates.env.globals["APP_TITLE"] = _settings.APP_TITLE
 templates.env.globals["status_bar_class"] = (
     lambda s: STATUS_TAILWIND_BAR.get(s, STATUS_TAILWIND_BAR["unknown"])
 )
