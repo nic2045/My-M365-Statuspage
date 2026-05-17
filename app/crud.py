@@ -278,6 +278,7 @@ async def get_all_incidents(
     db: AsyncSession,
     include_resolved: bool = False,
     classification: str | None = None,
+    source: str | None = None,
 ) -> list[Incident]:
     """Return non-maintenance incidents. Pass classification='incident' for
     real disruptions only, 'advisory' for informational items."""
@@ -291,6 +292,8 @@ async def get_all_incidents(
         stmt = stmt.where(Incident.is_resolved.is_(False))
     if classification is not None:
         stmt = stmt.where(Incident.classification == classification)
+    if source is not None:
+        stmt = stmt.where(Incident.source == source)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

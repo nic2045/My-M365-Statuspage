@@ -32,11 +32,18 @@ async def admin_nav_context(
         Incident.classification == "maintenance",
         Incident.is_resolved.is_(False),
     )
+    manual_q = select(func.count(Incident.id)).where(
+        Incident.source == "manual",
+        Incident.is_resolved.is_(False),
+        Incident.classification != "maintenance",
+    )
     incidents_count = (await db.execute(incidents_q)).scalar_one()
     maintenances_count = (await db.execute(maintenances_q)).scalar_one()
+    manual_count = (await db.execute(manual_q)).scalar_one()
     return {
         "nav_active_incidents": incidents_count,
         "nav_scheduled_maintenances": maintenances_count,
+        "nav_manual_active": manual_count,
         "flashes": consume_flashes(request),
     }
 
