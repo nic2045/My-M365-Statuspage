@@ -6,6 +6,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
 from app.crud import (
+    backfill_service_status_from_issues,
+    count_status_days_in_window,
     ensure_service_known,
     get_enabled_services,
     upsert_incident,
@@ -16,6 +18,7 @@ from app.database import AsyncSessionLocal
 from app.graph_client import (
     fetch_active_issues,
     fetch_health_overviews,
+    fetch_issues_since,
     fetch_recently_resolved_issues,
 )
 from app.models import GRAPH_STATUS_MAP
@@ -173,6 +176,28 @@ async def poll_graph_api() -> None:
         except Exception:
             await db.rollback()
             logger.exception("Recently resolved issues poll failed – active issues unaffected")
+
+    # ── Phase 4: 90-day history backfill (only if gaps exist) ───────────────────
+    # After a container restart with a fresh volume, service_status is empty and
+    # the 90-day uptime bars show "no_data". Reconstruct missing days from the
+    # Graph API issue history: days with no incident → operational; days covered
+    # by an incident → degraded/interrupted.
+    for name in monitored:
+        async with AsyncSessionLocal() as db:
+            try:
+                existing = await count_status_days_in_window(db, name, days=90)
+                if existing >= 90:
+                    continue
+                issues = await fetch_issues_since(name, days=90)
+                await backfill_service_status_from_issues(db, name, issues, days=90)
+                await db.commit()
+                logger.info(
+                    "Backfill committed for %s: %d issues, filled %d missing days.",
+                    name, len(issues), 90 - existing,
+                )
+            except Exception:
+                await db.rollback()
+                logger.exception("Backfill failed for %s", name)
 
 
 def start_scheduler() -> None:
