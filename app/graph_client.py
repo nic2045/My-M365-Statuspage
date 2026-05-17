@@ -84,7 +84,7 @@ async def fetch_issues_since(service_name: str, days: int = 90) -> list[dict]:
     base_url = (
         f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
         f"?$filter=service eq '{service_name}' and startDateTime ge {since}"
-        f"&$select=id,service,title,classification,status,startDateTime,endDateTime,lastModifiedDateTime,isResolved,severity"
+        f"&$select=id,service,title,classification,status,startDateTime,endDateTime,lastModifiedDateTime,isResolved,severity,impactDescription"
         f"&$top=100"
     )
     all_issues: list[dict] = []

@@ -144,6 +144,8 @@ async def sync_issue_as_incident(db, issue: dict) -> None:
     existing_incident = existing.scalar_one_or_none()
     old_status = existing_incident.status if existing_incident else None
 
+    impact_desc = issue.get("impactDescription") or None
+
     fields: dict = {
         "title": issue.get("title", ""),
         "service_name": issue.get("service", ""),
@@ -154,6 +156,10 @@ async def sync_issue_as_incident(db, issue: dict) -> None:
         "is_resolved": issue.get("isResolved", False),
         "severity": severity,
     }
+    # Only set description from impactDescription when the incident has none yet,
+    # preserving any description an admin has written manually.
+    if impact_desc and not (existing_incident and existing_incident.description):
+        fields["description"] = impact_desc
     if classification == "maintenance":
         fields["scheduled_start"] = _parse_dt(issue.get("startDateTime"))
         fields["scheduled_end"] = _parse_dt(issue.get("endDateTime"))
