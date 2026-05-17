@@ -86,6 +86,9 @@ async def upsert_incident(
             # Don't overwrite severity if admin has set it manually
             if k == "severity" and incident.source == "manual":
                 continue
+            # Preserve admin-set end_datetime if Graph API has no value yet
+            if k == "end_datetime" and v is None and incident.end_datetime is not None:
+                continue
             setattr(incident, k, v)
         await db.flush()
     return incident

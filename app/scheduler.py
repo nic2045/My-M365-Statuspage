@@ -152,6 +152,7 @@ async def sync_issue_as_incident(db, issue: dict) -> None:
         "classification": classification,
         "status": new_status,
         "start_datetime": _parse_dt(issue.get("startDateTime")),
+        "end_datetime": _parse_dt(issue.get("endDateTime")),
         "last_modified": _parse_dt(issue.get("lastModifiedDateTime")),
         "is_resolved": issue.get("isResolved", False),
         "severity": severity,
