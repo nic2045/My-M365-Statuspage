@@ -14,7 +14,8 @@
                   or (key == 'settings'     and _path == '/admin/settings')
                   or (key == 'debug'        and _path.startswith('/admin/debug'))
                   or (key == 'own'          and _path.startswith('/admin/incidents') and _query == 'manual')
-                  or (key == 'new_incident' and _path == '/admin/incidents/new') %}
+                  or (key == 'new_incident' and _path == '/admin/incidents/new')
+                  or (key == 'services'     and _path == '/admin/settings') %}
   <a href="{{ href }}"
      class="flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors
        {% if is_active %}bg-blue-50 text-[#005EA8] dark:bg-blue-950/30 dark:text-blue-300 font-medium
@@ -36,6 +37,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
         {% elif key == 'new_incident' %}
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        {% elif key == 'services' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
         {% endif %}
       </svg>
       <span class="truncate">{{ label }}</span>
@@ -81,21 +84,22 @@
 
       <div class="px-2 pt-3 pb-2 flex-1 space-y-4">
 
-        {# ── Microsoft 365 ─────────────────────────────────────────── #}
+        {# ── Allgemein ─────────────────────────────────────────────── #}
         <div class="space-y-0.5">
           <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">
-            {{ L["admin.nav.m365_section"] }}
+            {{ L["admin.nav.general_section"] }}
           </p>
           {{ nav_link('/admin', L['admin.nav.dashboard'], 'dashboard') }}
-          {{ nav_link('/admin#incidents', L['admin.nav.incidents'], 'incidents', nav_active_incidents, 'red') }}
-          {{ nav_link('/admin#maintenances', L['admin.nav.maintenances'], 'maintenances', nav_scheduled_maintenances, 'blue') }}
+          {{ nav_link('/admin/settings#services', L['admin.nav.services_mgmt'], 'services') }}
         </div>
 
-        {# ── Eigene Einträge ────────────────────────────────────────── #}
+        {# ── Meldungen ─────────────────────────────────────────────── #}
         <div class="space-y-0.5">
           <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">
-            {{ L["admin.nav.own_section"] }}
+            {{ L["admin.nav.meldungen_section"] }}
           </p>
+          {{ nav_link('/admin#incidents', L['admin.nav.incidents'], 'incidents', nav_active_incidents, 'red') }}
+          {{ nav_link('/admin#maintenances', L['admin.nav.maintenances'], 'maintenances', nav_scheduled_maintenances, 'blue') }}
           {{ nav_link('/admin/incidents?source=manual', L['admin.nav.own_incidents'], 'own', nav_manual_active, 'amber') }}
           {{ nav_link('/admin/incidents/new', L['admin.nav.new_incident'], 'new_incident') }}
         </div>

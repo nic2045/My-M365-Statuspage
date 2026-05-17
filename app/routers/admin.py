@@ -164,7 +164,7 @@ async def admin_dashboard(
     incidents = await get_all_incidents(
         db, include_resolved=False, classification="incident"
     )
-    advisories = await get_all_incidents(
+    all_advisories = await get_all_incidents(
         db, include_resolved=False, classification="advisory"
     )
     resolved = await get_resolved_incidents(db, limit=10)
@@ -177,7 +177,8 @@ async def admin_dashboard(
         {
             "user": user,
             "incidents": incidents,
-            "advisories": advisories,
+            "advisories": all_advisories[:5],
+            "advisories_total": len(all_advisories),
             "resolved_incidents": resolved,
             "suppressed_incidents": suppressed,
             "maintenances": maintenances,
@@ -321,20 +322,33 @@ async def admin_delete_subscriber(
 async def admin_incidents_all(
     request: Request,
     source: str | None = None,
+    classification: str | None = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
     nav: dict = Depends(admin_nav_context),
 ):
-    """List ALL incidents (active + resolved). Pass ?source=manual to show
-    only manually created entries. Suppressed shown for incidents (dimmed)
-    but hidden from advisories per UX preference."""
+    """List ALL incidents (active + resolved). Supports ?source=manual|graph
+    and ?classification=incident|advisory filters."""
     src_filter = source if source in ("manual", "graph") else None
-    incidents = await get_all_incidents(
-        db, include_resolved=True, classification="incident", source=src_filter
-    )
-    advisories_all = await get_all_incidents(
-        db, include_resolved=True, classification="advisory", source=src_filter
-    )
+    cls_filter = classification if classification in ("incident", "advisory") else None
+    # When classification=advisory, only fetch advisories; otherwise fetch both
+    if cls_filter == "advisory":
+        incidents = []
+        advisories_all = await get_all_incidents(
+            db, include_resolved=True, classification="advisory", source=src_filter
+        )
+    elif cls_filter == "incident":
+        incidents = await get_all_incidents(
+            db, include_resolved=True, classification="incident", source=src_filter
+        )
+        advisories_all = []
+    else:
+        incidents = await get_all_incidents(
+            db, include_resolved=True, classification="incident", source=src_filter
+        )
+        advisories_all = await get_all_incidents(
+            db, include_resolved=True, classification="advisory", source=src_filter
+        )
     advisories = [a for a in advisories_all if not a.is_suppressed]
     return templates.TemplateResponse(
         request,
@@ -344,6 +358,7 @@ async def admin_incidents_all(
             "incidents": incidents,
             "advisories": advisories,
             "source_filter": src_filter,
+            "classification_filter": cls_filter,
             "page_title": f"Alle Störungen – {settings.APP_TITLE}",
             **nav,
         },

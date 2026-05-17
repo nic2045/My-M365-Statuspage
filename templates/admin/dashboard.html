@@ -179,12 +179,24 @@
     <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
       {{ L["admin.advisories"] }}
     </h2>
+    {% if advisories_total > 0 %}
+    <a href="/admin/incidents?classification=advisory"
+       class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+      {% if advisories_total > 5 %}Alle {{ advisories_total }} anzeigen →{% else %}Alle anzeigen →{% endif %}
+    </a>
+    {% endif %}
   </div>
   {% if advisories %}
   {{ service_filter_pills(advisories, 'advisories') }}
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
     {% for inc in advisories %}{{ incident_row(inc) }}{% endfor %}
   </div>
+  {% if advisories_total > 5 %}
+  <p class="mt-2 text-xs text-gray-400 dark:text-gray-500 text-center">
+    + {{ advisories_total - 5 }} weitere –
+    <a href="/admin/incidents?classification=advisory" class="text-blue-600 dark:text-blue-400 hover:underline">alle anzeigen</a>
+  </p>
+  {% endif %}
   {% else %}
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-400 dark:text-gray-500 shadow-sm">
     {{ L["empty.admin.advisories"] }}
