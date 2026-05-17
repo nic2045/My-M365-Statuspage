@@ -126,4 +126,5 @@ class MonitoredService(Base):
     show_uptime_percentage: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="1", default=True
     )
+    group_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

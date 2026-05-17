@@ -430,17 +430,29 @@ async def get_suppressed_incidents(db: AsyncSession) -> list[Incident]:
 
 
 async def get_enabled_services(db: AsyncSession) -> list[str]:
+    # NULL group sorts last (asc nulls last is not portable on SQLite,
+    # so we coerce NULL -> "￿" which sorts after any real string)
+    from sqlalchemy import case
+    group_sort = case(
+        (MonitoredService.group_name.is_(None), "￿"),
+        else_=MonitoredService.group_name,
+    )
     result = await db.execute(
         select(MonitoredService.service_name)
         .where(MonitoredService.is_enabled.is_(True))
-        .order_by(MonitoredService.service_name)
+        .order_by(group_sort, MonitoredService.service_name)
     )
     return [row[0] for row in result.fetchall()]
 
 
 async def get_all_monitored_services(db: AsyncSession) -> list[MonitoredService]:
+    from sqlalchemy import case
+    group_sort = case(
+        (MonitoredService.group_name.is_(None), "￿"),
+        else_=MonitoredService.group_name,
+    )
     result = await db.execute(
-        select(MonitoredService).order_by(MonitoredService.service_name)
+        select(MonitoredService).order_by(group_sort, MonitoredService.service_name)
     )
     return list(result.scalars().all())
 
@@ -473,6 +485,27 @@ async def set_show_uptime_percentage(
     svc.show_uptime_percentage = show
     await db.flush()
     return svc
+
+
+async def set_service_group(
+    db: AsyncSession, service_name: str, group_name: str | None
+) -> MonitoredService:
+    svc = await ensure_service_known(db, service_name)
+    cleaned = (group_name or "").strip() or None
+    svc.group_name = cleaned
+    await db.flush()
+    return svc
+
+
+async def get_known_groups(db: AsyncSession) -> list[str]:
+    """Distinct, non-empty group names for the datalist autocomplete."""
+    result = await db.execute(
+        select(MonitoredService.group_name)
+        .where(MonitoredService.group_name.is_not(None))
+        .distinct()
+        .order_by(MonitoredService.group_name)
+    )
+    return [row[0] for row in result.fetchall() if row[0]]
 
 
 async def get_uptime_percentage(
@@ -515,18 +548,23 @@ async def build_status_page_data(
     services: list[ServiceStatusSchema] = []
     overall_severity = 0
 
-    show_flags_result = await db.execute(
-        select(MonitoredService.service_name, MonitoredService.show_uptime_percentage)
+    svc_meta_result = await db.execute(
+        select(
+            MonitoredService.service_name,
+            MonitoredService.show_uptime_percentage,
+            MonitoredService.group_name,
+        )
         .where(MonitoredService.service_name.in_(service_names))
     )
-    show_flags = {row[0]: row[1] for row in show_flags_result.fetchall()}
+    svc_meta = {row[0]: {"show_uptime": row[1], "group": row[2]} for row in svc_meta_result.fetchall()}
 
     for name in service_names:
         current_status = await get_service_current_status(db, name)
         uptime_days = await get_uptime_bars(db, name)
         raw_incidents = await get_active_incidents(db, service_name=name)
+        meta = svc_meta.get(name, {})
         uptime_pct = (
-            await get_uptime_percentage(db, name) if show_flags.get(name, True) else None
+            await get_uptime_percentage(db, name) if meta.get("show_uptime", True) else None
         )
 
         incident_schemas = [
@@ -564,6 +602,7 @@ async def build_status_page_data(
                 uptime_days=uptime_days,
                 active_incidents=incident_schemas,
                 uptime_percentage=uptime_pct,
+                group_name=meta.get("group"),
             )
         )
 

@@ -71,6 +71,21 @@ templates.env.globals["phase_dot_class"] = (
     lambda s: PHASE_DOT.get(s, "bg-gray-300 dark:bg-gray-600")
 )
 
+
+def _group_services(services, fallback_label: str):
+    """Bucket services by group_name (None → fallback_label), preserving the
+    incoming order. Used by status.html instead of Jinja's groupby, which
+    cannot sort mixed None/str keys."""
+    buckets: dict[str, list] = {}
+    for s in services:
+        key = s.group_name or fallback_label
+        buckets.setdefault(key, []).append(s)
+    return list(buckets.items())
+
+
+templates.env.globals["group_services"] = _group_services
+
+
 # ── Filters ───────────────────────────────────────────────────────────────────
 def _strftime_de(dt: datetime | None, fmt: str = "%d.%m.%Y %H:%M Uhr") -> str:
     if dt is None:
