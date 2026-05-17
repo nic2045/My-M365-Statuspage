@@ -1,5 +1,6 @@
 {# Renders one service card. Expects `service` (ServiceStatusSchema) in scope. #}
 <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 mb-3 shadow-sm"
+     id="svc-{{ service.service_name | lower | replace(' ', '-') | replace('/', '-') | replace('_', '-') }}"
      data-service-card
      data-service="{{ service.service_name }}">
   <div class="flex items-center justify-between">
