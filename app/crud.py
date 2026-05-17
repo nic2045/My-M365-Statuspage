@@ -274,6 +274,16 @@ async def get_scheduled_maintenances(db: AsyncSession) -> list[Incident]:
     return list(result.scalars().all())
 
 
+async def get_all_maintenances(db: AsyncSession) -> list[Incident]:
+    result = await db.execute(
+        select(Incident)
+        .options(selectinload(Incident.updates))
+        .where(Incident.classification == "maintenance")
+        .order_by(desc(Incident.last_modified))
+    )
+    return list(result.scalars().all())
+
+
 async def get_all_incidents(
     db: AsyncSession,
     include_resolved: bool = False,

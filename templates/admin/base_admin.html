@@ -9,8 +9,8 @@
 {# Helper macro for a single nav link #}
 {% macro nav_link(href, label, key, counter=None, counter_color='red') %}
   {% set is_active = (key == 'dashboard'    and _path == '/admin' and not _query)
-                  or (key == 'incidents'    and _path.startswith('/admin/incidents') and not _query)
-                  or (key == 'maintenances' and _path.startswith('/admin/maintenance'))
+                  or (key == 'incidents'    and _path.startswith('/admin/incidents') and _path != '/admin/incidents/new' and not _query)
+                  or (key == 'maintenances' and (_path == '/admin/maintenances' or _path.startswith('/admin/maintenance')))
                   or (key == 'settings'     and _path == '/admin/settings')
                   or (key == 'debug'        and _path.startswith('/admin/debug'))
                   or (key == 'own'          and _path.startswith('/admin/incidents') and _query == 'manual')
@@ -98,8 +98,8 @@
           <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">
             {{ L["admin.nav.meldungen_section"] }}
           </p>
-          {{ nav_link('/admin#incidents', L['admin.nav.incidents'], 'incidents', nav_active_incidents, 'red') }}
-          {{ nav_link('/admin#maintenances', L['admin.nav.maintenances'], 'maintenances', nav_scheduled_maintenances, 'blue') }}
+          {{ nav_link('/admin/incidents', L['admin.nav.incidents'], 'incidents', nav_active_incidents, 'red') }}
+          {{ nav_link('/admin/maintenances', L['admin.nav.maintenances'], 'maintenances', nav_scheduled_maintenances, 'blue') }}
           {{ nav_link('/admin/incidents?source=manual', L['admin.nav.own_incidents'], 'own', nav_manual_active, 'amber') }}
           {{ nav_link('/admin/incidents/new', L['admin.nav.new_incident'], 'new_incident') }}
         </div>
