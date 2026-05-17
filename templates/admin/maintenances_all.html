@@ -20,21 +20,62 @@
   'in_progress': 'bg-amber-400',
   'completed':   'bg-emerald-400',
 } %}
-{% set status_label = {
-  'scheduled':   L['maintenance.scheduled'],
-  'in_progress': L['maintenance.in_progress'],
-  'completed':   L['maintenance.completed'],
-} %}
+
+{% set all_services = maintenances | map(attribute='service_name') | list | unique | sort %}
+
+{# Filter bar #}
+<div class="flex flex-wrap items-center gap-2 mb-4">
+  <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">Status:</span>
+  <button type="button" data-mf="all"
+          class="text-xs px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-colors">
+    {{ L["admin.filter_all"] }}
+  </button>
+  <button type="button" data-mf="scheduled"
+          class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+    {{ L["maintenance.scheduled"] }}
+  </button>
+  <button type="button" data-mf="in_progress"
+          class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+    {{ L["maintenance.in_progress"] }}
+  </button>
+  <button type="button" data-mf="completed"
+          class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+    {{ L["maintenance.completed"] }}
+  </button>
+
+  {% if all_services | length > 1 %}
+  <span class="text-gray-200 dark:text-gray-700 select-none shrink-0">|</span>
+  <div class="relative" id="svc-ms">
+    <button type="button" id="svc-ms-toggle"
+            class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none cursor-pointer inline-flex items-center gap-1 transition-colors max-w-[220px]">
+      <span id="svc-ms-label" class="truncate">Service</span>
+      <svg class="w-2.5 h-2.5 shrink-0 text-gray-400 flex-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </button>
+    <div id="svc-ms-panel"
+         class="hidden absolute top-full mt-1 left-0 z-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 min-w-[180px] max-h-56 overflow-y-auto">
+      {% for s in all_services %}
+      <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer text-xs text-gray-700 dark:text-gray-200">
+        <input type="checkbox" value="{{ s }}" data-svc-ms-opt
+               class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-blue-600 focus:ring-blue-500 focus:ring-offset-0">
+        <span class="truncate">{{ s }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
 
 {% if maintenances %}
 <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
   {% for m in maintenances %}
   {% set phase = 'completed' if m.is_resolved else m.status %}
   <a href="/admin/incidents/{{ m.id }}"
+     data-mrow data-phase="{{ phase }}" data-service="{{ m.service_name }}"
      class="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
     <div class="flex items-center gap-0 min-w-0 flex-1">
-      <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ status_dot.get(phase, 'bg-gray-400') }}"
-            title="{{ status_label.get(phase, phase) }}"></span>
+      <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ status_dot.get(phase, 'bg-gray-400') }}"></span>
       <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5 bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400">
         {{ L["incident.type.maintenance"] }}
       </span>
@@ -42,11 +83,11 @@
       <span class="text-sm text-gray-400 dark:text-gray-500 ml-2 shrink-0">· {{ m.service_name }}</span>
     </div>
     <div class="flex items-center gap-2 shrink-0 ml-3">
-      {% if m.is_resolved %}
+      {% if phase == 'completed' %}
       <span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
         {{ L["maintenance.completed"] }}
       </span>
-      {% elif m.status == 'in_progress' %}
+      {% elif phase == 'in_progress' %}
       <span class="text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
         {{ L["maintenance.in_progress"] }}
       </span>
@@ -58,10 +99,96 @@
   </a>
   {% endfor %}
 </div>
+<p class="mt-4 text-xs text-gray-400 dark:text-gray-500 hidden text-center" id="mf-empty">
+  {{ L["admin.filter_empty"] }}
+</p>
 {% else %}
 <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-8 shadow-sm text-center">
   <p class="text-sm text-gray-500 dark:text-gray-400">{{ L["admin.no_maintenances"] }}</p>
 </div>
 {% endif %}
+
+<script>
+  (function () {
+    const filterBtns = document.querySelectorAll('[data-mf]');
+    const rows = document.querySelectorAll('[data-mrow]');
+    const emptyMsg = document.getElementById('mf-empty');
+    const svcMs = document.getElementById('svc-ms');
+    const svcToggle = document.getElementById('svc-ms-toggle');
+    const svcPanel = document.getElementById('svc-ms-panel');
+    const svcLabel = document.getElementById('svc-ms-label');
+    const svcOpts = svcMs ? svcMs.querySelectorAll('[data-svc-ms-opt]') : [];
+    let activePhase = 'all';
+
+    function getSelectedSvcs() {
+      return Array.from(svcOpts).filter(o => o.checked).map(o => o.value);
+    }
+
+    function updateSvcLabel(selected) {
+      if (!svcLabel) return;
+      svcLabel.textContent = selected.length === 0 ? 'Service'
+        : selected.length <= 2 ? selected.join(', ')
+        : selected.length + ' Services';
+      if (svcToggle) {
+        const on = selected.length > 0;
+        svcToggle.classList.toggle('border-blue-300', on);
+        svcToggle.classList.toggle('bg-blue-50', on);
+        svcToggle.classList.toggle('text-blue-700', on);
+        svcToggle.classList.toggle('dark:border-blue-700', on);
+        svcToggle.classList.toggle('dark:bg-blue-950/40', on);
+        svcToggle.classList.toggle('dark:text-blue-300', on);
+        svcToggle.classList.toggle('border-gray-200', !on);
+        svcToggle.classList.toggle('dark:border-gray-700', !on);
+        svcToggle.classList.toggle('text-gray-600', !on);
+        svcToggle.classList.toggle('dark:text-gray-400', !on);
+      }
+    }
+
+    function applyFilters() {
+      const selectedSvcs = getSelectedSvcs();
+      let visible = 0;
+      rows.forEach((row) => {
+        const phaseMatch = activePhase === 'all' || row.dataset.phase === activePhase;
+        const svcMatch = selectedSvcs.length === 0 || selectedSvcs.includes(row.dataset.service);
+        const show = phaseMatch && svcMatch;
+        row.classList.toggle('hidden', !show);
+        if (show) visible++;
+      });
+      if (emptyMsg) emptyMsg.classList.toggle('hidden', visible > 0);
+
+      filterBtns.forEach((b) => {
+        const active = b.dataset.mf === activePhase;
+        b.classList.toggle('border-blue-300', active);
+        b.classList.toggle('bg-blue-50', active);
+        b.classList.toggle('text-blue-700', active);
+        b.classList.toggle('dark:border-blue-700', active);
+        b.classList.toggle('dark:bg-blue-950/40', active);
+        b.classList.toggle('dark:text-blue-300', active);
+        b.classList.toggle('border-gray-200', !active);
+        b.classList.toggle('dark:border-gray-700', !active);
+        b.classList.toggle('text-gray-600', !active);
+        b.classList.toggle('dark:text-gray-400', !active);
+      });
+    }
+
+    filterBtns.forEach((b) => b.addEventListener('click', () => {
+      activePhase = b.dataset.mf;
+      applyFilters();
+    }));
+    if (svcToggle) {
+      svcToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        svcPanel.classList.toggle('hidden');
+      });
+    }
+    svcOpts.forEach((o) => o.addEventListener('change', () => {
+      updateSvcLabel(getSelectedSvcs());
+      applyFilters();
+    }));
+    document.addEventListener('click', (e) => {
+      if (svcMs && !svcMs.contains(e.target)) svcPanel?.classList.add('hidden');
+    });
+  })();
+</script>
 
 {% endblock %}
