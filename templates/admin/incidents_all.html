@@ -5,10 +5,12 @@
   <div>
     <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
       {% if source_filter == 'manual' %}{{ L["admin.nav.own_incidents"] }}
+      {% elif classification_filter == 'advisory' %}Alle Hinweise
       {% else %}{{ L["admin.incidents_all_title"] }}{% endif %}
     </h1>
     <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
       {% if source_filter == 'manual' %}Manuell erstellte Störungen und Hinweise
+      {% elif classification_filter == 'advisory' %}Aktive und behobene Hinweise
       {% else %}{{ L["admin.incidents_all_sub"] }}{% endif %}
     </p>
   </div>
