@@ -107,6 +107,16 @@
     {% block content %}{% endblock %}
   </main>
 
+  <!-- ── Bar-hover tooltip: floats next to cursor, lists up to 3 incidents ──── -->
+  <div id="bar-tooltip"
+       class="fixed z-50 hidden pointer-events-none max-w-xs bg-gray-900 text-white text-xs rounded-lg shadow-xl px-3 py-2 border border-gray-700 dark:bg-gray-800 dark:border-gray-700"
+       role="tooltip">
+    <div id="bar-tooltip-head" class="font-medium mb-1"></div>
+    <div id="bar-tooltip-body" class="text-gray-200"></div>
+    <div id="bar-tooltip-incidents" class="mt-1.5 space-y-1"></div>
+    <div id="bar-tooltip-more" class="text-[10px] text-gray-400 mt-1 hidden"></div>
+  </div>
+
   <!-- ── Day-detail modal: opened by clicking a 90-day uptime bar ───────────── -->
   <div id="day-modal" role="dialog" aria-modal="true" aria-labelledby="day-modal-title"
        class="fixed inset-0 z-50 hidden items-center justify-center p-4">
@@ -286,11 +296,82 @@
         document.body.classList.add('overflow-hidden');
       }
 
+      // ── Bar hover tooltip ────────────────────────────────────────────────
+      const tooltip = document.getElementById('bar-tooltip');
+      const tHead = document.getElementById('bar-tooltip-head');
+      const tBody = document.getElementById('bar-tooltip-body');
+      const tIncidents = document.getElementById('bar-tooltip-incidents');
+      const tMore = document.getElementById('bar-tooltip-more');
+
+      function showTooltip(bar, evt) {
+        const dateLabel = bar.dataset.dateLabel;
+        const statusLabel = bar.dataset.statusLabel;
+        const service = bar.dataset.service;
+        const status = bar.dataset.status;
+        const style = STATUS_STYLE[status] || STATUS_STYLE.unknown;
+
+        tHead.textContent = service + ' · ' + dateLabel;
+        tBody.innerHTML = '<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full ' + style.dot + '"></span>' + statusLabel + '</span>';
+
+        const matching = findIncidentsCoveringDate(service, bar.dataset.date);
+        tIncidents.innerHTML = '';
+        if (matching.length > 0) {
+          const visible = matching.slice(0, 3);
+          visible.forEach((inc) => {
+            const row = document.createElement('div');
+            row.className = 'text-[11px] text-gray-100 truncate';
+            row.textContent = '• ' + inc.title;
+            tIncidents.appendChild(row);
+          });
+          if (matching.length > 3) {
+            tMore.textContent = '+' + (matching.length - 3) + ' weitere — klicken für Details';
+            tMore.classList.remove('hidden');
+          } else {
+            tMore.textContent = 'Klicken für Details';
+            tMore.classList.remove('hidden');
+          }
+        } else {
+          tMore.classList.add('hidden');
+        }
+
+        tooltip.classList.remove('hidden');
+        positionTooltip(evt);
+      }
+
+      function positionTooltip(evt) {
+        const rect = tooltip.getBoundingClientRect();
+        const margin = 12;
+        let x = evt.clientX + margin;
+        let y = evt.clientY + margin;
+        if (x + rect.width > window.innerWidth - 8) x = window.innerWidth - rect.width - 8;
+        if (y + rect.height > window.innerHeight - 8) y = evt.clientY - rect.height - margin;
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+      }
+
+      function hideTooltip() {
+        tooltip.classList.add('hidden');
+      }
+
+      document.addEventListener('mouseover', (e) => {
+        const bar = e.target.closest('[data-day-bar]');
+        if (bar) showTooltip(bar, e);
+      });
+      document.addEventListener('mousemove', (e) => {
+        if (!tooltip.classList.contains('hidden')) positionTooltip(e);
+      });
+      document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('[data-day-bar]') && !e.relatedTarget?.closest('[data-day-bar]')) {
+          hideTooltip();
+        }
+      });
+
       document.addEventListener('click', (e) => {
         // Day bars take priority over incident cards (they're inside service cards)
         const bar = e.target.closest('[data-day-bar]');
         if (bar) {
           e.preventDefault();
+          hideTooltip();
           open(bar);
           return;
         }
