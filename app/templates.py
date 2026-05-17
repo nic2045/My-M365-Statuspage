@@ -5,6 +5,7 @@ import bleach
 import mistune
 from fastapi.templating import Jinja2Templates
 
+from app import __version__
 from app.i18n import LABELS
 from app.models import INCIDENT_BORDER, STATUS_BADGE_CLASSES, STATUS_TAILWIND_BAR
 
@@ -16,6 +17,7 @@ templates = Jinja2Templates(directory="templates")
 
 # ── Globals ───────────────────────────────────────────────────────────────────
 templates.env.globals["L"] = LABELS
+templates.env.globals["APP_VERSION"] = __version__
 templates.env.globals["status_bar_class"] = (
     lambda s: STATUS_TAILWIND_BAR.get(s, STATUS_TAILWIND_BAR["unknown"])
 )
