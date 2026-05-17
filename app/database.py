@@ -51,6 +51,9 @@ async def init_db() -> None:
             "ALTER TABLE incident_updates ADD COLUMN notify_subscribers BOOLEAN NOT NULL DEFAULT 0",
             "ALTER TABLE monitored_services ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE incidents ADD COLUMN external_id VARCHAR(128)",
+            "ALTER TABLE incidents ADD COLUMN owner_email VARCHAR(256)",
+            "ALTER TABLE incidents ADD COLUMN acknowledged_at DATETIME",
+            "ALTER TABLE incidents ADD COLUMN acknowledged_by_email VARCHAR(256)",
             # subscribers table is created by metadata.create_all above;
             # these stmts only fire if it already existed without the column
         ]:
