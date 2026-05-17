@@ -1,29 +1,24 @@
 {% extends "admin/base_admin.html" %}
+{% import "partials/_form_macros.html" as f %}
 
 {% block admin_content %}
-<div class="mb-6 flex items-center gap-3">
-  <a href="/admin" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
-    ← {{ L["admin.back"] }}
-  </a>
+<div class="mb-6 flex items-center gap-2">
+  {{ f.back_link("/admin/maintenances") }}
   <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ L["admin.new_maintenance"] }}</h1>
 </div>
 
-<div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 max-w-xl">
-  <form method="post" action="/admin/maintenance" class="space-y-4">
+<form method="post" action="/admin/maintenance" class="max-w-2xl space-y-6">
 
+  {% call f.form_card("Grunddaten") %}
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        {{ L["admin.title_label"] }}
-      </label>
-      <input type="text" name="title" required
+      {{ f.field_label(L["admin.title_label"]) }}
+      <input type="text" name="title" required autofocus
              class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
              placeholder="Kurze Beschreibung der Wartung…">
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        {{ L["admin.service_label"] }}
-      </label>
+      {{ f.field_label(L["admin.service_label"]) }}
       <select name="service_name" required
               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         {% for svc in services %}
@@ -31,41 +26,27 @@
         {% endfor %}
       </select>
     </div>
+  {% endcall %}
 
+  {% call f.form_card("Zeitraum") %}
+    <div class="grid grid-cols-2 gap-4">
+      {{ f.datetime_now_field(L["admin.scheduled_start"], "scheduled_start") }}
+      {{ f.datetime_now_field(L["admin.scheduled_end"], "scheduled_end", optional=True) }}
+    </div>
+  {% endcall %}
+
+  {% call f.form_card("Details") %}
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        {{ L["admin.description_label"] }}
-        <span class="font-normal text-gray-400">(optional)</span>
-      </label>
+      {{ f.field_label(L["admin.description_label"], optional=True) }}
       <textarea name="description" rows="3"
                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 placeholder="Was wird gewartet, welche Auswirkungen sind zu erwarten…"></textarea>
     </div>
+  {% endcall %}
 
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {{ L["admin.scheduled_start"] }}
-        </label>
-        <input type="datetime-local" name="scheduled_start"
-               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {{ L["admin.scheduled_end"] }}
-        </label>
-        <input type="datetime-local" name="scheduled_end"
-               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-    </div>
+  {{ f.action_row(L["admin.create"], "/admin/maintenances") }}
 
-    <div class="pt-2">
-      <button type="submit"
-              class="px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium transition-colors">
-        {{ L["admin.create"] }}
-      </button>
-    </div>
+</form>
 
-  </form>
-</div>
+{{ f.now_buttons_script(prefill_target="scheduled_start") }}
 {% endblock %}
