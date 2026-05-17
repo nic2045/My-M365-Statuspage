@@ -148,7 +148,15 @@
     {% if recent_resolved %}
     <div class="space-y-2">
       {% for incident in recent_resolved %}
-      <details class="group/item bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+      <details class="group/item bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
+               id="incident-{{ incident.id }}"
+               data-incident-entry
+               data-service="{{ incident.service_name }}"
+               data-start="{{ incident.start_datetime.date().isoformat() if incident.start_datetime else '' }}"
+               data-end="{{ (incident.end_datetime.date().isoformat() if incident.end_datetime else (incident.last_modified.date().isoformat() if incident.last_modified else '')) }}"
+               data-title="{{ incident.title }}"
+               data-href="#incident-{{ incident.id }}"
+               data-meta="{{ incident_type_label(incident.classification) }} · {{ incident.service_name }}">
         <summary class="flex items-center gap-3 px-4 py-3 cursor-pointer list-none select-none hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
           <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0 transition-transform group-open/item:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
