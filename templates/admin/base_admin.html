@@ -58,13 +58,13 @@
 
   {# ── Mobile drawer overlay ─────────────────────────────────────── #}
   <div id="admin-sidebar-overlay"
-       class="fixed inset-0 bg-black/40 z-20 lg:hidden hidden"
+       class="fixed inset-0 top-14 bg-black/40 z-20 lg:hidden hidden"
        aria-hidden="true"></div>
 
   {# ── Sidebar (left, sticky on desktop, drawer on mobile) ──────── #}
   <aside id="admin-sidebar"
-         class="fixed lg:sticky top-0 lg:top-20 left-0 z-30
-                w-60 lg:w-52 h-screen lg:h-auto shrink-0
+         class="fixed lg:sticky top-14 lg:top-20 left-0 z-30
+                w-60 lg:w-52 h-[calc(100vh-3.5rem)] lg:h-auto shrink-0
                 bg-white dark:bg-gray-900 lg:bg-transparent dark:lg:bg-transparent
                 border-r border-gray-200 dark:border-gray-800 lg:border-0
                 -translate-x-full lg:translate-x-0 transition-transform duration-200">
