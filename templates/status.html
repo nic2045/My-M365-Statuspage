@@ -37,8 +37,27 @@
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
     {{ L["page.uptime_heading"] }}
   </h2>
-  {% for service in data.services %}
-    {% include "partials/service_row.html" %}
+  {# Services are pre-sorted by (group, name) in get_enabled_services.
+     group_services() buckets them while preserving that order — Jinja's
+     groupby would re-sort and fail on mixed None/str keys. Headers shown
+     only when there are 2+ distinct groups. #}
+  {% set grouped = group_services(data.services, L['page.group_other']) %}
+  {% set show_headers = grouped | length > 1 %}
+  {% for group_label, group_services in grouped %}
+    {% set svc_list = group_services | list %}
+    {% if show_headers %}
+    <div class="flex items-baseline justify-between mt-5 mb-2 first:mt-0">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        {{ group_label }}
+      </h3>
+      <span class="text-[11px] text-gray-400 dark:text-gray-500">
+        {% if svc_list | length == 1 %}{{ L['page.group_count_one'] }}{% else %}{{ L['page.group_count'].format(count=svc_list | length) }}{% endif %}
+      </span>
+    </div>
+    {% endif %}
+    {% for service in svc_list %}
+      {% include "partials/service_row.html" %}
+    {% endfor %}
   {% endfor %}
 </section>
 

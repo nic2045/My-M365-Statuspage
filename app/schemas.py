@@ -38,6 +38,7 @@ class ServiceStatusSchema(BaseModel):
     uptime_days: list[DayStatusSchema]
     active_incidents: list[IncidentSchema] = []
     uptime_percentage: float | None = None
+    group_name: str | None = None
 
 
 class StatusPageSchema(BaseModel):

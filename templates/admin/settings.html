@@ -24,14 +24,40 @@
 
   <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">{{ L["admin.service_backfill_hint"] }}</p>
 
+  {# Shared datalist for group autocomplete across all rows #}
+  <datalist id="known-groups">
+    {% for g in known_groups %}<option value="{{ g }}">{% endfor %}
+  </datalist>
+
   {% if all_services %}
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
     {% for svc in all_services %}
-    <div class="flex items-center justify-between px-5 py-3 gap-4 {{ '' if svc.is_enabled else 'opacity-60' }}">
-      <span class="font-medium text-sm {{ 'text-gray-800 dark:text-gray-200' if svc.is_enabled else 'text-gray-500 dark:text-gray-400' }}">
-        {{ svc.service_name }}
-      </span>
-      <div class="flex items-center gap-2">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between px-5 py-3 gap-3 {{ '' if svc.is_enabled else 'opacity-60' }}">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="font-medium text-sm {{ 'text-gray-800 dark:text-gray-200' if svc.is_enabled else 'text-gray-500 dark:text-gray-400' }} truncate">
+          {{ svc.service_name }}
+        </span>
+        {% if svc.group_name %}
+        <span class="inline-flex shrink-0 items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+          {{ svc.group_name }}
+        </span>
+        {% endif %}
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <form method="post" action="/admin/services/{{ svc.service_name | urlencode }}/group"
+              class="flex items-center gap-1">
+          <input type="text"
+                 name="group_name"
+                 list="known-groups"
+                 value="{{ svc.group_name or '' }}"
+                 placeholder="{{ L['admin.service_group_placeholder'] }}"
+                 title="{{ L['admin.service_group_hint'] }}"
+                 class="text-xs px-2 py-1 w-36 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button type="submit"
+                  class="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-700 hover:border-gray-400 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+            {{ L["admin.service_group_save"] }}
+          </button>
+        </form>
         <form method="post" action="/admin/services/{{ svc.service_name | urlencode }}/uptime-toggle">
           <button type="submit"
                   title="{{ L['admin.uptime_toggle_hint'] }}"

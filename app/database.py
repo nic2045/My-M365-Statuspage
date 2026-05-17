@@ -47,6 +47,7 @@ async def init_db() -> None:
             "ALTER TABLE incidents ADD COLUMN is_suppressed BOOLEAN NOT NULL DEFAULT 0",
             "ALTER TABLE incidents ADD COLUMN end_datetime DATETIME",
             "ALTER TABLE monitored_services ADD COLUMN show_uptime_percentage BOOLEAN NOT NULL DEFAULT 1",
+            "ALTER TABLE monitored_services ADD COLUMN group_name VARCHAR(64)",
             "ALTER TABLE incident_updates ADD COLUMN notify_subscribers BOOLEAN NOT NULL DEFAULT 0",
         ]:
             try:

@@ -20,10 +20,12 @@ from app.crud import (
     get_all_monitored_services,
     get_enabled_services,
     get_incident_by_id,
+    get_known_groups,
     get_resolved_incidents,
     get_scheduled_maintenances,
     get_suppressed_incidents,
     set_service_enabled,
+    set_service_group,
     set_service_status_manual,
     set_show_uptime_percentage,
     toggle_suppress_incident,
@@ -172,12 +174,14 @@ async def admin_settings(
     nav: dict = Depends(admin_nav_context),
 ):
     all_services = await get_all_monitored_services(db)
+    known_groups = await get_known_groups(db)
     return templates.TemplateResponse(
         request,
         "admin/settings.html",
         {
             "user": user,
             "all_services": all_services,
+            "known_groups": known_groups,
             "page_title": f"Einstellungen – {settings.APP_TITLE}",
             **nav,
         },
@@ -386,6 +390,19 @@ async def toggle_uptime_display(
     svc = result.scalar_one_or_none()
     new_state = not (svc.show_uptime_percentage if svc else True)
     await set_show_uptime_percentage(db, service_name, new_state)
+    await db.commit()
+    return RedirectResponse(url="/admin/settings", status_code=303)
+
+
+@router.post("/services/{service_name}/group")
+async def update_service_group(
+    service_name: str,
+    group_name: Annotated[str, Form()] = "",
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Assign (or clear) the group for a monitored service."""
+    await set_service_group(db, service_name, group_name)
     await db.commit()
     return RedirectResponse(url="/admin/settings", status_code=303)
 
