@@ -29,6 +29,7 @@ from app.crud import (
     get_resolved_incidents,
     get_scheduled_maintenances,
     get_suppressed_incidents,
+    move_service,
     set_service_enabled,
     set_service_group,
     set_service_status_manual,
@@ -558,6 +559,22 @@ async def toggle_uptime_display(
     new_state = not (svc.show_uptime_percentage if svc else True)
     await set_show_uptime_percentage(db, service_name, new_state)
     await db.commit()
+    return RedirectResponse(url="/admin/settings", status_code=303)
+
+
+@router.post("/services/{service_name}/move")
+async def admin_move_service(
+    request: Request,
+    service_name: str,
+    direction: Annotated[str, Form()],
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Move service one slot up or down within its group (changes public-page order)."""
+    moved = await move_service(db, service_name, direction)
+    await db.commit()
+    if moved:
+        flash(request, LABELS["toast.service_moved"])
     return RedirectResponse(url="/admin/settings", status_code=303)
 
 
