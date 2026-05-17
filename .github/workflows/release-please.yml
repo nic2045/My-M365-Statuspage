@@ -1,9 +1,12 @@
 name: Release Please
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Release batch reason (optional)"
+        required: false
+        default: ""
 
 permissions:
   contents: write

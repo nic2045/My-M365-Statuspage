@@ -123,15 +123,21 @@
     <div data-day-modal-backdrop class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
     <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full border border-gray-100 dark:border-gray-800 overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between gap-3">
-        <div class="min-w-0 flex items-center gap-3">
-          <span id="day-modal-dot" class="w-3 h-3 rounded-full shrink-0"></span>
-          <div>
-            <h3 id="day-modal-title" class="text-base font-semibold text-gray-900 dark:text-white"></h3>
+        <div class="min-w-0 flex items-center gap-2">
+          <button id="day-modal-back" type="button" aria-label="Zurück zur Übersicht"
+                  class="hidden shrink-0 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 -ml-1 p-1 rounded transition-colors">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <span id="day-modal-dot" class="w-2.5 h-2.5 rounded-full shrink-0"></span>
+          <div class="min-w-0">
+            <h3 id="day-modal-title" class="text-sm font-semibold text-gray-900 dark:text-white leading-tight"></h3>
             <p id="day-modal-sub" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"></p>
           </div>
         </div>
         <button type="button" data-day-modal-close aria-label="Schließen"
-                class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 -m-1 p-1 rounded">
+                class="shrink-0 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 -m-1 p-1 rounded">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
           </svg>
@@ -140,7 +146,7 @@
       <div class="px-5 py-4">
         <div id="day-modal-status-row" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium mb-3"></div>
         <p id="day-modal-body" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed"></p>
-        <div id="day-modal-incidents" class="mt-4 space-y-2"></div>
+        <div id="day-modal-incidents" class="mt-3 space-y-2"></div>
       </div>
     </div>
   </div>
@@ -179,6 +185,9 @@
       const statusRow = document.getElementById('day-modal-status-row');
       const body = document.getElementById('day-modal-body');
       const incidentsBox = document.getElementById('day-modal-incidents');
+      const backBtn = document.getElementById('day-modal-back');
+
+      let lastBar = null;
 
       const STATUS_STYLE = {
         operational: { dot: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', body: 'Keine Vorfälle an diesem Tag — Dienst lief normal.' },
@@ -188,7 +197,16 @@
         unknown:     { dot: 'bg-gray-400',    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',              body: 'Status unbekannt.' },
       };
 
+      const CLASS_STYLE = {
+        incident:    { border: 'border-l-red-400',   badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',     label: 'Störung' },
+        advisory:    { border: 'border-l-amber-400', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400', label: 'Hinweis' },
+        maintenance: { border: 'border-l-blue-400',  badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',  label: 'Wartung' },
+      };
+
       function open(btn) {
+        lastBar = btn;
+        backBtn.classList.add('hidden');
+
         const date = btn.dataset.date;
         const dateLabel = btn.dataset.dateLabel;
         const status = btn.dataset.status;
@@ -198,7 +216,7 @@
 
         title.textContent = service;
         sub.textContent = dateLabel;
-        dot.className = 'w-3 h-3 rounded-full shrink-0 ' + style.dot;
+        dot.className = 'w-2.5 h-2.5 rounded-full shrink-0 ' + style.dot;
         statusRow.className = 'inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium mb-3 ' + style.badge;
         statusRow.innerHTML = '<span class="w-1.5 h-1.5 rounded-full ' + style.dot + '"></span>' + statusLabel;
         body.textContent = style.body;
@@ -214,16 +232,23 @@
           header.textContent = 'Zugehörige Einträge';
           incidentsBox.appendChild(header);
           matching.forEach((inc) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'w-full text-left block px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
-            btn.innerHTML = '<span class="text-sm font-medium text-gray-800 dark:text-gray-200">' + inc.title + '</span>'
+            const cs = CLASS_STYLE[inc.classificationRaw] || {};
+            const row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'w-full text-left block pl-3 pr-3 py-2 rounded-lg border border-gray-100 dark:border-gray-800 border-l-4 '
+              + (cs.border || 'border-l-gray-300')
+              + ' hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
+            let badgeHtml = '';
+            if (cs.badge) {
+              badgeHtml = '<span class="inline-flex items-center px-1.5 py-0 rounded text-[10px] font-medium ' + cs.badge + ' ml-1.5">' + (cs.label || inc.classificationRaw) + '</span>';
+            }
+            row.innerHTML = '<span class="text-sm font-medium text-gray-800 dark:text-gray-200">' + inc.title + badgeHtml + '</span>'
               + '<span class="block text-xs text-gray-400 dark:text-gray-500 mt-0.5">' + inc.meta + '</span>';
-            btn.addEventListener('click', (ev) => {
+            row.addEventListener('click', (ev) => {
               ev.preventDefault();
               if (inc.element) openIncidentCard(inc.element);
             });
-            incidentsBox.appendChild(btn);
+            incidentsBox.appendChild(row);
           });
         }
 
@@ -236,10 +261,11 @@
         modal.classList.add('hidden');
         modal.classList.remove('flex');
         document.body.classList.remove('overflow-hidden');
+        lastBar = null;
       }
 
       // Find incident entries on the page whose [start..end] date range covers `date`
-      // Returns [{title, href, meta}]. Uses [data-incident-entry] attributes.
+      // Returns [{title, meta, classificationRaw, element}]. Uses [data-incident-entry] attributes.
       function findIncidentsCoveringDate(service, date) {
         const all = document.querySelectorAll('[data-incident-entry]');
         const out = [];
@@ -250,8 +276,8 @@
           if (start && date >= start && date <= end) {
             out.push({
               title: el.dataset.title || '(ohne Titel)',
-              href: el.dataset.href || '#',
-              meta: el.dataset.meta || (el.dataset.classification ? el.dataset.classification + ' · ' + (el.dataset.service || '') : ''),
+              meta: el.dataset.meta || (el.dataset.statusLabel ? el.dataset.statusLabel + ' · ' + (el.dataset.service || '') : (el.dataset.service || '')),
+              classificationRaw: el.dataset.classificationRaw || '',
               element: el,
             });
           }
@@ -265,7 +291,12 @@
 
         title.textContent = card.dataset.title || '';
         sub.textContent = card.dataset.service || '';
-        dot.className = 'w-3 h-3 rounded-full shrink-0 ' + style.dot;
+        dot.className = 'w-2.5 h-2.5 rounded-full shrink-0 ' + style.dot;
+
+        // Show back button only when we drilled in from a day overview
+        if (lastBar) {
+          backBtn.classList.remove('hidden');
+        }
 
         // Status row: combine classification + severity + state
         const chips = [];
@@ -299,6 +330,10 @@
         modal.classList.add('flex');
         document.body.classList.add('overflow-hidden');
       }
+
+      backBtn.addEventListener('click', () => {
+        if (lastBar) open(lastBar);
+      });
 
       // ── Bar hover tooltip ────────────────────────────────────────────────
       const tooltip = document.getElementById('bar-tooltip');
