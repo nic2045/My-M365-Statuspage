@@ -98,4 +98,5 @@ LABELS: dict[str, str] = {
     "admin.uptime_hidden":        "Verfügbarkeit ausgeblendet",
     "admin.uptime_toggle_hint":   "Gesamtverfügbarkeit der letzten 90 Tage auf der Statusseite ein-/ausblenden",
     "page.uptime_90d":            "Gesamtverfügbarkeit (90 Tage)",
+    "page.uptime_suffix":         "verfügbar",
 }
