@@ -50,15 +50,23 @@ async def _send_via_smtp(cfg: EmailSettings, to: str, subject: str, html_body: s
 
 async def _get_graph_token() -> str | None:
     """Acquire Graph token with client_credentials (Mail.Send permission)."""
-    try:
-        import msal
+    from app.app_settings import get_azure_settings  # noqa: PLC0415
+    from app.database import AsyncSessionLocal  # noqa: PLC0415
 
-        app = msal.ConfidentialClientApplication(
-            settings.AZURE_CLIENT_ID,
-            authority=f"https://login.microsoftonline.com/{settings.AZURE_TENANT_ID}",
-            client_credential=settings.AZURE_CLIENT_SECRET,
+    async with AsyncSessionLocal() as db:
+        az = await get_azure_settings(db)
+    if not az.is_configured:
+        logger.error("Azure AD not configured – cannot acquire Graph token")
+        return None
+    try:
+        import msal  # noqa: PLC0415
+
+        msal_app = msal.ConfidentialClientApplication(
+            az.client_id,
+            authority=f"https://login.microsoftonline.com/{az.tenant_id}",
+            client_credential=az.client_secret,
         )
-        result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
+        result = msal_app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
         if "access_token" not in result:
             logger.error("MSAL token acquisition failed: %s", result.get("error_description"))
             return None

@@ -267,29 +267,23 @@
            data-severity-label="{{ severity_label(incident.severity) if incident.severity else '' }}"
            data-since="{{ incident.start_datetime | strftime_de if incident.start_datetime else '' }}"
            data-description="{{ incident.description or '' }}"
-           class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
-        <div class="flex items-center gap-3 px-4 py-3">
-          <div class="flex items-center gap-1.5 shrink-0">
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+           class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 border-l-4 border-l-emerald-400 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-3 px-3 py-2.5">
+          <div class="min-w-0 flex-1 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full shrink-0 bg-emerald-500"></span>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{{ incident.title }}</span>
+            <span class="hidden sm:inline text-xs text-gray-400 dark:text-gray-500 shrink-0">{{ incident.service_name }}</span>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium
               {% if incident.classification == 'incident' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400
               {% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400{% endif %}">
               {{ incident_type_label(incident.classification) }}
             </span>
-            {% if incident.severity %}
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ severity_badge_class(incident.severity) }}">
-              {{ severity_label(incident.severity) }}
-            </span>
-            {% endif %}
-          </div>
-          <span class="text-sm font-medium text-gray-600 dark:text-gray-400 truncate min-w-0">
-            {{ incident.title }}
-          </span>
-          <div class="ml-auto flex items-center gap-3 shrink-0">
-            <span class="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">{{ incident.service_name }}</span>
-            <span class="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            <span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 shrink-0">
               {{ L["incident.resolved"] }}
             </span>
-            <span class="text-xs text-gray-400 dark:text-gray-500">
+            <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0 hidden sm:block">
               {{ (incident.end_datetime or incident.last_modified) | strftime_de }}
             </span>
           </div>

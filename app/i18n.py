@@ -222,4 +222,15 @@ LABELS: dict[str, str] = {
     # Notification send
     "notify.new_incident":            "Neue Störung",
     "notify.update":                  "Status-Update",
+    # Azure AD settings
+    "admin.azure_heading":            "Azure AD App",
+    "admin.azure_hint":               "Credentials der Azure-AD-App für Microsoft Graph API und E-Mail-Versand.",
+    "admin.azure_tenant_label":       "Tenant-ID",
+    "admin.azure_client_label":       "Client-ID (App-ID)",
+    "admin.azure_secret_label":       "Client-Secret",
+    "admin.azure_secret_hint":        "Leer lassen = bestehendes Secret behalten",
+    "admin.azure_save":               "Speichern & Verbindung prüfen",
+    "admin.azure_status_configured":  "Verbunden",
+    "admin.azure_status_pending":     "Unvollständig",
+    "toast.azure_saved":              "Azure AD App gespeichert.",
 }
