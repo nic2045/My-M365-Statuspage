@@ -107,6 +107,34 @@
     {% block content %}{% endblock %}
   </main>
 
+  <!-- ── Day-detail modal: opened by clicking a 90-day uptime bar ───────────── -->
+  <div id="day-modal" role="dialog" aria-modal="true" aria-labelledby="day-modal-title"
+       class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div data-day-modal-backdrop class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between gap-3">
+        <div class="min-w-0 flex items-center gap-3">
+          <span id="day-modal-dot" class="w-3 h-3 rounded-full shrink-0"></span>
+          <div>
+            <h3 id="day-modal-title" class="text-base font-semibold text-gray-900 dark:text-white"></h3>
+            <p id="day-modal-sub" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"></p>
+          </div>
+        </div>
+        <button type="button" data-day-modal-close aria-label="Schließen"
+                class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 -m-1 p-1 rounded">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="px-5 py-4">
+        <div id="day-modal-status-row" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium mb-3"></div>
+        <p id="day-modal-body" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed"></p>
+        <div id="day-modal-incidents" class="mt-4 space-y-2"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- PWA install prompt (shown only after browser fires beforeinstallprompt) -->
   <button id="pwa-install-btn"
           aria-label="App installieren"
@@ -128,6 +156,162 @@
       html.classList.toggle('dark');
       localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
     });
+  </script>
+
+  <script>
+    // Day-detail modal: opens when a 90-day uptime bar is clicked
+    (function () {
+      const modal = document.getElementById('day-modal');
+      if (!modal) return;
+      const title = document.getElementById('day-modal-title');
+      const sub = document.getElementById('day-modal-sub');
+      const dot = document.getElementById('day-modal-dot');
+      const statusRow = document.getElementById('day-modal-status-row');
+      const body = document.getElementById('day-modal-body');
+      const incidentsBox = document.getElementById('day-modal-incidents');
+
+      const STATUS_STYLE = {
+        operational: { dot: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', body: 'Keine Vorfälle an diesem Tag — Dienst lief normal.' },
+        degraded:    { dot: 'bg-amber-500',   badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',       body: 'Eingeschränkte Verfügbarkeit an diesem Tag.' },
+        interrupted: { dot: 'bg-red-500',     badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',               body: 'Dienstunterbrechung an diesem Tag.' },
+        no_data:     { dot: 'bg-gray-300',    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',              body: 'Keine Datenpunkte für diesen Tag verfügbar.' },
+        unknown:     { dot: 'bg-gray-400',    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',              body: 'Status unbekannt.' },
+      };
+
+      function open(btn) {
+        const date = btn.dataset.date;
+        const dateLabel = btn.dataset.dateLabel;
+        const status = btn.dataset.status;
+        const statusLabel = btn.dataset.statusLabel;
+        const service = btn.dataset.service;
+        const style = STATUS_STYLE[status] || STATUS_STYLE.unknown;
+
+        title.textContent = service;
+        sub.textContent = dateLabel;
+        dot.className = 'w-3 h-3 rounded-full shrink-0 ' + style.dot;
+        statusRow.className = 'inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium mb-3 ' + style.badge;
+        statusRow.innerHTML = '<span class="w-1.5 h-1.5 rounded-full ' + style.dot + '"></span>' + statusLabel;
+        body.textContent = style.body;
+
+        // Look up incidents covering this date by scanning history entries
+        // (each entry has a data-incident block we can pattern-match against).
+        incidentsBox.innerHTML = '';
+        const matching = findIncidentsCoveringDate(service, date);
+        if (matching.length === 0) {
+          incidentsBox.innerHTML = '';
+        } else {
+          const header = document.createElement('p');
+          header.className = 'text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2';
+          header.textContent = 'Zugehörige Einträge';
+          incidentsBox.appendChild(header);
+          matching.forEach((inc) => {
+            const link = document.createElement('a');
+            link.href = inc.href;
+            link.className = 'block px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
+            link.innerHTML = '<span class="text-sm font-medium text-gray-800 dark:text-gray-200">' + inc.title + '</span>'
+              + '<span class="block text-xs text-gray-400 dark:text-gray-500 mt-0.5">' + inc.meta + '</span>';
+            incidentsBox.appendChild(link);
+          });
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+      }
+
+      function close() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+      }
+
+      // Find incident entries on the page whose [start..end] date range covers `date`
+      // Returns [{title, href, meta}]. Uses [data-incident-entry] attributes.
+      function findIncidentsCoveringDate(service, date) {
+        const all = document.querySelectorAll('[data-incident-entry]');
+        const out = [];
+        all.forEach((el) => {
+          if (el.dataset.service && el.dataset.service !== service) return;
+          const start = el.dataset.start;
+          const end = el.dataset.end || new Date().toISOString().slice(0, 10);
+          if (start && date >= start && date <= end) {
+            out.push({
+              title: el.dataset.title || '(ohne Titel)',
+              href: el.dataset.href || '#',
+              meta: el.dataset.meta || '',
+            });
+          }
+        });
+        return out;
+      }
+
+      function openIncidentCard(card) {
+        const status = card.dataset.status || 'unknown';
+        const style = STATUS_STYLE[status] || STATUS_STYLE.unknown;
+
+        title.textContent = card.dataset.title || '';
+        sub.textContent = card.dataset.service || '';
+        dot.className = 'w-3 h-3 rounded-full shrink-0 ' + style.dot;
+
+        // Status row: combine classification + severity + state
+        const chips = [];
+        if (card.dataset.classification) chips.push(card.dataset.classification);
+        if (card.dataset.severityLabel) chips.push(card.dataset.severityLabel);
+        if (card.dataset.statusLabel) chips.push(card.dataset.statusLabel);
+        statusRow.className = 'inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium mb-3 ' + style.badge;
+        statusRow.innerHTML = '<span class="w-1.5 h-1.5 rounded-full ' + style.dot + '"></span>' + chips.join(' · ');
+
+        body.innerHTML = '';
+        if (card.dataset.since) {
+          const p = document.createElement('p');
+          p.className = 'text-xs text-gray-500 dark:text-gray-400 mb-2';
+          p.innerHTML = '<span class="font-medium">Seit:</span> ' + card.dataset.since;
+          body.appendChild(p);
+        }
+        if (card.dataset.description) {
+          const desc = document.createElement('p');
+          desc.className = 'text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line';
+          desc.textContent = card.dataset.description;
+          body.appendChild(desc);
+        } else {
+          const p = document.createElement('p');
+          p.className = 'text-sm text-gray-500 dark:text-gray-400 italic';
+          p.textContent = 'Keine weiteren Details verfügbar.';
+          body.appendChild(p);
+        }
+
+        incidentsBox.innerHTML = '';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+      }
+
+      document.addEventListener('click', (e) => {
+        // Day bars take priority over incident cards (they're inside service cards)
+        const bar = e.target.closest('[data-day-bar]');
+        if (bar) {
+          e.preventDefault();
+          open(bar);
+          return;
+        }
+        const card = e.target.closest('[data-incident-card]');
+        if (card && !e.target.closest('a, button, summary, details')) {
+          openIncidentCard(card);
+          return;
+        }
+        if (e.target.closest('[data-day-modal-close], [data-day-modal-backdrop]')) {
+          close();
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+        // Space/Enter on focused incident card opens modal
+        if ((e.key === 'Enter' || e.key === ' ') && document.activeElement?.matches('[data-incident-card]')) {
+          e.preventDefault();
+          openIncidentCard(document.activeElement);
+        }
+      });
+    })();
   </script>
 
   <script>

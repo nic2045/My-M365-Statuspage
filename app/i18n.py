@@ -36,6 +36,10 @@ LABELS: dict[str, str] = {
     "admin.title":                "Admin",
     "admin.dashboard":            "Dashboard",
     "admin.incidents":            "Störungen & Hinweise",
+    "admin.incidents_only":       "Aktive Störungen",
+    "admin.advisories":           "Hinweise",
+    "admin.services_count_suffix": "Dienste",
+    "empty.admin.advisories":     "Keine aktiven Hinweise.",
     # Admin – Sidebar navigation
     "admin.nav.dashboard":        "Dashboard",
     "admin.nav.incidents":        "Störungen",

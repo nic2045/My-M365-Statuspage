@@ -75,10 +75,11 @@ templates.env.globals["phase_dot_class"] = (
 def _group_services(services, fallback_label: str):
     """Bucket services by group_name (None → fallback_label), preserving the
     incoming order. Used by status.html instead of Jinja's groupby, which
-    cannot sort mixed None/str keys."""
+    cannot sort mixed None/str keys. Accepts both ORM objects and dicts."""
     buckets: dict[str, list] = {}
     for s in services:
-        key = s.group_name or fallback_label
+        group = s.get("group_name") if isinstance(s, dict) else getattr(s, "group_name", None)
+        key = group or fallback_label
         buckets.setdefault(key, []).append(s)
     return list(buckets.items())
 

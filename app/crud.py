@@ -276,7 +276,10 @@ async def get_scheduled_maintenances(db: AsyncSession) -> list[Incident]:
 async def get_all_incidents(
     db: AsyncSession,
     include_resolved: bool = False,
+    classification: str | None = None,
 ) -> list[Incident]:
+    """Return non-maintenance incidents. Pass classification='incident' for
+    real disruptions only, 'advisory' for informational items."""
     stmt = (
         select(Incident)
         .options(selectinload(Incident.updates))
@@ -285,6 +288,8 @@ async def get_all_incidents(
     )
     if not include_resolved:
         stmt = stmt.where(Incident.is_resolved.is_(False))
+    if classification is not None:
+        stmt = stmt.where(Incident.classification == classification)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -443,6 +448,36 @@ async def get_enabled_services(db: AsyncSession) -> list[str]:
         .order_by(group_sort, MonitoredService.service_name)
     )
     return [row[0] for row in result.fetchall()]
+
+
+async def get_enabled_services_with_status(db: AsyncSession) -> list[dict]:
+    """Same order as get_enabled_services, enriched with current status + group.
+
+    Used by the admin dashboard to render status-aware quick-action tiles.
+    """
+    from sqlalchemy import case
+    group_sort = case(
+        (MonitoredService.group_name.is_(None), "￿"),
+        else_=MonitoredService.group_name,
+    )
+    result = await db.execute(
+        select(
+            MonitoredService.service_name,
+            MonitoredService.group_name,
+        )
+        .where(MonitoredService.is_enabled.is_(True))
+        .order_by(group_sort, MonitoredService.service_name)
+    )
+    rows = result.fetchall()
+    enriched: list[dict] = []
+    for name, group in rows:
+        status = await get_service_current_status(db, name)
+        enriched.append({
+            "service_name": name,
+            "group_name": group,
+            "current_status": status,
+        })
+    return enriched
 
 
 async def get_all_monitored_services(db: AsyncSession) -> list[MonitoredService]:

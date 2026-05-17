@@ -22,6 +22,7 @@ from app.crud import (
     get_all_subscribers,
     get_confirmed_subscribers,
     get_enabled_services,
+    get_enabled_services_with_status,
     get_incident_by_id,
     get_known_groups,
     get_resolved_incidents,
@@ -151,21 +152,27 @@ async def admin_dashboard(
     user: dict = Depends(require_auth),
     nav: dict = Depends(admin_nav_context),
 ):
-    incidents = await get_all_incidents(db, include_resolved=False)
+    incidents = await get_all_incidents(
+        db, include_resolved=False, classification="incident"
+    )
+    advisories = await get_all_incidents(
+        db, include_resolved=False, classification="advisory"
+    )
     resolved = await get_resolved_incidents(db, limit=10)
     suppressed = await get_suppressed_incidents(db)
     maintenances = await get_scheduled_maintenances(db)
-    enabled_services = await get_enabled_services(db)
+    services_with_status = await get_enabled_services_with_status(db)
     return templates.TemplateResponse(
         request,
         "admin/dashboard.html",
         {
             "user": user,
             "incidents": incidents,
+            "advisories": advisories,
             "resolved_incidents": resolved,
             "suppressed_incidents": suppressed,
             "maintenances": maintenances,
-            "services": enabled_services,
+            "services": services_with_status,
             "page_title": f"Admin – {settings.APP_TITLE}",
             **nav,
         },

@@ -22,68 +22,136 @@
 </div>
 
 {# ── Dienststatus überschreiben ──────────────────────────────────────────────── #}
+{% set status_meta = {
+  'operational': {'dot': 'bg-emerald-500', 'label': L['status.operational'], 'ring': 'ring-emerald-500/30', 'text': 'text-emerald-700 dark:text-emerald-400', 'bg': 'bg-emerald-50 dark:bg-emerald-950/30'},
+  'degraded':    {'dot': 'bg-amber-500',   'label': L['status.degraded'],    'ring': 'ring-amber-500/30',   'text': 'text-amber-700 dark:text-amber-400',     'bg': 'bg-amber-50 dark:bg-amber-950/30'},
+  'interrupted': {'dot': 'bg-red-500',     'label': L['status.interrupted'], 'ring': 'ring-red-500/30',     'text': 'text-red-700 dark:text-red-400',         'bg': 'bg-red-50 dark:bg-red-950/30'},
+  'unknown':     {'dot': 'bg-gray-400',    'label': L['status.unknown'],     'ring': 'ring-gray-400/30',    'text': 'text-gray-600 dark:text-gray-400',       'bg': 'bg-gray-50 dark:bg-gray-900'},
+} %}
 <section class="mb-8">
-  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    {{ L["admin.service_status"] }}
-  </h2>
-  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
-    {% for service in services %}
-    <form method="post" action="/admin/services/{{ service | urlencode }}/status"
-          class="flex items-center justify-between px-5 py-3 gap-4">
-      <span class="font-medium text-sm text-gray-800 dark:text-gray-200">{{ service }}</span>
-      <div class="flex items-center gap-2">
-        <select name="status"
-                class="text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="operational">{{ L["status.operational"] }}</option>
-          <option value="degraded">{{ L["status.degraded"] }}</option>
-          <option value="interrupted">{{ L["status.interrupted"] }}</option>
-          <option value="unknown">{{ L["status.unknown"] }}</option>
-        </select>
-        <button type="submit"
-                class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors">
-          {{ L["admin.set_status"] }}
-        </button>
-      </div>
-    </form>
-    {% endfor %}
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+      {{ L["admin.service_status"] }}
+    </h2>
+    <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ services | length }} {{ L["admin.services_count_suffix"] }}</span>
   </div>
+
+  {% set grouped = group_services(services, L['page.group_other']) %}
+  {% set show_headers = grouped | length > 1 %}
+
+  {% for group_label, group_services in grouped %}
+    {% set svc_list = group_services | list %}
+    {% if show_headers %}
+    <div class="flex items-baseline justify-between mt-5 mb-2 first:mt-0">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ group_label }}</h3>
+      <span class="text-[11px] text-gray-400 dark:text-gray-500">
+        {% if svc_list | length == 1 %}{{ L['page.group_count_one'] }}{% else %}{{ L['page.group_count'].format(count=svc_list | length) }}{% endif %}
+      </span>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+      {% for svc in svc_list %}
+        {% set cur = svc.current_status %}
+        {% set meta = status_meta.get(cur, status_meta['unknown']) %}
+        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-3 flex items-center gap-3">
+          <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ meta.dot }} ring-4 {{ meta.ring }}"
+                title="{{ meta.label }}"></span>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{{ svc.service_name }}</p>
+            <p class="text-[11px] {{ meta.text }} font-medium uppercase tracking-wide">{{ meta.label }}</p>
+          </div>
+          <form method="post" action="/admin/services/{{ svc.service_name | urlencode }}/status"
+                class="flex items-center gap-1 shrink-0">
+            {% for key in ['operational', 'degraded', 'interrupted'] %}
+              {% set is_current = (cur == key) %}
+              {% set bm = status_meta[key] %}
+              <button type="submit" name="status" value="{{ key }}"
+                      title="{{ bm.label }}"
+                      class="w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                        {% if is_current %}{{ bm.bg }} {{ bm.text }} ring-1 ring-current/20
+                        {% else %}text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800{% endif %}">
+                {% if key == 'operational' %}
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                {% elif key == 'degraded' %}
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.814-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/></svg>
+                {% else %}
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                {% endif %}
+              </button>
+            {% endfor %}
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
 </section>
 
-{# ── Aktive Störungen & Hinweise ─────────────────────────────────────────────── #}
+{# ── Aktive Störungen ────────────────────────────────────────────────────────── #}
+{% macro incident_row(inc) %}
+<div class="flex items-center justify-between px-5 py-3 group">
+  <a href="/admin/incidents/{{ inc.id }}" class="flex-1 flex items-center gap-0 hover:opacity-80 transition-opacity min-w-0">
+    {% set _phase = 'resolved' if inc.is_resolved else inc.status %}
+    <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ phase_dot_class(_phase) }}"
+          title="{{ state_label(_phase) }}"></span>
+    <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5
+      {% if inc.classification == 'advisory' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400
+      {% else %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400{% endif %}">
+      {{ incident_type_label(inc.classification) }}
+    </span>
+    {% if inc.severity %}
+    <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5 {{ severity_badge_class(inc.severity) }}">{{ severity_label(inc.severity) }}</span>
+    {% endif %}
+    <span class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{{ inc.title }}</span>
+    <span class="text-sm text-gray-400 dark:text-gray-500 ml-2 shrink-0">· {{ inc.service_name }}</span>
+  </a>
+  <form method="post" action="/admin/incidents/{{ inc.id }}/suppress" class="ml-3 shrink-0">
+    <button type="submit"
+            class="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-700 hover:border-gray-400 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+      {{ L["admin.suppress"] }}
+    </button>
+  </form>
+</div>
+{% endmacro %}
+
 <section id="incidents" class="mb-8 scroll-mt-20">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    {{ L["admin.incidents"] }}
+    {{ L["admin.incidents_only"] }}
   </h2>
   {% if incidents %}
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
-    {% for inc in incidents %}
-    <div class="flex items-center justify-between px-5 py-3 group">
-      <a href="/admin/incidents/{{ inc.id }}" class="flex-1 flex items-center gap-0 hover:opacity-80 transition-opacity min-w-0">
-        <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ phase_dot_class('resolved' if inc.is_resolved else inc.status) }}"
-              title="{{ state_label('resolved' if inc.is_resolved else inc.status) }}"></span>
-        <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5
-          {% if inc.classification == 'advisory' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400
-          {% else %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400{% endif %}">
-          {{ incident_type_label(inc.classification) }}
-        </span>
-        {% if inc.severity %}
-        <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5 {{ severity_badge_class(inc.severity) }}">{{ severity_label(inc.severity) }}</span>
-        {% endif %}
-        <span class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{{ inc.title }}</span>
-        <span class="text-sm text-gray-400 dark:text-gray-500 ml-2 shrink-0">· {{ inc.service_name }}</span>
-      </a>
-      <form method="post" action="/admin/incidents/{{ inc.id }}/suppress" class="ml-3 shrink-0">
-        <button type="submit"
-                class="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-700 hover:border-gray-400 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
-          {{ L["admin.suppress"] }}
-        </button>
-      </form>
-    </div>
-    {% endfor %}
+    {% for inc in incidents %}{{ incident_row(inc) }}{% endfor %}
   </div>
   {% else %}
-  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-500 dark:text-gray-400 shadow-sm">
-    {{ L["admin.no_incidents"] }}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-6 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div>
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ L["empty.admin.incidents"] }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">{{ L["empty.admin.incidents_sub"] }}</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+{# ── Hinweise (Advisories) ───────────────────────────────────────────────────── #}
+<section id="advisories" class="mb-8 scroll-mt-20">
+  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
+    {{ L["admin.advisories"] }}
+  </h2>
+  {% if advisories %}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
+    {% for inc in advisories %}{{ incident_row(inc) }}{% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 text-sm text-gray-400 dark:text-gray-500 shadow-sm flex items-center gap-2">
+    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+    </svg>
+    <span>{{ L["empty.admin.advisories"] }}</span>
   </div>
   {% endif %}
 </section>
