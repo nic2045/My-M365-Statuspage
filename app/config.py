@@ -34,6 +34,24 @@ class Settings(BaseSettings):
     # Dev: bypass Entra ID OIDC – alle Routen ohne Login zugänglich
     DISABLE_AUTH: bool = False
 
+    # Notifications – Email (SMTP)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    SMTP_FROM: str = ""
+    SMTP_TLS: bool = True          # True = STARTTLS on port 587; False = plain
+
+    # Notifications – MS Teams incoming webhook (comma-separated for multiple channels)
+    TEAMS_WEBHOOK_URLS: str = ""
+
+    # Public base URL (used in email links)
+    BASE_URL: str = "http://localhost:8000"
+
+    @property
+    def teams_webhook_list(self) -> list[str]:
+        return [u.strip() for u in self.TEAMS_WEBHOOK_URLS.split(",") if u.strip()]
+
     @computed_field
     @property
     def oidc_metadata_url(self) -> str:

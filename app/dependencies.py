@@ -15,9 +15,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def admin_nav_context(db: AsyncSession = Depends(get_db)) -> dict:
-    """Counters for the admin sidebar — kept in one place so every route
-    can splat the result into its template context."""
+async def admin_nav_context(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Counters and flash messages for the admin sidebar."""
+    from app.flash import consume_flashes
     from app.models import Incident
 
     incidents_q = select(func.count(Incident.id)).where(
@@ -34,6 +37,7 @@ async def admin_nav_context(db: AsyncSession = Depends(get_db)) -> dict:
     return {
         "nav_active_incidents": incidents_count,
         "nav_scheduled_maintenances": maintenances_count,
+        "flashes": consume_flashes(request),
     }
 
 

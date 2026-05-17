@@ -8,7 +8,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Incident, IncidentUpdate, MonitoredService, ServiceStatus
+from app.models import Incident, IncidentUpdate, MonitoredService, ServiceStatus, Subscriber
 from app.schemas import (
     DayStatusSchema,
     IncidentSchema,
@@ -616,3 +616,60 @@ async def build_status_page_data(
         last_updated=last_updated,
         overall_status=overall_status,
     )
+
+
+# ── Subscriber CRUD ───────────────────────────────────────────────────────────
+
+async def create_subscriber(db: AsyncSession, email: str) -> Subscriber | None:
+    """Create a pending (unconfirmed) subscriber. Returns None if email already exists."""
+    existing = await db.execute(select(Subscriber).where(Subscriber.email == email))
+    if existing.scalar_one_or_none():
+        return None
+    sub = Subscriber(
+        email=email,
+        confirm_token=uuid.uuid4().hex,
+        unsubscribe_token=uuid.uuid4().hex,
+    )
+    db.add(sub)
+    await db.flush()
+    return sub
+
+
+async def confirm_subscriber(db: AsyncSession, token: str) -> Subscriber | None:
+    result = await db.execute(select(Subscriber).where(Subscriber.confirm_token == token))
+    sub = result.scalar_one_or_none()
+    if sub and sub.confirmed_at is None:
+        sub.confirmed_at = datetime.utcnow()
+        await db.flush()
+    return sub
+
+
+async def get_subscriber_by_unsub_token(db: AsyncSession, token: str) -> Subscriber | None:
+    result = await db.execute(
+        select(Subscriber).where(Subscriber.unsubscribe_token == token)
+    )
+    return result.scalar_one_or_none()
+
+
+async def delete_subscriber(db: AsyncSession, subscriber_id: int) -> bool:
+    result = await db.execute(select(Subscriber).where(Subscriber.id == subscriber_id))
+    sub = result.scalar_one_or_none()
+    if not sub:
+        return False
+    await db.delete(sub)
+    await db.flush()
+    return True
+
+
+async def get_all_subscribers(db: AsyncSession) -> list[Subscriber]:
+    result = await db.execute(select(Subscriber).order_by(Subscriber.created_at.desc()))
+    return list(result.scalars().all())
+
+
+async def get_confirmed_subscribers(db: AsyncSession) -> list[Subscriber]:
+    result = await db.execute(
+        select(Subscriber)
+        .where(Subscriber.confirmed_at.is_not(None))
+        .order_by(Subscriber.email)
+    )
+    return list(result.scalars().all())
