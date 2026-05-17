@@ -111,6 +111,9 @@ LABELS: dict[str, str] = {
     "page.history_heading":       "Kürzlich behoben",
     "page.history_subheading":    "Letzte 30 Tage",
     "page.history_empty":         "Keine behobenen Störungen in den letzten 30 Tagen.",
+    "page.history_filter":        "Filter:",
+    "page.history_filter_all":    "Alle",
+    "page.history_filter_empty":  "Keine Einträge für diesen Dienst.",
     "page.history_show":          "Störungs-Verlauf anzeigen",
     "incident.resolved_at":       "Behoben am",
     # Service management

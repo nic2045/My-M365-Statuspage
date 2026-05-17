@@ -229,11 +229,29 @@
     </summary>
 
     {% if recent_resolved %}
-    <div class="space-y-2">
+    {# ── Service filter for history ─────────────────────────────────────── #}
+    {% set history_services = recent_resolved | map(attribute='service_name') | list | unique | sort %}
+    <div class="flex flex-wrap items-center gap-2 mb-3" data-history-filter>
+      <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">
+        {{ L["page.history_filter"] }}
+      </span>
+      <button type="button" data-history-filter-btn="" data-active="1"
+              class="text-xs px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-colors">
+        {{ L["page.history_filter_all"] }}
+      </button>
+      {% for svc in history_services %}
+      <button type="button" data-history-filter-btn="{{ svc }}"
+              class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+        {{ svc }}
+      </button>
+      {% endfor %}
+    </div>
+    <div class="space-y-2" data-history-entries>
       {% for incident in recent_resolved %}
       <div id="incident-{{ incident.id }}"
            role="button" tabindex="0"
            data-incident-entry data-incident-card
+           data-history-entry
            data-service="{{ incident.service_name }}"
            data-start="{{ incident.start_datetime.date().isoformat() if incident.start_datetime else '' }}"
            data-end="{{ (incident.end_datetime.date().isoformat() if incident.end_datetime else (incident.last_modified.date().isoformat() if incident.last_modified else '')) }}"
@@ -275,6 +293,42 @@
       </div>
       {% endfor %}
     </div>
+    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500 hidden" data-history-empty-filter>
+      {{ L["page.history_filter_empty"] }}
+    </p>
+    <script>
+      (function () {
+        const buttons = document.querySelectorAll('[data-history-filter-btn]');
+        const entries = document.querySelectorAll('[data-history-entry]');
+        const emptyMsg = document.querySelector('[data-history-empty-filter]');
+        function apply(filter) {
+          let visible = 0;
+          entries.forEach((el) => {
+            const match = !filter || el.dataset.service === filter;
+            el.classList.toggle('hidden', !match);
+            if (match) visible++;
+          });
+          if (emptyMsg) emptyMsg.classList.toggle('hidden', visible > 0);
+          buttons.forEach((b) => {
+            const active = (b.dataset.historyFilterBtn || '') === filter;
+            b.dataset.active = active ? '1' : '';
+            b.classList.toggle('border-blue-300', active);
+            b.classList.toggle('bg-blue-50', active);
+            b.classList.toggle('text-blue-700', active);
+            b.classList.toggle('dark:border-blue-700', active);
+            b.classList.toggle('dark:bg-blue-950/40', active);
+            b.classList.toggle('dark:text-blue-300', active);
+            b.classList.toggle('border-gray-200', !active);
+            b.classList.toggle('dark:border-gray-700', !active);
+            b.classList.toggle('text-gray-600', !active);
+            b.classList.toggle('dark:text-gray-400', !active);
+          });
+        }
+        buttons.forEach((b) => {
+          b.addEventListener('click', () => apply(b.dataset.historyFilterBtn || ''));
+        });
+      })();
+    </script>
     {% else %}
     <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-6 shadow-sm flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
       <svg class="w-5 h-5 shrink-0 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
