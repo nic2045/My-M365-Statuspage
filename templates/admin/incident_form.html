@@ -87,12 +87,17 @@
         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
           {{ L["admin.source_label"] }}
         </label>
-        <select name="source"
-                class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="manual" selected>{{ L["admin.source_manual"] }}</option>
-          <option value="graph">{{ L["admin.source_microsoft"] }}</option>
-          <option value="other">{{ L["admin.source_other"] }}</option>
-        </select>
+        <input type="text" name="source" value="manual"
+               list="source-list"
+               autocomplete="off"
+               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <datalist id="source-list">
+          {% for src in known_sources %}
+          <option value="{{ src }}">{% if src == 'manual' %}{{ L["admin.source_manual"] }}{% elif src == 'graph' %}{{ L["admin.source_microsoft"] }}{% endif %}</option>
+          {% endfor %}
+          {% if 'manual' not in known_sources %}<option value="manual">{{ L["admin.source_manual"] }}</option>{% endif %}
+          {% if 'graph' not in known_sources %}<option value="graph">{{ L["admin.source_microsoft"] }}</option>{% endif %}
+        </datalist>
       </div>
       <div>
         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
