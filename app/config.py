@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     # Dev: bypass Entra ID OIDC – alle Routen ohne Login zugänglich
     DISABLE_AUTH: bool = False
 
+    # UI language fallback when the visitor has no cookie, no Accept-Language
+    # header and no admin-configured default. Supported: "de", "en".
+    DEFAULT_LANGUAGE: str = "de"
+
     # Notifications – Email (SMTP)
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587

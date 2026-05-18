@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de" class="h-full">
+<html lang="{{ current_lang() }}" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -71,10 +71,37 @@
       </div>
 
       <div class="flex items-center gap-3">
+        <!-- Language switcher -->
+        <div class="relative" data-lang-switcher>
+          <button type="button"
+                  data-lang-toggle
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-label="{{ L['ui.switch_language'] }}"
+                  class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors text-xs font-medium uppercase">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+            </svg>
+            <span>{{ current_lang() | upper }}</span>
+          </button>
+          <ul data-lang-menu role="menu"
+              class="hidden absolute right-0 mt-1 min-w-[8rem] rounded-lg bg-white dark:bg-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/10 py-1 z-30">
+            {% for code in SUPPORTED_LANGUAGES %}
+            <li>
+              <a href="/lang/{{ code }}?next={{ request.url.path | urlencode }}"
+                 role="menuitem"
+                 class="block px-3 py-1.5 text-sm {% if current_lang() == code %}font-semibold text-brand dark:text-brand-light{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800{% endif %}">
+                {{ LANGUAGE_NAMES[code] }}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+
         <!-- Dark mode toggle -->
         <button
           id="theme-toggle"
-          aria-label="Farbschema wechseln"
+          aria-label="{{ L['ui.theme_toggle'] }}"
           class="p-1.5 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors"
         >
           <svg id="icon-sun" class="w-4 h-4 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -125,7 +152,7 @@
     <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full border border-gray-100 dark:border-gray-800 overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between gap-3">
         <div class="min-w-0 flex items-center gap-2">
-          <button id="day-modal-back" type="button" aria-label="Zurück zur Übersicht"
+          <button id="day-modal-back" type="button" aria-label="{{ L['ui.back_to_overview'] }}"
                   class="hidden shrink-0 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 -ml-1 p-1 rounded transition-colors">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
@@ -137,7 +164,7 @@
             <p id="day-modal-sub" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"></p>
           </div>
         </div>
-        <button type="button" data-day-modal-close aria-label="Schließen"
+        <button type="button" data-day-modal-close aria-label="{{ L['ui.close'] }}"
                 class="shrink-0 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 -m-1 p-1 rounded">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
@@ -154,12 +181,12 @@
 
   <!-- PWA install prompt (shown only after browser fires beforeinstallprompt) -->
   <button id="pwa-install-btn"
-          aria-label="App installieren"
+          aria-label="{{ L['ui.app_install'] }}"
           class="hidden fixed bottom-4 right-4 z-40 inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-brand text-white text-sm font-medium shadow-lg hover:bg-brand-dark transition-colors">
     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4m-8 8h8"/>
     </svg>
-    <span>Installieren</span>
+    <span>{{ L['ui.app_install_short'] }}</span>
   </button>
 
   {# ── Build info chip — only in DEV mode (DEBUG=True); never in production ── #}
@@ -170,6 +197,46 @@
   </div>
   {% endif %}
 
+  <script>
+    // Labels exposed to inline JS so day-modal/tooltip strings stay localised.
+    window.__I18N = {
+      day_op_body: {{ L['ui.day.operational_body'] | tojson }},
+      day_deg_body: {{ L['ui.day.degraded_body'] | tojson }},
+      day_int_body: {{ L['ui.day.interrupted_body'] | tojson }},
+      day_nd_body: {{ L['ui.day.no_data_body'] | tojson }},
+      day_unk_body: {{ L['ui.day.unknown_body'] | tojson }},
+      cls_incident: {{ L['incident.type.incident'] | tojson }},
+      cls_advisory: {{ L['incident.type.advisory'] | tojson }},
+      cls_maintenance: {{ L['incident.type.maintenance'] | tojson }},
+      related: {{ L['ui.related_entries'] | tojson }},
+      since: {{ L['incident.since'] | tojson }},
+      no_title: {{ L['ui.no_title'] | tojson }},
+      no_details: {{ L['ui.no_details_available'] | tojson }},
+      click_for_details: {{ L['ui.click_for_details'] | tojson }},
+      more_click_for_details: {{ L['ui.more_click_for_details'] | tojson }},
+    };
+  </script>
+  <script>
+    // Language switcher dropdown
+    (function () {
+      const wrap = document.querySelector('[data-lang-switcher]');
+      if (!wrap) return;
+      const btn = wrap.querySelector('[data-lang-toggle]');
+      const menu = wrap.querySelector('[data-lang-menu]');
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = !menu.classList.contains('hidden');
+        menu.classList.toggle('hidden');
+        btn.setAttribute('aria-expanded', String(!open));
+      });
+      document.addEventListener('click', (e) => {
+        if (!wrap.contains(e.target)) {
+          menu.classList.add('hidden');
+          btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    })();
+  </script>
   <script>
     // Dark mode toggle (persists to localStorage)
     const html = document.documentElement;
@@ -199,17 +266,17 @@
       let lastBar = null;
 
       const STATUS_STYLE = {
-        operational: { dot: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', body: 'Keine Vorfälle an diesem Tag — Dienst lief normal.' },
-        degraded:    { dot: 'bg-amber-500',   badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',       body: 'Eingeschränkte Verfügbarkeit an diesem Tag.' },
-        interrupted: { dot: 'bg-red-500',     badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',               body: 'Dienstunterbrechung an diesem Tag.' },
-        no_data:     { dot: 'bg-gray-300',    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',              body: 'Keine Datenpunkte für diesen Tag verfügbar.' },
-        unknown:     { dot: 'bg-gray-400',    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',              body: 'Status unbekannt.' },
+        operational: { dot: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', body: window.__I18N.day_op_body },
+        degraded:    { dot: 'bg-amber-500',   badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',       body: window.__I18N.day_deg_body },
+        interrupted: { dot: 'bg-red-500',     badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',               body: window.__I18N.day_int_body },
+        no_data:     { dot: 'bg-gray-300',    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',              body: window.__I18N.day_nd_body },
+        unknown:     { dot: 'bg-gray-400',    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',              body: window.__I18N.day_unk_body },
       };
 
       const CLASS_STYLE = {
-        incident:    { border: 'border-l-red-400',   badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',     label: 'Störung' },
-        advisory:    { border: 'border-l-amber-400', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400', label: 'Hinweis' },
-        maintenance: { border: 'border-l-blue-400',  badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',  label: 'Wartung' },
+        incident:    { border: 'border-l-red-400',   badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',     label: window.__I18N.cls_incident },
+        advisory:    { border: 'border-l-amber-400', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400', label: window.__I18N.cls_advisory },
+        maintenance: { border: 'border-l-blue-400',  badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',  label: window.__I18N.cls_maintenance },
       };
 
       function open(btn) {
@@ -238,7 +305,7 @@
         if (matching.length > 0) {
           const header = document.createElement('p');
           header.className = 'text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2';
-          header.textContent = 'Zugehörige Einträge';
+          header.textContent = window.__I18N.related;
           incidentsBox.appendChild(header);
           matching.forEach((inc) => {
             const cs = CLASS_STYLE[inc.classificationRaw] || {};
@@ -284,7 +351,7 @@
           const end = el.dataset.end || new Date().toISOString().slice(0, 10);
           if (start && date >= start && date <= end) {
             out.push({
-              title: el.dataset.title || '(ohne Titel)',
+              title: el.dataset.title || window.__I18N.no_title,
               meta: el.dataset.meta || (el.dataset.statusLabel ? el.dataset.statusLabel + ' · ' + (el.dataset.service || '') : (el.dataset.service || '')),
               classificationRaw: el.dataset.classificationRaw || '',
               element: el,
@@ -319,7 +386,7 @@
         if (card.dataset.since) {
           const p = document.createElement('p');
           p.className = 'text-xs text-gray-500 dark:text-gray-400 mb-2';
-          p.innerHTML = '<span class="font-medium">Seit:</span> ' + card.dataset.since;
+          p.innerHTML = '<span class="font-medium">' + window.__I18N.since + ':</span> ' + card.dataset.since;
           body.appendChild(p);
         }
         if (card.dataset.description) {
@@ -330,7 +397,7 @@
         } else {
           const p = document.createElement('p');
           p.className = 'text-sm text-gray-500 dark:text-gray-400 italic';
-          p.textContent = 'Keine weiteren Details verfügbar.';
+          p.textContent = window.__I18N.no_details;
           body.appendChild(p);
         }
 
@@ -372,10 +439,10 @@
             tIncidents.appendChild(row);
           });
           if (matching.length > 3) {
-            tMore.textContent = '+' + (matching.length - 3) + ' weitere — klicken für Details';
+            tMore.textContent = window.__I18N.more_click_for_details.replace('{count}', String(matching.length - 3));
             tMore.classList.remove('hidden');
           } else {
-            tMore.textContent = 'Klicken für Details';
+            tMore.textContent = window.__I18N.click_for_details;
             tMore.classList.remove('hidden');
           }
         } else {

@@ -2,8 +2,37 @@
 
 {% block admin_content %}
 <div class="mb-6">
-  <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Einstellungen</h1>
+  <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ L["settings.title"] }}</h1>
 </div>
+
+{# ── Sprache / Language ────────────────────────────────────────────────────── #}
+<a id="language" class="block scroll-mt-20"></a>
+<section class="mb-8">
+  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
+    {{ L["settings.language_heading"] }}
+  </h2>
+  <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">{{ L["settings.language_hint"] }}</p>
+  <form method="post" action="/admin/settings/language"
+        class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 flex flex-wrap items-end gap-4">
+    <div class="flex-1 min-w-[12rem]">
+      <label for="default_language" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+        {{ L["settings.language_label"] }}
+      </label>
+      <select id="default_language" name="default_language"
+              class="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        {% for code in SUPPORTED_LANGUAGES %}
+          <option value="{{ code }}" {% if app_default_language == code %}selected{% endif %}>
+            {{ LANGUAGE_NAMES[code] }} ({{ code | upper }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit"
+            class="inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-dark transition-colors">
+      {{ L["settings.language_save"] }}
+    </button>
+  </form>
+</section>
 
 {# ── Dienstverwaltung ────────────────────────────────────────────────────────── #}
 <a id="services" class="block scroll-mt-20"></a>

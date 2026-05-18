@@ -7,7 +7,13 @@ from fastapi.templating import Jinja2Templates
 
 from app import __version__
 from app.config import settings as _settings
-from app.i18n import LABELS
+from app.i18n import (
+    LABELS,
+    LANGUAGE_NAMES,
+    SUPPORTED_LANGUAGES,
+    get_current_language,
+    get_label,
+)
 from app.models import INCIDENT_BORDER, STATUS_BADGE_CLASSES, STATUS_TAILWIND_BAR
 
 _ALLOWED_MD_TAGS = ["p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "br", "code", "pre", "blockquote"]
@@ -18,6 +24,9 @@ templates = Jinja2Templates(directory="templates")
 
 # ── Globals ───────────────────────────────────────────────────────────────────
 templates.env.globals["L"] = LABELS
+templates.env.globals["current_lang"] = get_current_language
+templates.env.globals["LANGUAGE_NAMES"] = LANGUAGE_NAMES
+templates.env.globals["SUPPORTED_LANGUAGES"] = SUPPORTED_LANGUAGES
 templates.env.globals["APP_VERSION"] = __version__
 templates.env.globals["APP_TITLE"] = _settings.APP_TITLE
 templates.env.globals["BUILD_SHA"] = _settings.BUILD_SHA
@@ -141,40 +150,54 @@ templates.env.globals["group_services"] = _group_services
 
 
 # ── Filters ───────────────────────────────────────────────────────────────────
-def _strftime_de(dt: datetime | None, fmt: str = "%d.%m.%Y %H:%M Uhr") -> str:
+_DATETIME_FORMATS = {
+    "de": "%d.%m.%Y %H:%M Uhr",
+    "en": "%Y-%m-%d %H:%M",
+}
+_DATE_FORMATS = {
+    "de": "%d.%m.%Y",
+    "en": "%Y-%m-%d",
+}
+
+
+def _strftime_localized(dt: datetime | None, fmt: str | None = None) -> str:
     if dt is None:
         return "—"
+    if fmt is None:
+        fmt = _DATETIME_FORMATS.get(get_current_language(), _DATETIME_FORMATS["de"])
     return dt.strftime(fmt)
 
 
-def _date_de(d, fmt: str = "%d.%m.%Y") -> str:
+def _date_localized(d, fmt: str | None = None) -> str:
     if d is None:
         return "—"
+    if fmt is None:
+        fmt = _DATE_FORMATS.get(get_current_language(), _DATE_FORMATS["de"])
     return d.strftime(fmt)
 
 
-def _duration_de(start: datetime | None, end: datetime | None) -> str:
+def _duration_localized(start: datetime | None, end: datetime | None) -> str:
     if start is None or end is None:
         return ""
     seconds = int((end - start).total_seconds())
     if seconds < 0:
         return ""
     if seconds < 60:
-        return f"{seconds} Sek"
+        return f"{seconds} {get_label('duration.sec')}"
     minutes = seconds // 60
     if minutes < 60:
-        return f"{minutes} Min"
+        return f"{minutes} {get_label('duration.min')}"
     hours = minutes // 60
     if hours < 24:
-        return f"{hours} Std"
+        return f"{hours} {get_label('duration.hr')}"
     days = hours // 24
     if days < 7:
-        return "1 Tag" if days == 1 else f"{days} Tage"
+        return get_label("duration.day_one") if days == 1 else get_label("duration.day_many").format(n=days)
     weeks = days // 7
     if weeks < 5:
-        return "1 Woche" if weeks == 1 else f"{weeks} Wochen"
+        return get_label("duration.week_one") if weeks == 1 else get_label("duration.week_many").format(n=weeks)
     months = days // 30
-    return "1 Monat" if months == 1 else f"{months} Monate"
+    return get_label("duration.month_one") if months == 1 else get_label("duration.month_many").format(n=months)
 
 
 def _render_md(text: str | None) -> str:
@@ -184,7 +207,10 @@ def _render_md(text: str | None) -> str:
     return bleach.clean(raw_html, tags=_ALLOWED_MD_TAGS, attributes=_ALLOWED_MD_ATTRS, strip=True)
 
 
-templates.env.filters["strftime_de"] = _strftime_de
-templates.env.filters["date_de"] = _date_de
+templates.env.filters["strftime_de"] = _strftime_localized
+templates.env.filters["date_de"] = _date_localized
+templates.env.filters["localized_datetime"] = _strftime_localized
+templates.env.filters["localized_date"] = _date_localized
 templates.env.filters["render_md"] = _render_md
-templates.env.globals["duration_de"] = _duration_de
+templates.env.globals["duration_de"] = _duration_localized
+templates.env.globals["localized_duration"] = _duration_localized

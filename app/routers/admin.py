@@ -9,8 +9,10 @@ from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.app_settings import (
+    get_app_default_language,
     get_azure_settings,
     get_email_settings,
+    save_app_default_language,
     save_azure_settings,
     save_email_settings,
     verify_azure_connection,
@@ -56,7 +58,7 @@ from app.graph_client import (
     fetch_issues_since,
     fetch_recently_resolved_issues,
 )
-from app.i18n import LABELS
+from app.i18n import LABELS, LABELS_BY_LANG
 from app.models import MonitoredService
 from app.notifications import send_incident_notification, send_teams_notification, send_test_email
 from app.templates import templates
@@ -194,13 +196,14 @@ async def admin_settings(
     user: dict = Depends(require_auth),
     nav: dict = Depends(admin_nav_context),
 ):
-    all_services, known_groups, subscribers, email_cfg, azure_cfg, source_labels = await asyncio.gather(
+    all_services, known_groups, subscribers, email_cfg, azure_cfg, source_labels, app_lang = await asyncio.gather(
         get_all_monitored_services(db),
         get_known_groups(db),
         get_all_subscribers(db),
         get_email_settings(db),
         get_azure_settings(db),
         get_all_source_labels(db),
+        get_app_default_language(db),
     )
     return templates.TemplateResponse(
         request,
@@ -214,10 +217,26 @@ async def admin_settings(
             "email_cfg": email_cfg,
             "azure_cfg": azure_cfg,
             "source_labels": source_labels,
-            "page_title": f"Einstellungen – {settings.APP_TITLE}",
+            "app_default_language": app_lang or settings.DEFAULT_LANGUAGE,
+            "page_title": f"{LABELS['settings.title']} – {settings.APP_TITLE}",
             **nav,
         },
     )
+
+
+@router.post("/settings/language")
+async def admin_save_language(
+    request: Request,
+    default_language: Annotated[str, Form()],
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    if default_language not in LABELS_BY_LANG:
+        raise HTTPException(status_code=400, detail="unsupported language")
+    await save_app_default_language(db, default_language)
+    await db.commit()
+    flash(request, LABELS["toast.language_saved"])
+    return RedirectResponse(url="/admin/settings#language", status_code=303)
 
 
 @router.post("/settings/email")
