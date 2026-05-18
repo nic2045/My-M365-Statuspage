@@ -1,0 +1,91 @@
+{# Shared form building blocks. Import via:
+   {% import "partials/_form_macros.html" as f %}
+#}
+
+{# Back arrow link in the page header. #}
+{% macro back_link(href) %}
+<a href="{{ href }}"
+   class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200 transition-colors">
+  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+  </svg>
+</a>
+{% endmacro %}
+
+{# Section card with uppercase header. Use as:
+   {% call f.form_card("Grunddaten") %} ...fields... {% endcall %}
+#}
+{% macro form_card(title) %}
+<div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+  <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ title }}</h2>
+  </div>
+  <div class="px-5 py-4 space-y-4">
+    {{ caller() }}
+  </div>
+</div>
+{% endmacro %}
+
+{# Label row used above every form field. `optional` shows the (optional) hint. #}
+{% macro field_label(text, for_id="", optional=False) %}
+<label{% if for_id %} for="{{ for_id }}"{% endif %} class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+  {{ text }}
+  {% if optional %}<span class="font-normal text-gray-400">(optional)</span>{% endif %}
+</label>
+{% endmacro %}
+
+{# Datetime field with a small "Jetzt" button that sets the value to now. #}
+{% macro datetime_now_field(label, name, value="", optional=False, btn_id="") %}
+{% set _btn_id = btn_id or (name ~ "-now-btn") %}
+<div>
+  <div class="flex items-center justify-between mb-1">
+    <label for="{{ name }}" class="text-xs font-medium text-gray-500 dark:text-gray-400">
+      {{ label }}
+      {% if optional %}<span class="font-normal text-gray-400">(optional)</span>{% endif %}
+    </label>
+    <button type="button" id="{{ _btn_id }}"
+            data-now-btn-for="{{ name }}"
+            class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+      {{ L["admin.now"] }}
+    </button>
+  </div>
+  <input type="datetime-local" name="{{ name }}" id="{{ name }}"
+         value="{{ value }}"
+         class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+</div>
+{% endmacro %}
+
+{# Submit + Abbrechen link, placed at the end of a form. #}
+{% macro action_row(submit_label, cancel_href, cancel_label="Abbrechen") %}
+<div class="flex items-center gap-3">
+  <button type="submit"
+          class="px-5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium transition-colors">
+    {{ submit_label }}
+  </button>
+  <a href="{{ cancel_href }}"
+     class="text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors">
+    {{ cancel_label }}
+  </a>
+</div>
+{% endmacro %}
+
+{# Small inline JS that wires up every [data-now-btn-for] button to set its
+   target input's value to the current local time. Include once per page. #}
+{% macro now_buttons_script(prefill_target="") %}
+<script>
+  (function () {
+    const fmtLocal = (d) => {
+      const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+    document.querySelectorAll('[data-now-btn-for]').forEach((btn) => {
+      const target = document.getElementById(btn.getAttribute('data-now-btn-for'));
+      if (target) btn.addEventListener('click', () => { target.value = fmtLocal(new Date()); });
+    });
+    {% if prefill_target %}
+    const _pre = document.getElementById("{{ prefill_target }}");
+    if (_pre && !_pre.value) _pre.value = fmtLocal(new Date());
+    {% endif %}
+  })();
+</script>
+{% endmacro %}
