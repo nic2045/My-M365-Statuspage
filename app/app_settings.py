@@ -14,6 +14,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings as env_settings
+from app.i18n import LABELS_BY_LANG
 from app.models import AppSetting
 
 logger = logging.getLogger(__name__)
@@ -284,3 +285,21 @@ async def verify_smtp_connection(
     except Exception as exc:  # noqa: BLE001
         logger.warning("SMTP verify exception: %s", exc)
         return False, f"Unerwarteter Fehler: {exc}"
+
+
+# ── UI language ───────────────────────────────────────────────────────────────
+
+_LANG_SETTING_KEY = "ui.default_language"
+
+
+async def get_app_default_language(db: AsyncSession) -> str | None:
+    """Admin-configured default language, or None if unset."""
+    rows = await get_all_settings(db)
+    value = rows.get(_LANG_SETTING_KEY)
+    return value if value in LABELS_BY_LANG else None
+
+
+async def save_app_default_language(db: AsyncSession, lang: str) -> None:
+    if lang not in LABELS_BY_LANG:
+        raise ValueError(f"unsupported language: {lang!r}")
+    await set_setting(db, _LANG_SETTING_KEY, lang)

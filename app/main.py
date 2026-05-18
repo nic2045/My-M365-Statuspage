@@ -8,10 +8,19 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.auth import LoginRequired
 from app.config import settings
-from app.database import init_db
+from app.database import AsyncSessionLocal, init_db
+from app.i18n import (
+    LABELS_BY_LANG,
+    reset_current_language,
+    resolve_language,
+    set_current_language,
+)
 from app.routers import admin, api, auth_router, embed, status
 from app.routers.subscribers import router as subscribers_router
 from app.scheduler import start_scheduler, stop_scheduler
+
+LANG_COOKIE = "lang"
+LANG_COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 year
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -41,6 +50,60 @@ app.add_middleware(
     https_only=not settings.DEBUG,
     same_site="lax",
 )
+
+@app.middleware("http")
+async def language_middleware(request: Request, call_next):
+    """Resolve the visitor's UI language once per request.
+
+    Cookie wins. If no cookie, fall back to the Accept-Language header (the
+    visitor's browser/OS preference), then to the admin-configured default,
+    then to the server's locale, then to DEFAULT_LANGUAGE.
+    """
+    cookie = request.cookies.get(LANG_COOKIE)
+    app_default: str | None = None
+    if not cookie:
+        try:
+            from app.app_settings import (  # noqa: PLC0415
+                get_app_default_language,
+            )
+            async with AsyncSessionLocal() as db:
+                app_default = await get_app_default_language(db)
+        except Exception:  # noqa: BLE001
+            app_default = None
+    lang = resolve_language(
+        cookie=cookie,
+        accept_language=request.headers.get("accept-language"),
+        app_default=app_default or settings.DEFAULT_LANGUAGE,
+    )
+    token = set_current_language(lang)
+    request.state.lang = lang
+    try:
+        response = await call_next(request)
+    finally:
+        reset_current_language(token)
+    return response
+
+
+@app.get("/lang/{code}", include_in_schema=False)
+async def set_language(request: Request, code: str):
+    """Persist the visitor's language choice and redirect back."""
+    if code not in LABELS_BY_LANG:
+        return RedirectResponse(url="/", status_code=303)
+    next_url = request.query_params.get("next") or request.headers.get("referer") or "/"
+    if not next_url.startswith("/"):
+        # Don't allow off-site redirects via the ?next= param.
+        next_url = "/"
+    response = RedirectResponse(url=next_url, status_code=303)
+    response.set_cookie(
+        LANG_COOKIE,
+        code,
+        max_age=LANG_COOKIE_MAX_AGE,
+        httponly=False,
+        samesite="lax",
+        secure=not settings.DEBUG,
+    )
+    return response
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
