@@ -1,10 +1,9 @@
 {% extends "admin/base_admin.html" %}
+{% import "partials/_form_macros.html" as f %}
 
 {% block admin_content %}
 <div class="mb-6 flex items-center gap-3">
-  <a href="/admin" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
-    ← {{ L["admin.back"] }}
-  </a>
+  {{ f.back_link("/admin/incidents") }}
   <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full {{ incident_type_badge_class(incident.classification) }}">
     {{ incident_type_label(incident.classification) }}
   </span>
@@ -59,36 +58,19 @@
 
 <div class="grid gap-6 lg:grid-cols-3">
 
-  {# ── Left: Edit form ──────────────────────────────────────────────────────── #}
-  <div class="lg:col-span-2 space-y-6">
+  {# ── Left: Edit form (3 cards, same structure as the create view) ────────── #}
+  <form method="post" action="/admin/incidents/{{ incident.id }}" class="lg:col-span-2 space-y-6">
 
-    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
-      <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-4">Details</h2>
-      <form method="post" action="/admin/incidents/{{ incident.id }}" class="space-y-4">
+    {% call f.form_card("Grunddaten") %}
+      <div>
+        {{ f.field_label(L["admin.title_label"]) }}
+        <input type="text" name="title" value="{{ incident.title }}" required
+               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
 
+      {% if incident.classification == "maintenance" %}
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {{ L["admin.title_label"] }}
-          </label>
-          <input type="text" name="title" value="{{ incident.title }}" required
-                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {{ L["admin.description_label"] }}
-            <span class="font-normal text-gray-400">(optional · Markdown)</span>
-          </label>
-          <textarea name="description" rows="3"
-                    class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none">{{ incident.description or "" }}</textarea>
-        </div>
-
-        {# Status + Severity / Scheduled times depending on classification #}
-        {% if incident.classification == "maintenance" %}
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {{ L["admin.status_label"] }}
-          </label>
+          {{ f.field_label(L["admin.status_label"]) }}
           <select name="status"
                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="scheduled"   {% if incident.status == "scheduled"   %}selected{% endif %}>{{ L["maintenance.scheduled"] }}</option>
@@ -96,24 +78,10 @@
             <option value="completed"   {% if incident.status == "completed"   %}selected{% endif %}>{{ L["maintenance.completed"] }}</option>
           </select>
         </div>
+      {% else %}
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ L["admin.scheduled_start"] }}</label>
-            <input type="datetime-local" name="scheduled_start"
-                   value="{{ incident.scheduled_start.strftime('%Y-%m-%dT%H:%M') if incident.scheduled_start else '' }}"
-                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ L["admin.scheduled_end"] }}</label>
-            <input type="datetime-local" name="scheduled_end"
-                   value="{{ incident.scheduled_end.strftime('%Y-%m-%dT%H:%M') if incident.scheduled_end else '' }}"
-                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-        </div>
-        {% else %}
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ L["admin.status_label"] }}</label>
+            {{ f.field_label(L["admin.status_label"]) }}
             <select name="status"
                     class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="active"       {% if incident.status == "active"       %}selected{% endif %}>{{ L["state.active"] }}</option>
@@ -123,7 +91,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ L["admin.severity_label"] }}</label>
+            {{ f.field_label(L["admin.severity_label"], optional=True) }}
             <select name="severity"
                     class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value=""         {% if not incident.severity              %}selected{% endif %}>—</option>
@@ -134,91 +102,76 @@
             </select>
           </div>
         </div>
-        {% endif %}
+      {% endif %}
+    {% endcall %}
 
-        {% if incident.classification != "maintenance" %}
+    {% call f.form_card("Zeitraum") %}
+      {% if incident.classification == "maintenance" %}
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label for="start_datetime" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ L["admin.start_datetime"] }}
-              </label>
-              <button type="button" id="start-now-btn"
-                      class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
-                {{ L["admin.now"] }}
-              </button>
-            </div>
-            <input type="datetime-local" name="start_datetime" id="start_datetime"
-                   value="{{ incident.start_datetime.strftime('%Y-%m-%dT%H:%M') if incident.start_datetime else '' }}"
-                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label for="end_datetime" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ L["admin.end_datetime"] }}
-              </label>
-              <button type="button" id="end-now-btn"
-                      class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
-                {{ L["admin.now"] }}
-              </button>
-            </div>
-            <input type="datetime-local" name="end_datetime" id="end_datetime"
-                   value="{{ incident.end_datetime.strftime('%Y-%m-%dT%H:%M') if incident.end_datetime else '' }}"
-                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
+          {{ f.datetime_now_field(L["admin.scheduled_start"], "scheduled_start", value=(incident.scheduled_start.strftime('%Y-%m-%dT%H:%M') if incident.scheduled_start else "")) }}
+          {{ f.datetime_now_field(L["admin.scheduled_end"], "scheduled_end", value=(incident.scheduled_end.strftime('%Y-%m-%dT%H:%M') if incident.scheduled_end else ""), optional=True) }}
         </div>
-        {% endif %}
-
+      {% else %}
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ L["admin.source_label"] }}</label>
-            <input type="text" name="source"
-                   value="{{ incident.source or 'manual' }}"
-                   list="source-list"
-                   autocomplete="off"
-                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <datalist id="source-list">
-              {% for src in known_sources %}
-              <option value="{{ src }}">{{ source_labels.get(src, '') }}</option>
-              {% endfor %}
-              {% if 'manual' not in known_sources %}<option value="manual">{{ L["admin.source_manual"] }}</option>{% endif %}
-              {% if 'graph' not in known_sources %}<option value="graph">{{ L["admin.source_microsoft"] }}</option>{% endif %}
-            </datalist>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {{ L["admin.external_id_label"] }}
-              <span class="font-normal text-gray-400">(optional)</span>
-            </label>
-            <input type="text" name="external_id"
-                   value="{{ incident.external_id or '' }}"
-                   placeholder="{{ L['admin.external_id_placeholder'] }}"
-                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
-          </div>
+          {{ f.datetime_now_field(L["admin.start_datetime"], "start_datetime", value=(incident.start_datetime.strftime('%Y-%m-%dT%H:%M') if incident.start_datetime else "")) }}
+          {{ f.datetime_now_field(L["admin.end_datetime"], "end_datetime", value=(incident.end_datetime.strftime('%Y-%m-%dT%H:%M') if incident.end_datetime else ""), optional=True) }}
         </div>
-
-        <div class="flex items-center gap-3 pt-1">
-          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+        <div>
+          <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
             <input type="checkbox" name="is_resolved" value="on"
                    {% if incident.is_resolved %}checked{% endif %}
                    class="rounded border-gray-300 dark:border-gray-600 text-emerald-500 focus:ring-emerald-500">
             {{ L["incident.resolved"] }}
           </label>
         </div>
+      {% endif %}
+    {% endcall %}
 
+    {% call f.form_card("Details") %}
+      <div>
+        {{ f.field_label(L["admin.description_label"] + " (Markdown)", optional=True) }}
+        <textarea name="description" rows="3"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none">{{ incident.description or "" }}</textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
         <div>
-          <button type="submit"
-                  class="px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium transition-colors">
-            {{ L["admin.save"] }}
-          </button>
+          {{ f.field_label(L["admin.source_label"]) }}
+          <input type="text" name="source"
+                 value="{{ incident.source or 'manual' }}"
+                 list="source-list"
+                 autocomplete="off"
+                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <datalist id="source-list">
+            {% for src in known_sources %}
+            <option value="{{ src }}">{{ source_labels.get(src, '') }}</option>
+            {% endfor %}
+            {% if 'manual' not in known_sources %}<option value="manual">{{ L["admin.source_manual"] }}</option>{% endif %}
+            {% if 'graph' not in known_sources %}<option value="graph">{{ L["admin.source_microsoft"] }}</option>{% endif %}
+          </datalist>
         </div>
+        <div>
+          {{ f.field_label(L["admin.external_id_label"], optional=True) }}
+          <input type="text" name="external_id"
+                 value="{{ incident.external_id or '' }}"
+                 placeholder="{{ L['admin.external_id_placeholder'] }}"
+                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+        </div>
+      </div>
+    {% endcall %}
 
-      </form>
+    <div>
+      <button type="submit"
+              class="px-5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium transition-colors">
+        {{ L["admin.save"] }}
+      </button>
     </div>
 
-    {# ── Add update post ────────────────────────────────────────────────────── #}
-    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
-      <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-4">{{ L["admin.add_update"] }}</h2>
+  </form>
+
+  {# ── Right: Timeline ──────────────────────────────────────────────────────── #}
+  <div class="space-y-6">
+    {% call f.form_card(L["admin.add_update"]) %}
       <form method="post" action="/admin/incidents/{{ incident.id }}/posts" class="space-y-3">
         <textarea name="content" rows="4" required
                   placeholder="{{ L['admin.post_placeholder'] }} (Markdown)"
@@ -235,98 +188,80 @@
           </button>
         </div>
       </form>
-    </div>
+    {% endcall %}
 
-  </div>
+    <div>
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 px-1">{{ L["incident.updates"] }}</h2>
 
-  {# ── Right: Timeline ──────────────────────────────────────────────────────── #}
-  <div>
-    <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">{{ L["incident.updates"] }}</h2>
+      {% if phase_segments %}
+      <div class="mb-4">
+        <div class="flex h-1.5 w-full rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800" role="img"
+             aria-label="Incident-Phasen">
+          {% for seg in phase_segments %}
+          <div class="h-full {{ phase_dot_class(seg.status) }}"
+               style="flex-grow: {{ seg.weight }};"
+               title="{{ state_label(seg.status) }}"></div>
+          {% endfor %}
+        </div>
+        <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
+          <span>{{ incident.start_datetime | strftime_de }}</span>
+          <span>{{ (incident.end_datetime | strftime_de) if incident.end_datetime else "heute" }}</span>
+        </div>
+      </div>
+      {% endif %}
 
-    {% if phase_segments %}
-    {# Thin colored phase bar showing incident phases over time (oldest left, newest right). #}
-    <div class="mb-4">
-      <div class="flex h-1.5 w-full rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800" role="img"
-           aria-label="Incident-Phasen">
-        {% for seg in phase_segments %}
-        <div class="h-full {{ phase_dot_class(seg.status) }}"
-             style="flex-grow: {{ seg.weight }};"
-             title="{{ state_label(seg.status) }}"></div>
+      <div class="space-y-2">
+        {% for update in incident.updates | sort(attribute="post_created_at", reverse=True) %}
+          {% if update.update_type == "state_change" %}
+          <div class="flex items-center gap-2 py-2">
+            <div class="w-px flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
+              {% if update.content == 'resolved' or update.content == 'completed' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400
+              {% elif update.content == 'acknowledged' or update.content == 'in_progress' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400
+              {% else %}bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300{% endif %}">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="10" r="4"/></svg>
+              → {{ state_label(update.content) }}
+            </span>
+            <div class="w-px flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+          </div>
+          <p class="text-center text-xs text-gray-400 dark:text-gray-500 -mt-1">{{ update.post_created_at | strftime_de }}</p>
+          {% else %}
+          <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm px-4 py-3">
+            <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ update.post_created_at | strftime_de }}</p>
+            <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline">
+              {{ update.content | render_md | safe }}
+            </div>
+          </div>
+          {% endif %}
+        {% else %}
+        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-4 py-3 text-sm text-gray-400 dark:text-gray-500 shadow-sm">
+          Noch keine Updates.
+        </div>
         {% endfor %}
       </div>
-      <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
-        <span>{{ incident.start_datetime | strftime_de }}</span>
-        <span>{{ (incident.end_datetime | strftime_de) if incident.end_datetime else "heute" }}</span>
-      </div>
-    </div>
-    {% endif %}
 
-    <div class="space-y-2">
-      {% for update in incident.updates | sort(attribute="post_created_at", reverse=True) %}
-        {% if update.update_type == "state_change" %}
-        {# State-change pill #}
-        <div class="flex items-center gap-2 py-2">
-          <div class="w-px flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
-            {% if update.content == 'resolved' or update.content == 'completed' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400
-            {% elif update.content == 'acknowledged' or update.content == 'in_progress' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400
-            {% else %}bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300{% endif %}">
-            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="10" r="4"/></svg>
-            → {{ state_label(update.content) }}
-          </span>
-          <div class="w-px flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
-        </div>
-        <p class="text-center text-xs text-gray-400 dark:text-gray-500 -mt-1">{{ update.post_created_at | strftime_de }}</p>
-        {% else %}
-        {# Note entry #}
-        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm px-4 py-3">
-          <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ update.post_created_at | strftime_de }}</p>
-          <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline">
-            {{ update.content | render_md | safe }}
-          </div>
-        </div>
+      <div class="mt-4 text-xs text-gray-400 dark:text-gray-500 space-y-0.5 px-1">
+        <p>{{ L["incident.since"] }}: {{ incident.start_datetime | strftime_de }}</p>
+        {% if incident.end_datetime %}
+        <p>{{ L["admin.end_datetime"] }}: {{ incident.end_datetime | strftime_de }}</p>
         {% endif %}
-      {% else %}
-      <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-4 py-3 text-sm text-gray-400 dark:text-gray-500 shadow-sm">
-        Noch keine Updates.
+        <p>
+          {{ L["admin.source_label"] }}:
+          {% if incident.source == 'graph' %}{{ L["admin.source_microsoft"] }}
+          {% elif incident.source == 'manual' %}{{ L["admin.source_manual"] }}
+          {% else %}{{ incident.source }}{% endif %}
+        </p>
+        {% if incident.external_id %}
+        <p>{{ L["admin.external_id_label"] }}: <span class="font-mono">{{ incident.external_id }}</span></p>
+        {% endif %}
+        <p class="font-mono truncate opacity-60">Graph-ID: {{ incident.graph_issue_id }}</p>
       </div>
-      {% endfor %}
-    </div>
-
-    <div class="mt-4 text-xs text-gray-400 dark:text-gray-500 space-y-0.5">
-      <p>{{ L["incident.since"] }}: {{ incident.start_datetime | strftime_de }}</p>
-      {% if incident.end_datetime %}
-      <p>{{ L["admin.end_datetime"] }}: {{ incident.end_datetime | strftime_de }}</p>
-      {% endif %}
-      <p>
-        {{ L["admin.source_label"] }}:
-        {% if incident.source == 'graph' %}{{ L["admin.source_microsoft"] }}
-        {% elif incident.source == 'manual' %}{{ L["admin.source_manual"] }}
-        {% else %}{{ incident.source }}{% endif %}
-      </p>
-      {% if incident.external_id %}
-      <p>{{ L["admin.external_id_label"] }}: <span class="font-mono">{{ incident.external_id }}</span></p>
-      {% endif %}
-      <p class="font-mono truncate opacity-60">Graph-ID: {{ incident.graph_issue_id }}</p>
     </div>
   </div>
 
 </div>
 
-<script>
-  (function () {
-    const fmtLocal = (d) => {
-      const pad = (n) => String(n).padStart(2, "0");
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    };
-    const endInput = document.getElementById("end_datetime");
-    const endBtn = document.getElementById("end-now-btn");
-    if (endInput && endBtn) endBtn.addEventListener("click", () => { endInput.value = fmtLocal(new Date()); });
-    const startInput = document.getElementById("start_datetime");
-    const startBtn = document.getElementById("start-now-btn");
-    if (startInput && startBtn) startBtn.addEventListener("click", () => { startInput.value = fmtLocal(new Date()); });
-  })();
-</script>
+{{ f.now_buttons_script() }}
 
 {# ── Neues Quellen-Label Modal ──────────────────────────────────────────────── #}
 <div id="src-label-modal"
