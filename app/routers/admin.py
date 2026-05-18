@@ -619,7 +619,7 @@ async def update_incident(
     effective_new = "resolved" if new_resolved else status
     effective_old = "resolved" if old_resolved else old_status
     if effective_new != effective_old:
-        await add_state_change_entry(db, incident_id, effective_new)
+        await add_state_change_entry(db, incident_id, effective_new, author=_user_email(user))
 
     await db.commit()
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
@@ -652,6 +652,7 @@ async def add_post(
         incident_id,
         content,
         notify_subscribers=do_notify,
+        author=_user_email(user),
     )
     incident = await get_incident_by_id(db, incident_id)
     await db.commit()
