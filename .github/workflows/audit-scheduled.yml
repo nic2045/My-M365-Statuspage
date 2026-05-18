@@ -32,11 +32,15 @@ jobs:
           set +e
           pip-audit \
             --requirement requirements.txt \
-            --output-format markdown \
+            --format markdown \
             --progress-spinner off \
-            > audit-report.md 2>&1
+            > audit-report.md 2>audit-error.log
           EXIT_CODE=$?
           echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          if [ -s audit-error.log ]; then
+            echo "--- pip-audit stderr ---"
+            cat audit-error.log
+          fi
           cat audit-report.md
           exit 0   # never fail the step; we handle findings via issue
 

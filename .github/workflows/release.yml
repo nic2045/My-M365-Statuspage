@@ -131,7 +131,7 @@ jobs:
           pip install pip-audit
           pip-audit \
             --requirement requirements.txt \
-            --output-format markdown \
+            --format markdown \
             --progress-spinner off \
             | tee audit-report.md
 
