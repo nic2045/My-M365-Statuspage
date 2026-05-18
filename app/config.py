@@ -1,5 +1,16 @@
-from pydantic import computed_field
+import logging
+import secrets
+from pathlib import Path
+
+from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+# Sentinel value from .env.example – treated as "not configured"
+_SECRET_KEY_PLACEHOLDER = "change-me-to-a-32-byte-random-hex-string"
+# Persisted location for the auto-generated key (same writable dir as the DB)
+_SECRET_KEY_FILE = Path("data") / "secret_key"
 
 
 class Settings(BaseSettings):
@@ -11,8 +22,9 @@ class Settings(BaseSettings):
     AZURE_CLIENT_SECRET: str = "your-client-secret"
     AZURE_REDIRECT_URI: str = "http://localhost:8000/auth/callback"
 
-    # Session security
-    SECRET_KEY: str = "change-me-to-a-32-byte-random-hex-string"
+    # Session security – empty/placeholder triggers auto-generation on first run
+    # (persisted to data/secret_key so sessions survive restarts).
+    SECRET_KEY: str = ""
     SESSION_MAX_AGE: int = 3600
 
     # Embed widget API key (empty = OIDC required for /embed)
@@ -51,6 +63,43 @@ class Settings(BaseSettings):
     # Build metadata (injected by Docker build args; empty in local dev)
     BUILD_SHA: str = ""
     BUILD_TIME: str = ""
+
+    @model_validator(mode="after")
+    def _ensure_secret_key(self) -> "Settings":
+        if self.SECRET_KEY and self.SECRET_KEY != _SECRET_KEY_PLACEHOLDER:
+            return self
+
+        try:
+            _SECRET_KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+            if _SECRET_KEY_FILE.is_file():
+                stored = _SECRET_KEY_FILE.read_text(encoding="utf-8").strip()
+                if stored:
+                    self.SECRET_KEY = stored
+                    return self
+            generated = secrets.token_hex(32)
+            _SECRET_KEY_FILE.write_text(generated, encoding="utf-8")
+            try:
+                _SECRET_KEY_FILE.chmod(0o600)
+            except OSError:
+                pass
+            self.SECRET_KEY = generated
+            logger.warning(
+                "SECRET_KEY was not configured – generated a new one and "
+                "persisted it to %s. Set SECRET_KEY in your environment to "
+                "override.",
+                _SECRET_KEY_FILE,
+            )
+        except OSError:
+            # Read-only filesystem etc. – fall back to an ephemeral key so the
+            # app still boots, but warn that sessions won't survive a restart.
+            self.SECRET_KEY = secrets.token_hex(32)
+            logger.warning(
+                "SECRET_KEY was not configured and %s is not writable – "
+                "using an ephemeral key. Sessions will be invalidated on "
+                "every restart.",
+                _SECRET_KEY_FILE,
+            )
+        return self
 
     @property
     def teams_webhook_list(self) -> list[str]:

@@ -57,9 +57,10 @@ AZURE_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 AZURE_CLIENT_SECRET=dein-client-secret
 AZURE_REDIRECT_URI=https://statuspage.example.com/auth/callback
 
-# Zufälligen Schlüssel erzeugen:
+# Leer lassen: wird beim ersten Start automatisch generiert und unter
+# data/secret_key persistiert. Eigenen Wert (optional) erzeugen mit:
 # python -c "import secrets; print(secrets.token_hex(32))"
-SECRET_KEY=...
+SECRET_KEY=
 
 EMBED_API_KEY=ein-langer-zufaelliger-string  # leer lassen = OIDC erforderlich
 MONITORED_SERVICES=Exchange Online,SharePoint Online,Microsoft Teams
@@ -97,7 +98,7 @@ Beim ersten Aufruf wird man zu Entra ID weitergeleitet.
 | `AZURE_CLIENT_ID` | Anwendungs-ID | — |
 | `AZURE_CLIENT_SECRET` | Clientgeheimnis | — |
 | `AZURE_REDIRECT_URI` | OAuth-Callback-URL | `http://localhost:8000/auth/callback` |
-| `SECRET_KEY` | Session-Signaturschlüssel (≥32 Byte Hex) | — |
+| `SECRET_KEY` | Session-Signaturschlüssel (≥32 Byte Hex). Leer = Auto-Generierung beim ersten Start, persistiert in `data/secret_key` | *(auto)* |
 | `EMBED_API_KEY` | Token für Widget-Zugriff ohne Login | *(leer)* |
 | `DATABASE_URL` | SQLAlchemy Async URL | `sqlite+aiosqlite:///./data/statuspage.db` |
 | `MONITORED_SERVICES` | Kommagetrennte Dienstnamen (Graph API exakt) | Exchange Online, SharePoint Online, Microsoft Teams |
