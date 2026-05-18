@@ -415,6 +415,10 @@ async def admin_incidents_all(
             db, include_resolved=True, classification="advisory", source=src_filter
         )
     advisories = [a for a in advisories_all if not a.is_suppressed]
+    suppressed = [i for i in incidents if i.is_suppressed] + [
+        a for a in advisories_all if a.is_suppressed
+    ]
+    incidents = [i for i in incidents if not i.is_suppressed]
     return templates.TemplateResponse(
         request,
         "admin/incidents_all.html",
@@ -422,6 +426,7 @@ async def admin_incidents_all(
             "user": user,
             "incidents": incidents,
             "advisories": advisories,
+            "suppressed": suppressed,
             "source_filter": src_filter,
             "classification_filter": cls_filter,
             "page_title": f"Alle Störungen – {settings.APP_TITLE}",
@@ -795,7 +800,7 @@ async def suppress_incident(
 ):
     await toggle_suppress_incident(db, incident_id, suppress=True)
     await db.commit()
-    return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin/incidents", status_code=303)
 
 
 @router.post("/incidents/{incident_id}/unsuppress")

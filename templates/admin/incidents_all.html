@@ -28,18 +28,24 @@
 {% set all_services = (incidents + advisories) | map(attribute='service_name') | list | unique | sort %}
 <div class="flex flex-wrap items-center gap-2 mb-4">
   <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">{{ L["admin.filter_state"] }}</span>
-  <button type="button" data-filter="all" data-active="1"
-          class="text-xs px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-colors">
+  <button type="button" data-filter="all"
+          class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
     {{ L["admin.filter_all"] }}
   </button>
-  <button type="button" data-filter="active"
-          class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+  <button type="button" data-filter="active" data-active="1"
+          class="text-xs px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-colors">
     {{ L["admin.filter_active"] }}
   </button>
   <button type="button" data-filter="resolved"
           class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
     {{ L["admin.filter_resolved"] }}
   </button>
+  {% if suppressed %}
+  <button type="button" data-filter="suppressed"
+          class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+    {{ L["admin.filter_suppressed"] }}
+  </button>
+  {% endif %}
 
   {% if all_services | length > 1 %}
   <span class="text-gray-200 dark:text-gray-700 select-none shrink-0">|</span>
@@ -68,9 +74,9 @@
 {% macro incident_row(inc) %}
 <a href="/admin/incidents/{{ inc.id }}"
    data-incident-row
-   data-state="{{ 'resolved' if inc.is_resolved else 'active' }}"
+   data-state="{% if inc.is_suppressed %}suppressed{% elif inc.is_resolved %}resolved{% else %}active{% endif %}"
    data-service="{{ inc.service_name }}"
-   class="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group {{ 'opacity-50' if inc.is_suppressed else '' }}">
+   class="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group {{ 'opacity-60' if inc.is_suppressed else '' }}">
   <div class="flex items-center gap-0 min-w-0 flex-1">
     {% set _phase = 'resolved' if inc.is_resolved else inc.status %}
     <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ phase_dot_class(_phase) }}"
@@ -126,6 +132,17 @@
   </div>
   {% endif %}
 
+  {% if suppressed %}
+  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mt-8 mb-3 flex items-center gap-2"
+      data-suppressed-heading>
+    {{ L["admin.suppressed_heading"] }}
+    <span class="text-gray-300 dark:text-gray-600 normal-case font-normal">· {{ suppressed | length }}</span>
+  </h2>
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm overflow-hidden">
+    {% for inc in suppressed %}{{ incident_row(inc) }}{% endfor %}
+  </div>
+  {% endif %}
+
   <p class="mt-4 text-xs text-gray-400 dark:text-gray-500 hidden text-center" data-filter-empty>
     {{ L["admin.filter_empty"] }}
   </p>
@@ -152,7 +169,7 @@
     const svcMsPanel = document.getElementById('svc-ms-panel');
     const svcMsLabel = document.getElementById('svc-ms-label');
     const svcOpts = svcMs ? svcMs.querySelectorAll('[data-svc-ms-opt]') : [];
-    let activeState = 'all';
+    let activeState = 'active';
 
     function getSelectedSvcs() {
       return Array.from(svcOpts).filter(o => o.checked).map(o => o.value);
@@ -181,14 +198,26 @@
     function applyFilters() {
       const selectedSvcs = getSelectedSvcs();
       let visible = 0;
+      let visibleSuppressed = 0;
       rows.forEach((row) => {
         const stateMatch = activeState === 'all' || row.dataset.state === activeState;
         const svcMatch = selectedSvcs.length === 0 || selectedSvcs.includes(row.dataset.service);
         const show = stateMatch && svcMatch;
         row.classList.toggle('hidden', !show);
-        if (show) visible++;
+        if (show) {
+          visible++;
+          if (row.dataset.state === 'suppressed') visibleSuppressed++;
+        }
       });
       if (emptyMsg) emptyMsg.classList.toggle('hidden', visible > 0);
+
+      // Hide the "Ignoriert" section heading when no suppressed rows are visible.
+      const suppressedHeading = document.querySelector('[data-suppressed-heading]');
+      if (suppressedHeading) {
+        suppressedHeading.classList.toggle('hidden', visibleSuppressed === 0);
+        const wrap = suppressedHeading.nextElementSibling;
+        if (wrap) wrap.classList.toggle('hidden', visibleSuppressed === 0);
+      }
 
       // Hide service options for services with no state-matching rows
       if (svcMs) {
@@ -237,6 +266,9 @@
     document.addEventListener('click', (e) => {
       if (svcMs && !svcMs.contains(e.target)) svcMsPanel?.classList.add('hidden');
     });
+
+    // Apply the initial filter (default: active) so resolved rows are hidden on load.
+    applyFilters();
   })();
 </script>
 {% endblock %}
