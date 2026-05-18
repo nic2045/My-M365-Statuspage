@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import date, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -9,6 +11,7 @@ from app.config import settings
 from app.crud import (
     add_state_change_entry,
     ensure_service_known,
+    get_confirmed_subscribers,
     get_enabled_services,
     upsert_incident,
     upsert_incident_updates,
@@ -20,7 +23,9 @@ from app.graph_client import (
     fetch_health_overviews,
     fetch_recently_resolved_issues,
 )
+from app.i18n import LABELS
 from app.models import GRAPH_STATUS_MAP, Incident
+from app.notifications import send_incident_notification, send_teams_notification
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +125,17 @@ def _parse_dt(value: str | None) -> datetime | None:
         return None
 
 
-async def sync_issue_as_incident(db, issue: dict) -> None:
+@dataclass
+class _NotifyEvent:
+    """Notification trigger captured during sync — dispatched after DB commit."""
+    incident_title: str
+    service_name: str
+    description: str
+    status: str
+    is_new: bool
+
+
+async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
     """Upsert a Graph API issue as an Incident (and its posts, if present).
 
     Returns silently if the issue should be skipped (advisory, falsePositive,
@@ -134,7 +149,7 @@ async def sync_issue_as_incident(db, issue: dict) -> None:
     """
     classification = _classify_issue(issue)
     if classification is None:
-        return
+        return None
     severity = _GRAPH_SEVERITY_MAP.get(issue.get("severity", ""), "")
     new_status = _issue_status(issue, classification)
 
@@ -166,12 +181,80 @@ async def sync_issue_as_incident(db, issue: dict) -> None:
         fields["scheduled_end"] = _parse_dt(issue.get("endDateTime"))
     incident = await upsert_incident(db, graph_issue_id=issue["id"], **fields)
 
-    if old_status is not None and old_status != new_status:
+    is_new = existing_incident is None
+    status_changed = old_status is not None and old_status != new_status
+    if status_changed:
         await add_state_change_entry(db, incident.id, new_status)
 
     posts = issue.get("posts")
     if posts:
         await upsert_incident_updates(db, incident.id, posts)
+
+    # Notify subscribers only for real incidents — advisories and maintenance
+    # are intentionally excluded, matching the manual-create flow in
+    # routers/admin.py. Fires on first detection and on every phase change
+    # (Investigating → Identified → Monitoring → Resolved).
+    if classification == "incident" and (is_new or status_changed):
+        return _NotifyEvent(
+            incident_title=incident.title,
+            service_name=incident.service_name,
+            description=(impact_desc or incident.description or ""),
+            status=new_status,
+            is_new=is_new,
+        )
+    return None
+
+
+_TEAMS_STATUS_MAP = {
+    "active":       "interrupted",
+    "acknowledged": "interrupted",
+    "monitoring":   "degraded",
+    "resolved":     "operational",
+}
+
+
+async def _dispatch_notifications(events: list[_NotifyEvent]) -> None:
+    """Send email + Teams notifications for incidents detected during a poll.
+
+    Subscribers are queried once per poll (not per event) to avoid hitting the
+    DB N times when multiple incidents transition simultaneously.
+    """
+    if not events:
+        return
+
+    async with AsyncSessionLocal() as db:
+        confirmed = await get_confirmed_subscribers(db)
+
+    emails = [s.email for s in confirmed]
+    unsub_urls = {
+        s.email: f"{settings.BASE_URL}/unsubscribe/{s.unsubscribe_token}"
+        for s in confirmed
+    }
+
+    for ev in events:
+        subject_key = "notify.new_incident" if ev.is_new else "notify.update"
+        subject = LABELS[subject_key]
+        if emails:
+            asyncio.create_task(
+                send_incident_notification(
+                    subscribers=emails,
+                    subject=subject,
+                    incident_title=ev.incident_title,
+                    service_name=ev.service_name,
+                    description=ev.description,
+                    status_url=settings.BASE_URL,
+                    unsubscribe_urls=unsub_urls,
+                )
+            )
+        asyncio.create_task(
+            send_teams_notification(
+                incident_title=ev.incident_title,
+                service_name=ev.service_name,
+                status=_TEAMS_STATUS_MAP.get(ev.status, "degraded"),
+                description=ev.description,
+                status_url=settings.BASE_URL,
+            )
+        )
 
 
 async def poll_graph_api() -> None:
@@ -217,6 +300,7 @@ async def poll_graph_api() -> None:
             logger.exception("Health overview poll failed")
 
     # ── Phase 2: Active incidents (independent – failure here doesn't touch phase 3) ──
+    notify_events: list[_NotifyEvent] = []
     async with AsyncSessionLocal() as db:
         try:
             active_issues = await fetch_active_issues()
@@ -226,19 +310,28 @@ async def poll_graph_api() -> None:
                     continue
                 if _classify_issue(issue) is None:
                     continue
-                await sync_issue_as_incident(db, issue)
+                ev = await sync_issue_as_incident(db, issue)
+                if ev is not None:
+                    notify_events.append(ev)
                 synced += 1
             await db.commit()
             logger.info("Active issues committed: %d synced (of %d fetched).", synced, len(active_issues))
         except Exception:
             await db.rollback()
+            notify_events.clear()
             logger.exception("Active issues poll failed")
+
+    # Dispatch notifications only after the active-issues transaction has
+    # been committed, so subscribers never see a notification for an
+    # incident that was rolled back.
+    await _dispatch_notifications(notify_events)
 
     # ── Phase 3: Recently resolved (30 days) – independent, safe to fail ────────
     # The uptime bars compute live from Incidents in get_uptime_bars; keeping
     # the last 30 days of resolved issues here means the bars stay accurate
     # without a separate ServiceStatus backfill phase. For deeper history
     # (30–90 days) admins trigger a one-shot sync when enabling a service.
+    resolved_notify_events: list[_NotifyEvent] = []
     async with AsyncSessionLocal() as db:
         try:
             resolved_issues = await fetch_recently_resolved_issues(days=30)
@@ -248,13 +341,21 @@ async def poll_graph_api() -> None:
                     continue
                 if _classify_issue(issue) is None:
                     continue
-                await sync_issue_as_incident(db, issue)
+                ev = await sync_issue_as_incident(db, issue)
+                # Only forward transition events from phase 3 — suppress
+                # "new" events so historical backfills of resolved incidents
+                # don't trigger a flood of notifications on first run.
+                if ev is not None and not ev.is_new:
+                    resolved_notify_events.append(ev)
                 synced += 1
             await db.commit()
             logger.info("Recently resolved committed: %d synced (of %d fetched).", synced, len(resolved_issues))
         except Exception:
             await db.rollback()
+            resolved_notify_events.clear()
             logger.exception("Recently resolved issues poll failed – active issues unaffected")
+
+    await _dispatch_notifications(resolved_notify_events)
 
 
 def start_scheduler() -> None:
