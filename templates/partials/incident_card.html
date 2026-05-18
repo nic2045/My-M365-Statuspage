@@ -61,24 +61,30 @@
     </div>
 
     {% if incident.updates %}
-    <div class="mt-4 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-4">
-      <p class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ L["incident.updates"] }}</p>
-      {% for update in incident.updates | reverse %}
+    {% set _sorted_updates = incident.updates | sort(attribute="post_created_at") %}
+    {% set _latest = _sorted_updates | last %}
+    {% set _count = _sorted_updates | length %}
+    <div class="mt-4 border-t border-gray-100 dark:border-gray-800 pt-3">
+      <p class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
+        {{ L["incident.updates"] }}
+        {% if _count > 1 %}
+        <span class="ml-1 text-gray-300 dark:text-gray-600 normal-case font-normal">· {{ _count }}</span>
+        {% endif %}
+      </p>
       <div class="flex gap-3">
-        <div class="shrink-0 flex flex-col items-center">
-          <div class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 mt-1.5"></div>
-          {% if not loop.last %}
-          <div class="w-px flex-1 bg-gray-200 dark:bg-gray-700 my-1"></div>
-          {% endif %}
-        </div>
-        <div class="pb-3 min-w-0">
-          <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ update.post_created_at | strftime_de }}</p>
-          <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline">
-            {{ update.content | render_md | safe }}
+        <div class="shrink-0 w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 mt-1.5"></div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ _latest.post_created_at | strftime_de }}</p>
+          <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 [&_a]:underline line-clamp-3">
+            {{ _latest.content | render_md | safe }}
           </div>
         </div>
       </div>
-      {% endfor %}
+      {% if _count > 1 %}
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-2 pl-5">
+        {{ L["incident.older_updates"].format(n=_count - 1) }}
+      </p>
+      {% endif %}
     </div>
     {% endif %}
   </div>
