@@ -1,0 +1,42 @@
+{# Icon library for compact status/type indicators.
+   Macros return a coloured Heroicons SVG with a <title> for tooltip + a11y. #}
+
+{% macro type_icon(classification, size='w-4 h-4') -%}
+{%- set _icons = {
+  'incident':    {'d': 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.814-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z',
+                  'color': 'text-red-600 dark:text-red-400'},
+  'advisory':    {'d': 'M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z',
+                  'color': 'text-amber-600 dark:text-amber-400'},
+  'maintenance': {'d': 'M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437',
+                  'color': 'text-blue-600 dark:text-blue-400'}
+} -%}
+{%- set _i = _icons.get(classification, _icons['incident']) -%}
+<svg class="{{ size }} {{ _i.color }} shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" role="img" aria-label="{{ incident_type_label(classification) }}">
+  <title>{{ incident_type_label(classification) }}</title>
+  <path stroke-linecap="round" stroke-linejoin="round" d="{{ _i.d }}"/>
+</svg>
+{%- endmacro %}
+
+{% macro phase_icon(phase, size='w-4 h-4') -%}
+{%- set _icons = {
+  'active':       {'d': 'M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z',
+                   'color': 'text-yellow-500 dark:text-yellow-400'},
+  'acknowledged': {'d': 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.623 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.249-8.25-3.285z',
+                   'color': 'text-orange-500 dark:text-orange-400'},
+  'monitoring':   {'d': 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+                   'color': 'text-blue-500 dark:text-blue-400'},
+  'resolved':     {'d': 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+                   'color': 'text-emerald-500 dark:text-emerald-400'},
+  'completed':    {'d': 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+                   'color': 'text-emerald-500 dark:text-emerald-400'},
+  'scheduled':    {'d': 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z',
+                   'color': 'text-blue-500 dark:text-blue-400'},
+  'in_progress':  {'d': 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99',
+                   'color': 'text-amber-500 dark:text-amber-400'},
+} -%}
+{%- set _i = _icons.get(phase, _icons['resolved']) -%}
+<svg class="{{ size }} {{ _i.color }} shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" role="img" aria-label="{{ state_label(phase) }}">
+  <title>{{ state_label(phase) }}</title>
+  <path stroke-linecap="round" stroke-linejoin="round" d="{{ _i.d }}"/>
+</svg>
+{%- endmacro %}

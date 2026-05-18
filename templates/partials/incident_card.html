@@ -1,4 +1,5 @@
 {# Renders one incident card with update timeline. Expects `incident` in scope. #}
+{% from "partials/_icons.html" import type_icon, phase_icon %}
 {% set _upd = [] %}
 {% for u in incident.updates | sort(attribute="post_created_at") %}
   {% set _ = _upd.append({"type": u.update_type, "content": u.content, "at": (u.post_created_at.strftime("%d.%m.%Y %H:%M") if u.post_created_at else ""), "author": (u.author or "")}) %}
@@ -17,6 +18,7 @@
      data-classification="{{ incident_type_label(incident.classification) }}"
      data-classification-raw="{{ incident.classification }}"
      data-severity-label="{{ severity_label(incident.severity) if incident.severity else '' }}"
+     data-severity-raw="{{ incident.severity or '' }}"
      data-since="{{ incident.start_datetime | strftime_de if incident.start_datetime else '' }}"
      data-description="{{ incident.description or '' }}"
      data-updates="{{ _upd | tojson | e }}">
@@ -25,7 +27,7 @@
       <div class="min-w-0">
         {% set _phase = 'resolved' if incident.is_resolved else incident.status %}
         <h3 class="font-medium text-gray-900 dark:text-white leading-snug flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ phase_dot_class(_phase) }} {{ phase_pulse_class(_phase) }}"
+          <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ phase_dot_class(_phase) }}"
                 title="{{ state_label(_phase) }}"></span>
           <span>{{ incident.title }}</span>
         </h3>
@@ -46,15 +48,9 @@
         </div>
         {% endif %}
       </div>
-      <div class="shrink-0 flex flex-col items-end gap-1">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ incident_type_badge_class(incident.classification) }}">
-          {{ incident_type_label(incident.classification) }}
-        </span>
-        {% if incident.severity %}
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ severity_badge_class(incident.severity) }}">
-          {{ severity_label(incident.severity) }}
-        </span>
-        {% endif %}
+      <div class="shrink-0 flex items-center gap-2">
+        {{ type_icon(incident.classification, size='w-5 h-5') }}
+        {{ phase_icon(_phase, size='w-5 h-5') }}
       </div>
     </div>
 
