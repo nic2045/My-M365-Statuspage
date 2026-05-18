@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     APP_TITLE: str = "M365 Dienststatus"
 
-    # Dev: bypass Entra ID OIDC – alle Routen ohne Login zugänglich
+    # Dev: bypass Entra ID OIDC – all routes accessible without login
     DISABLE_AUTH: bool = False
 
     # UI language fallback when the visitor has no cookie, no Accept-Language
