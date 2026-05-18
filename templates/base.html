@@ -228,6 +228,14 @@
       state_completed: {{ L['state.completed'] | tojson }},
       state_scheduled: {{ L['state.scheduled'] | tojson }},
       state_in_progress: {{ L['state.in_progress'] | tojson }},
+      details_heading: {{ L['details.heading'] | tojson }},
+      details_reference: {{ L['details.reference'] | tojson }},
+      details_start: {{ L['details.start'] | tojson }},
+      details_end: {{ L['details.end'] | tojson }},
+      details_duration: {{ L['details.duration'] | tojson }},
+      details_last_update: {{ L['details.last_update'] | tojson }},
+      details_acknowledged: {{ L['details.acknowledged'] | tojson }},
+      details_owner: {{ L['details.owner'] | tojson }},
     };
   </script>
   <script>
@@ -458,22 +466,58 @@
         }
 
         body.innerHTML = '';
-        if (card.dataset.since) {
-          const p = document.createElement('p');
-          p.className = 'text-xs text-gray-500 dark:text-gray-400 mb-2';
-          p.innerHTML = '<span class="font-medium">' + window.__I18N.since + ':</span> ' + card.dataset.since;
-          body.appendChild(p);
-        }
+
         if (card.dataset.description) {
           const desc = document.createElement('div');
-          desc.className = 'text-sm text-gray-700 dark:text-gray-300 leading-relaxed prose prose-sm dark:prose-invert max-w-none';
+          desc.className = 'text-sm text-gray-700 dark:text-gray-300 leading-relaxed prose prose-sm dark:prose-invert max-w-none mb-3';
           desc.innerHTML = card.dataset.description;
           body.appendChild(desc);
         } else {
           const p = document.createElement('p');
-          p.className = 'text-sm text-gray-500 dark:text-gray-400 italic';
+          p.className = 'text-sm text-gray-500 dark:text-gray-400 italic mb-3';
           p.textContent = window.__I18N.no_details;
           body.appendChild(p);
+        }
+
+        // Key facts: reference, start, end + duration, last update, acknowledged, owner.
+        // Only fields that have a value are rendered — keeps the block compact.
+        const meta = [];
+        if (card.dataset.reference) meta.push([window.__I18N.details_reference, card.dataset.reference]);
+        if (card.dataset.since) meta.push([window.__I18N.details_start, card.dataset.since]);
+        if (card.dataset.endDt) {
+          const dur = card.dataset.duration ? ' (' + card.dataset.duration + ')' : '';
+          meta.push([window.__I18N.details_end, card.dataset.endDt + dur]);
+        }
+        if (card.dataset.acknowledgedAt) {
+          const who = card.dataset.acknowledgedBy ? ' · ' + card.dataset.acknowledgedBy : '';
+          meta.push([window.__I18N.details_acknowledged, card.dataset.acknowledgedAt + who]);
+        }
+        if (card.dataset.lastModified && card.dataset.lastModified !== card.dataset.since) {
+          meta.push([window.__I18N.details_last_update, card.dataset.lastModified]);
+        }
+        if (card.dataset.ownerEmail) meta.push([window.__I18N.details_owner, card.dataset.ownerEmail]);
+
+        if (meta.length > 0) {
+          const wrap = document.createElement('div');
+          wrap.className = 'border-t border-gray-100 dark:border-gray-800 pt-3';
+          const heading = document.createElement('p');
+          heading.className = 'text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2';
+          heading.textContent = window.__I18N.details_heading;
+          wrap.appendChild(heading);
+          const dl = document.createElement('dl');
+          dl.className = 'grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs';
+          meta.forEach(([label, value]) => {
+            const dt = document.createElement('dt');
+            dt.className = 'text-gray-500 dark:text-gray-400';
+            dt.textContent = label;
+            const dd = document.createElement('dd');
+            dd.className = 'text-gray-800 dark:text-gray-200 font-medium break-all';
+            dd.textContent = value;
+            dl.appendChild(dt);
+            dl.appendChild(dd);
+          });
+          wrap.appendChild(dl);
+          body.appendChild(wrap);
         }
 
         // ── Updates timeline ──────────────────────────────────────────────────

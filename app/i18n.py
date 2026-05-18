@@ -167,6 +167,15 @@ LABELS_DE: dict[str, str] = {
     "page.history_filter_empty":  "Keine Einträge für diesen Dienst.",
     "page.history_show":          "Störungs-Verlauf anzeigen",
     "incident.resolved_at":       "Behoben am",
+    # Incident detail metadata
+    "details.heading":            "Eckdaten",
+    "details.reference":          "Referenz",
+    "details.start":              "Beginn",
+    "details.end":                "Ende",
+    "details.duration":           "Dauer",
+    "details.last_update":        "Letztes Update",
+    "details.acknowledged":       "Identifiziert",
+    "details.owner":              "Verantwortlich",
     # Service management
     "admin.service_management":   "Dienstverwaltung",
     "admin.discover_services":    "Von Microsoft laden",
@@ -480,6 +489,15 @@ LABELS_EN: dict[str, str] = {
     "page.history_filter_empty":  "No entries for this service.",
     "page.history_show":          "Show incident history",
     "incident.resolved_at":       "Resolved at",
+    # Incident detail metadata
+    "details.heading":            "Key facts",
+    "details.reference":          "Reference",
+    "details.start":              "Started",
+    "details.end":                "Ended",
+    "details.duration":           "Duration",
+    "details.last_update":        "Last update",
+    "details.acknowledged":       "Identified",
+    "details.owner":              "Owner",
     # Service management
     "admin.service_management":   "Service management",
     "admin.discover_services":    "Load from Microsoft",
