@@ -33,8 +33,15 @@ async def _send_via_smtp(cfg: EmailSettings, to: str, subject: str, html_body: s
         import aiosmtplib
 
         msg = _build_email(cfg, to, subject, html_body, text_body)
+        # On Office 365 (and many providers) the SMTP envelope MAIL FROM must
+        # match the authenticated user, even when the visible From: header is
+        # a "Send As" address. Pass sender explicitly so aiosmtplib does not
+        # fall back to deriving it from the From: header.
+        envelope_sender = cfg.smtp_user or cfg.smtp_from or None
         await aiosmtplib.send(
             msg,
+            sender=envelope_sender,
+            recipients=[to],
             hostname=cfg.smtp_host,
             port=cfg.smtp_port,
             username=cfg.smtp_user or None,
