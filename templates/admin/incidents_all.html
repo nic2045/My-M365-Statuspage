@@ -1,4 +1,5 @@
 {% extends "admin/base_admin.html" %}
+{% from "partials/_icons.html" import type_icon, phase_icon %}
 
 {% block admin_content %}
 <div class="mb-6 flex items-center justify-between">
@@ -74,11 +75,10 @@
     {% set _phase = 'resolved' if inc.is_resolved else inc.status %}
     <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ phase_dot_class(_phase) }}"
           title="{{ state_label(_phase) }}"></span>
-    <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5 {{ incident_type_badge_class(inc.classification) }}">
-      {{ incident_type_label(inc.classification) }}
-    </span>
+    <span class="mr-1.5 flex items-center">{{ type_icon(inc.classification) }}</span>
     {% if inc.severity %}
-    <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5 {{ severity_badge_class(inc.severity) }}">
+    <span class="inline-block text-[10px] font-medium px-1.5 py-0 rounded uppercase tracking-wide mr-1.5 {{ severity_badge_class(inc.severity) }}"
+          title="{{ L['admin.severity_label'] }}: {{ severity_label(inc.severity) }}">
       {{ severity_label(inc.severity) }}
     </span>
     {% endif %}
@@ -93,9 +93,7 @@
           title="{{ L['admin.owner'] }}: {{ inc.owner_email }}">{{ _owner_initials }}</span>
     {% endif %}
     {% if inc.is_resolved %}
-    <span class="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-      {{ L["incident.resolved"] }}
-    </span>
+    {{ phase_icon('resolved') }}
     {% endif %}
     <span class="text-xs text-gray-400 dark:text-gray-500" title="{% if inc.start_datetime %}{{ L['ui.start'] }}: {{ inc.start_datetime | strftime_de }}{% endif %}{% if inc.end_datetime %} · {{ L['ui.end'] }}: {{ inc.end_datetime | strftime_de }}{% endif %}">
       {% if inc.is_resolved and inc.end_datetime and inc.start_datetime %}
