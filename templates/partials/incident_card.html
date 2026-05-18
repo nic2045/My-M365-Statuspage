@@ -20,6 +20,13 @@
      data-severity-label="{{ severity_label(incident.severity) if incident.severity else '' }}"
      data-severity-raw="{{ incident.severity or '' }}"
      data-since="{{ incident.start_datetime | strftime_de if incident.start_datetime else '' }}"
+     data-end-dt="{{ incident.end_datetime | strftime_de if incident.end_datetime else '' }}"
+     data-duration="{{ duration_de(incident.start_datetime, incident.end_datetime) if incident.is_resolved and incident.start_datetime and incident.end_datetime else '' }}"
+     data-last-modified="{{ incident.last_modified | strftime_de if incident.last_modified else '' }}"
+     data-reference="{{ incident.graph_issue_id or incident.external_id or '' }}"
+     data-acknowledged-at="{{ incident.acknowledged_at | strftime_de if incident.acknowledged_at else '' }}"
+     data-acknowledged-by="{{ incident.acknowledged_by_email or '' }}"
+     data-owner-email="{{ incident.owner_email or '' }}"
      data-description="{{ incident.description or '' }}"
      data-updates="{{ _upd | tojson | e }}">
   <div class="p-4">
@@ -48,9 +55,8 @@
         </div>
         {% endif %}
       </div>
-      <div class="shrink-0 flex items-center gap-2">
+      <div class="shrink-0 flex items-center">
         {{ type_icon(incident.classification, size='w-5 h-5') }}
-        {{ phase_icon(_phase, size='w-5 h-5') }}
       </div>
     </div>
 

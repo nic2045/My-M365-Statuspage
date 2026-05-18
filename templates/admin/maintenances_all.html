@@ -1,4 +1,5 @@
 {% extends "admin/base_admin.html" %}
+{% from "partials/_icons.html" import type_icon, phase_icon %}
 
 {% block admin_content %}
 <div class="mb-6 flex items-center justify-between">
@@ -75,22 +76,15 @@
      data-mrow data-phase="{{ phase }}" data-service="{{ m.service_name }}"
      class="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
     <div class="flex items-center gap-0 min-w-0 flex-1">
-      <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ status_dot.get(phase, 'bg-gray-400') }}"></span>
-      <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mr-1.5 {{ incident_type_badge_class('maintenance') }}">
-        {{ L["incident.type.maintenance"] }}
-      </span>
+      <span class="w-2.5 h-2.5 rounded-full mr-2 shrink-0 {{ status_dot.get(phase, 'bg-gray-400') }}"
+            title="{{ state_label(phase) }}"></span>
+      <span class="mr-1.5 flex items-center">{{ type_icon('maintenance') }}</span>
       <span class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{{ m.title }}</span>
       <span class="text-sm text-gray-400 dark:text-gray-500 ml-2 shrink-0">· {{ m.service_name }}</span>
     </div>
     <div class="flex items-center gap-2 shrink-0 ml-3">
-      {% if phase == 'completed' %}
-      <span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-        {{ L["maintenance.completed"] }}
-      </span>
-      {% elif phase == 'in_progress' %}
-      <span class="text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-        {{ L["maintenance.in_progress"] }}
-      </span>
+      {% if phase in ['completed', 'in_progress'] %}
+      {{ phase_icon(phase) }}
       {% endif %}
       <span class="text-xs text-gray-400 dark:text-gray-500">
         {{ (m.scheduled_start or m.start_datetime) | strftime_de }}
