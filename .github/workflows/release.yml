@@ -85,7 +85,7 @@ jobs:
         run: docker pull ghcr.io/${{ github.repository }}:${{ needs.docker.outputs.version || github.ref_name }}
 
       - name: Trivy scan – CRITICAL findings block release
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
           format: table
@@ -95,7 +95,7 @@ jobs:
 
       - name: Trivy scan – full report (SARIF)
         if: always()
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
           format: sarif
