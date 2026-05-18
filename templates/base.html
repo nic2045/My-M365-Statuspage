@@ -214,6 +214,14 @@
       no_details: {{ L['ui.no_details_available'] | tojson }},
       click_for_details: {{ L['ui.click_for_details'] | tojson }},
       more_click_for_details: {{ L['ui.more_click_for_details'] | tojson }},
+      history: {{ L['ui.history'] | tojson }},
+      state_active: {{ L['state.active'] | tojson }},
+      state_acknowledged: {{ L['state.acknowledged'] | tojson }},
+      state_monitoring: {{ L['state.monitoring'] | tojson }},
+      state_resolved: {{ L['state.resolved'] | tojson }},
+      state_completed: {{ L['state.completed'] | tojson }},
+      state_scheduled: {{ L['state.scheduled'] | tojson }},
+      state_in_progress: {{ L['state.in_progress'] | tojson }},
     };
   </script>
   <script>
@@ -271,6 +279,27 @@
         interrupted: { dot: 'bg-red-500',     badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',               body: window.__I18N.day_int_body },
         no_data:     { dot: 'bg-gray-300',    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',              body: window.__I18N.day_nd_body },
         unknown:     { dot: 'bg-gray-400',    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',              body: window.__I18N.day_unk_body },
+      };
+
+      // Phase/status colours for incident dots and state-change pills
+      const PHASE_STYLE = {
+        active:       { dot: 'bg-yellow-400 animate-pulse', badge: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300' },
+        acknowledged: { dot: 'bg-orange-400 animate-pulse', badge: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300' },
+        monitoring:   { dot: 'bg-blue-400 animate-pulse',   badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' },
+        resolved:     { dot: 'bg-emerald-500',               badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' },
+        completed:    { dot: 'bg-emerald-500',               badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' },
+        scheduled:    { dot: 'bg-blue-400',                  badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' },
+        in_progress:  { dot: 'bg-amber-400 animate-pulse',   badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' },
+      };
+
+      const STATE_LABELS = {
+        active:       window.__I18N.state_active,
+        acknowledged: window.__I18N.state_acknowledged,
+        monitoring:   window.__I18N.state_monitoring,
+        resolved:     window.__I18N.state_resolved,
+        completed:    window.__I18N.state_completed,
+        scheduled:    window.__I18N.state_scheduled,
+        in_progress:  window.__I18N.state_in_progress,
       };
 
       const CLASS_STYLE = {
@@ -362,24 +391,21 @@
       }
 
       function openIncidentCard(card) {
-        const status = card.dataset.status || 'unknown';
-        const style = STATUS_STYLE[status] || STATUS_STYLE.unknown;
+        const rawStatus = card.dataset.status || 'unknown';
+        const style = PHASE_STYLE[rawStatus] || STATUS_STYLE[rawStatus] || STATUS_STYLE.unknown;
 
         title.textContent = card.dataset.title || '';
         sub.textContent = card.dataset.service || '';
         dot.className = 'w-2.5 h-2.5 rounded-full shrink-0 ' + style.dot;
 
-        // Show back button only when we drilled in from a day overview
-        if (lastBar) {
-          backBtn.classList.remove('hidden');
-        }
+        if (lastBar) backBtn.classList.remove('hidden');
 
-        // Status row: combine classification + severity + state
+        // Status row: classification · severity · phase
         const chips = [];
         if (card.dataset.classification) chips.push(card.dataset.classification);
         if (card.dataset.severityLabel) chips.push(card.dataset.severityLabel);
         if (card.dataset.statusLabel) chips.push(card.dataset.statusLabel);
-        statusRow.className = 'inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium mb-3 ' + style.badge;
+        statusRow.className = 'inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium mb-3 ' + (style.badge || 'bg-gray-100 text-gray-600');
         statusRow.innerHTML = '<span class="w-1.5 h-1.5 rounded-full ' + style.dot + '"></span>' + chips.join(' · ');
 
         body.innerHTML = '';
@@ -390,9 +416,9 @@
           body.appendChild(p);
         }
         if (card.dataset.description) {
-          const desc = document.createElement('p');
-          desc.className = 'text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line';
-          desc.textContent = card.dataset.description;
+          const desc = document.createElement('div');
+          desc.className = 'text-sm text-gray-700 dark:text-gray-300 leading-relaxed prose prose-sm dark:prose-invert max-w-none';
+          desc.innerHTML = card.dataset.description;
           body.appendChild(desc);
         } else {
           const p = document.createElement('p');
@@ -401,7 +427,63 @@
           body.appendChild(p);
         }
 
+        // ── Updates timeline ──────────────────────────────────────────────────
         incidentsBox.innerHTML = '';
+        let updates = [];
+        try { updates = JSON.parse(card.dataset.updates || '[]'); } catch (_) {}
+
+        if (updates.length > 0) {
+          const header = document.createElement('p');
+          header.className = 'text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3 border-t border-gray-100 dark:border-gray-800 pt-3 mt-1';
+          header.textContent = window.__I18N.history;
+          incidentsBox.appendChild(header);
+
+          const timeline = document.createElement('div');
+          timeline.className = 'space-y-1';
+
+          updates.forEach((u) => {
+            if (u.type === 'state_change') {
+              const ps = PHASE_STYLE[u.content] || {};
+              const wrap = document.createElement('div');
+              wrap.className = 'flex items-center gap-2 py-1';
+              wrap.innerHTML = '<div class="w-px flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>'
+                + '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ' + (ps.badge || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300') + '">'
+                + '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="10" r="4"/></svg>'
+                + '→ ' + (STATE_LABELS[u.content] || u.content)
+                + '</span>'
+                + '<div class="w-px flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>';
+              timeline.appendChild(wrap);
+              if (u.at || u.author) {
+                const meta = document.createElement('p');
+                meta.className = 'text-center text-xs text-gray-400 dark:text-gray-500 -mt-0.5 mb-1';
+                meta.textContent = [u.at, u.author].filter(Boolean).join(' · ');
+                timeline.appendChild(meta);
+              }
+            } else {
+              const row = document.createElement('div');
+              row.className = 'flex gap-3';
+              const dotCol = document.createElement('div');
+              dotCol.className = 'shrink-0 flex flex-col items-center';
+              dotCol.innerHTML = '<div class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 mt-1.5"></div>';
+              const content = document.createElement('div');
+              content.className = 'pb-3 min-w-0';
+              const metaLine = document.createElement('p');
+              metaLine.className = 'text-xs text-gray-400 dark:text-gray-500 mb-1';
+              metaLine.textContent = [u.at, u.author].filter(Boolean).join(' · ');
+              const textEl = document.createElement('div');
+              textEl.className = 'text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none';
+              textEl.innerHTML = u.content;
+              content.appendChild(metaLine);
+              content.appendChild(textEl);
+              row.appendChild(dotCol);
+              row.appendChild(content);
+              timeline.appendChild(row);
+            }
+          });
+
+          incidentsBox.appendChild(timeline);
+        }
+
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         document.body.classList.add('overflow-hidden');

@@ -1,4 +1,8 @@
 {# Renders one incident card with update timeline. Expects `incident` in scope. #}
+{% set _upd = [] %}
+{% for u in incident.updates | sort(attribute="post_created_at") %}
+  {% set _ = _upd.append({"type": u.update_type, "content": u.content, "at": (u.post_created_at.strftime("%d.%m.%Y %H:%M") if u.post_created_at else ""), "author": (u.author or "")}) %}
+{% endfor %}
 <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 border-l-4 {{ incident_border_class(incident.classification) }} shadow-sm mb-4 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
      role="button"
      tabindex="0"
@@ -14,7 +18,8 @@
      data-classification-raw="{{ incident.classification }}"
      data-severity-label="{{ severity_label(incident.severity) if incident.severity else '' }}"
      data-since="{{ incident.start_datetime | strftime_de if incident.start_datetime else '' }}"
-     data-description="{{ incident.description or '' }}">
+     data-description="{{ incident.description or '' }}"
+     data-updates="{{ _upd | tojson | e }}">
   <div class="p-4">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">

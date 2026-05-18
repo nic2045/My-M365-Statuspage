@@ -116,6 +116,7 @@ class IncidentUpdate(Base):
     notify_subscribers: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="0", default=False
     )
+    author: Mapped[str | None] = mapped_column(String(256), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     incident: Mapped["Incident"] = relationship("Incident", back_populates="updates")

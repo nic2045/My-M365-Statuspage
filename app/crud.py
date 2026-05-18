@@ -226,10 +226,14 @@ async def get_uptime_bars(
     bars: list[DayStatusSchema] = []
     for i in range(days):
         d = start_date + timedelta(days=i)
-        if d in real_entries:
-            status = real_entries[d]
+        real = real_entries.get(d)
+        inc = computed.get(d, "operational")
+        if real is not None:
+            # Use whichever is worse: a manual critical incident should turn the
+            # bar red even when Graph reports the service as operational that day.
+            status = real if _STATUS_SEVERITY.get(real, 0) >= _STATUS_SEVERITY.get(inc, 0) else inc
         else:
-            status = computed.get(d, "operational")
+            status = inc
         bars.append(DayStatusSchema(date=d, status=status))
     return bars
 
@@ -395,6 +399,7 @@ async def add_incident_post(
     incident_id: int,
     content: str,
     notify_subscribers: bool = True,
+    author: str | None = None,
 ) -> IncidentUpdate:
     update = IncidentUpdate(
         incident_id=incident_id,
@@ -402,6 +407,7 @@ async def add_incident_post(
         update_type="note",
         post_created_at=datetime.utcnow(),
         notify_subscribers=notify_subscribers,
+        author=author,
     )
     db.add(update)
     await db.flush()
@@ -412,12 +418,14 @@ async def add_state_change_entry(
     db: AsyncSession,
     incident_id: int,
     new_status: str,
+    author: str | None = None,
 ) -> IncidentUpdate:
     update = IncidentUpdate(
         incident_id=incident_id,
         content=new_status,
         update_type="state_change",
         post_created_at=datetime.utcnow(),
+        author=author,
     )
     db.add(update)
     await db.flush()
