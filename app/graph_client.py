@@ -5,28 +5,34 @@ from datetime import datetime, timedelta
 import httpx
 import msal
 
-from app.config import settings
-
 logger = logging.getLogger(__name__)
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
 _msal_app: msal.ConfidentialClientApplication | None = None
+_msal_credentials: tuple[str, str, str] | None = None
 
 
-def _get_msal_app() -> msal.ConfidentialClientApplication:
-    global _msal_app
-    if _msal_app is None:
+def _get_msal_app(tenant_id: str, client_id: str, client_secret: str) -> msal.ConfidentialClientApplication:
+    global _msal_app, _msal_credentials
+    creds = (tenant_id, client_id, client_secret)
+    if _msal_app is None or _msal_credentials != creds:
         _msal_app = msal.ConfidentialClientApplication(
-            client_id=settings.AZURE_CLIENT_ID,
-            client_credential=settings.AZURE_CLIENT_SECRET,
-            authority=f"https://login.microsoftonline.com/{settings.AZURE_TENANT_ID}",
+            client_id=client_id,
+            client_credential=client_secret,
+            authority=f"https://login.microsoftonline.com/{tenant_id}",
         )
+        _msal_credentials = creds
     return _msal_app
 
 
 async def _get_access_token() -> str:
-    app = _get_msal_app()
+    from app.app_settings import get_azure_settings  # noqa: PLC0415
+    from app.database import AsyncSessionLocal  # noqa: PLC0415
+
+    async with AsyncSessionLocal() as db:
+        azure_cfg = await get_azure_settings(db)
+    app = _get_msal_app(azure_cfg.tenant_id, azure_cfg.client_id, azure_cfg.client_secret)
     # MSAL token acquisition is synchronous; run in thread to avoid blocking event loop
     result = await asyncio.to_thread(
         app.acquire_token_for_client,
