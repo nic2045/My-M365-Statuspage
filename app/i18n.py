@@ -60,6 +60,7 @@ LABELS_DE: dict[str, str] = {
     "incident.since":             "Seit",
     "incident.until":             "bis",
     "incident.updates":           "Updates",
+    "incident.older_updates":     "+ {n} ältere — Details öffnen",
     "incident.resolved":          "Behoben",
     # Embed
     "embed.active_incidents":     "Aktive Störungen vorhanden",
@@ -81,6 +82,7 @@ LABELS_DE: dict[str, str] = {
     "admin.filter_state":         "Status:",
     "admin.filter_all":           "Alle",
     "admin.filter_active":        "Aktiv",
+    "admin.filter_suppressed":    "Ignoriert",
     "admin.filter_resolved":      "Behoben",
     "admin.filter_empty":         "Keine Einträge mit diesem Filter.",
     "admin.advisories":           "Hinweise",
@@ -382,6 +384,7 @@ LABELS_EN: dict[str, str] = {
     "incident.since":             "Since",
     "incident.until":             "until",
     "incident.updates":           "Updates",
+    "incident.older_updates":     "+ {n} older — open details",
     "incident.resolved":          "Resolved",
     # Embed
     "embed.active_incidents":     "Active incidents detected",
@@ -403,6 +406,7 @@ LABELS_EN: dict[str, str] = {
     "admin.filter_state":         "Status:",
     "admin.filter_all":           "All",
     "admin.filter_active":        "Active",
+    "admin.filter_suppressed":    "Ignored",
     "admin.filter_resolved":      "Resolved",
     "admin.filter_empty":         "No entries match this filter.",
     "admin.advisories":           "Advisories",

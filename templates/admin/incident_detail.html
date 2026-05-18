@@ -1,14 +1,14 @@
 {% extends "admin/base_admin.html" %}
 {% import "partials/_form_macros.html" as f %}
+{% from "partials/_icons.html" import type_icon %}
 
 {% block admin_content %}
 <div class="mb-6 flex items-center gap-3">
   {{ f.back_link("/admin/incidents") }}
-  <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full {{ incident_type_badge_class(incident.classification) }}">
-    {{ incident_type_label(incident.classification) }}
-  </span>
+  {{ type_icon(incident.classification, size='w-5 h-5') }}
   {% if incident.severity %}
-  <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full {{ severity_badge_class(incident.severity) }}">
+  <span class="inline-block text-[10px] font-medium px-1.5 py-0 rounded uppercase tracking-wide {{ severity_badge_class(incident.severity) }}"
+        title="{{ L['admin.severity_label'] }}: {{ severity_label(incident.severity) }}">
     {{ severity_label(incident.severity) }}
   </span>
   {% endif %}
