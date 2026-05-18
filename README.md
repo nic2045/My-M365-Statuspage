@@ -2,6 +2,8 @@
 
 > Leichtgewichtige Statusseite für Microsoft 365 — gebaut mit FastAPI, betrieben in Docker, abgesichert via Entra ID.
 
+🇩🇪 **Deutsch** · 🇬🇧 [English version](README.en.md)
+
 [![CI](https://github.com/nic2045/My-M365-Statuspage/actions/workflows/ci.yml/badge.svg)](https://github.com/nic2045/My-M365-Statuspage/actions/workflows/ci.yml)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)

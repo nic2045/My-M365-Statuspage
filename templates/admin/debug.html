@@ -12,7 +12,7 @@
     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
     </svg>
-    Alle Microsoft Meldungen abrufen
+    Fetch all Microsoft messages
   </button>
   <span class="text-xs text-gray-400 dark:text-gray-500 ml-3">Ruft live von Graph API ab – alle Dienste, ungefiltert</span>
 </form>
@@ -33,15 +33,15 @@
 {% if overviews is not none %}
 <section class="mb-8">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-    Dienst-Status (healthOverviews) — {{ overviews | length }} Dienste
+    Service status (healthOverviews) — {{ overviews | length }} services
   </h2>
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-gray-100 dark:border-gray-800 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-          <th class="px-4 py-2.5 text-left">Dienst</th>
-          <th class="px-4 py-2.5 text-left">Graph-Status</th>
-          <th class="px-4 py-2.5 text-left">Gemappt</th>
+          <th class="px-4 py-2.5 text-left">Service</th>
+          <th class="px-4 py-2.5 text-left">Graph status</th>
+          <th class="px-4 py-2.5 text-left">Mapped</th>
           <th class="px-4 py-2.5 text-left">Überwacht</th>
         </tr>
       </thead>
@@ -116,7 +116,7 @@
       <div class="px-4 pb-4 border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
           <span><span class="font-medium">Start:</span> {{ issue.get("startDateTime", "—") }}</span>
-          <span><span class="font-medium">Geändert:</span> {{ issue.get("lastModifiedDateTime", "—") }}</span>
+          <span><span class="font-medium">Modified:</span> {{ issue.get("lastModifiedDateTime", "—") }}</span>
           <span><span class="font-medium">End:</span> {{ issue.get("endDateTime", "—") }}</span>
           <span><span class="font-medium">Status:</span> {{ issue.get("status", "—") }}</span>
           <span><span class="font-medium">Feature:</span> {{ issue.get("feature", "—") }}</span>
@@ -133,7 +133,7 @@
         {% set posts = issue.get("posts") or [] %}
         {% if posts %}
         <div class="mt-3">
-          <p class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">Verlauf ({{ posts | length }} Updates)</p>
+          <p class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">History ({{ posts | length }} updates)</p>
           <div class="space-y-0">
             {% for post in posts | reverse %}
             {% set post_type = post.get("postType", "") %}
@@ -210,7 +210,7 @@
       <div class="px-4 pb-4 border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
         <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
           <span><span class="font-medium">Start:</span> {{ issue.get("startDateTime", "—") }}</span>
-          <span><span class="font-medium">Behoben:</span> {{ issue.get("lastModifiedDateTime", "—") }}</span>
+          <span><span class="font-medium">Resolved:</span> {{ issue.get("lastModifiedDateTime", "—") }}</span>
           <span><span class="font-medium">Status:</span> {{ issue.get("status", "—") }}</span>
           <span><span class="font-medium">Feature:</span> {{ issue.get("feature", "—") }}</span>
         </div>
@@ -225,7 +225,7 @@
         {% set posts = issue.get("posts") or [] %}
         {% if posts %}
         <div class="mt-3">
-          <p class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">Verlauf ({{ posts | length }} Updates)</p>
+          <p class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">History ({{ posts | length }} updates)</p>
           <div class="space-y-0">
             {% for post in posts | reverse %}
             {% set post_type = post.get("postType", "") %}
@@ -274,7 +274,7 @@
 {% else %}
 {# ── Placeholder before first fetch ──────────────────────────────────────── #}
 <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-12 text-center shadow-sm">
-  <p class="text-gray-400 dark:text-gray-500 text-sm">Noch keine Daten abgerufen. Klicke auf „Alle Microsoft Meldungen abrufen".</p>
+  <p class="text-gray-400 dark:text-gray-500 text-sm">No data fetched yet. Click "Fetch all Microsoft messages".</p>
 </div>
 {% endif %}
 

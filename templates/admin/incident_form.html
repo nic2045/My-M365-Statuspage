@@ -14,7 +14,7 @@
       {{ f.field_label(L["admin.title_label"]) }}
       <input type="text" name="title" required autofocus
              class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-             placeholder="Kurze Beschreibung der Störung…">
+             placeholder="{{ L['admin.incident_summary_placeholder'] }}">
     </div>
 
     <div class="grid grid-cols-2 gap-4">
@@ -64,7 +64,7 @@
       {{ f.field_label(L["admin.description_label"], optional=True) }}
       <textarea name="description" rows="3"
                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                placeholder="Detailbeschreibung der Störung…"></textarea>
+                placeholder="{{ L['admin.incident_description_placeholder'] }}"></textarea>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
@@ -95,7 +95,7 @@
 
 </form>
 
-{# ── Neues Quellen-Label Modal ──────────────────────────────────────────────── #}
+{# ── New source-label modal ─────────────────────────────────────────────────── #}
 <div id="src-label-modal"
      class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
      role="dialog" aria-modal="true">

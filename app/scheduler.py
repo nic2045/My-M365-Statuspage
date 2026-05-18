@@ -46,10 +46,10 @@ _GRAPH_CLASSIFICATION_MAP: dict[str, str] = {
 }
 
 # Maps the Microsoft Graph issue `status` field to one of our incident phases:
-#   active        – Investigating  (Untersuchung läuft)
-#   acknowledged  – Identified     (Ursache bekannt, Behebung startet)
-#   monitoring    – Monitoring     (Fix eingespielt, System wird beobachtet)
-#   resolved      – Resolved       (Behoben)
+#   active        – Investigating  (problem known, root cause being searched)
+#   acknowledged  – Identified     (root cause known, remediation starting)
+#   monitoring    – Monitoring     (fix deployed, system being observed)
+#   resolved      – Resolved       (incident closed)
 # falsePositive is intentionally omitted; _classify_issue filters those out.
 _GRAPH_INCIDENT_PHASE_MAP: dict[str, str] = {
     "investigating":               "active",

@@ -205,7 +205,7 @@
         </div>
         <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
           <span>{{ incident.start_datetime | strftime_de }}</span>
-          <span>{{ (incident.end_datetime | strftime_de) if incident.end_datetime else "heute" }}</span>
+          <span>{{ (incident.end_datetime | strftime_de) if incident.end_datetime else L['datetime.today'] }}</span>
         </div>
       </div>
       {% endif %}
@@ -263,7 +263,7 @@
 
 {{ f.now_buttons_script() }}
 
-{# ── Neues Quellen-Label Modal ──────────────────────────────────────────────── #}
+{# ── New source-label modal ─────────────────────────────────────────────────── #}
 <div id="src-label-modal"
      class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
      role="dialog" aria-modal="true">

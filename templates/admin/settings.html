@@ -5,7 +5,7 @@
   <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ L["settings.title"] }}</h1>
 </div>
 
-{# ── Sprache / Language ────────────────────────────────────────────────────── #}
+{# ── Language ──────────────────────────────────────────────────────────────── #}
 <a id="language" class="block scroll-mt-20"></a>
 <section class="mb-8">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
@@ -34,7 +34,7 @@
   </form>
 </section>
 
-{# ── Dienstverwaltung ────────────────────────────────────────────────────────── #}
+{# ── Service management ──────────────────────────────────────────────────────── #}
 <a id="services" class="block scroll-mt-20"></a>
 <section class="mb-8">
   <div class="flex items-center justify-between mb-3">
@@ -148,7 +148,7 @@
   {% endif %}
 </section>
 
-{# ── E-Mail-Abonnenten ───────────────────────────────────────────────────────── #}
+{# ── Email subscribers ───────────────────────────────────────────────────────── #}
 <section id="subscribers" class="mb-8 scroll-mt-20">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
     {{ L["admin.subscribers_heading"] }}
@@ -250,7 +250,7 @@
   </div>
 </section>
 
-{# ── E-Mail-Versand ──────────────────────────────────────────────────────────── #}
+{# ── Email delivery ──────────────────────────────────────────────────────────── #}
 {% set method = email_cfg.auth_method %}
 {% set status_pill = ('admin.email_status_configured' if email_cfg.is_configured else ('admin.email_status_disabled' if method == 'none' else 'admin.email_status_pending')) %}
 {% set status_color = ('bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' if email_cfg.is_configured else ('bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' if method == 'none' else 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400')) %}
@@ -266,7 +266,7 @@
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
     <form method="post" action="/admin/settings/email" class="p-5 space-y-4">
 
-      {# Versandmethode #}
+      {# Delivery method #}
       <div>
         <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["admin.email_method"] }}</label>
         <div class="flex flex-wrap gap-2">
@@ -342,7 +342,7 @@
       </div>
     </form>
 
-    {# Test-Versand #}
+    {# Test delivery #}
     <div class="border-t border-gray-100 dark:border-gray-800 px-5 py-4 bg-gray-50/50 dark:bg-gray-900/40">
       <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">{{ L["admin.email_test_heading"] }}</p>
       <form method="post" action="/admin/settings/email/test" class="flex flex-wrap items-center gap-2">
@@ -372,12 +372,12 @@
   </script>
 </section>
 
-{# ── Quellen-Labels ──────────────────────────────────────────────────────────── #}
+{# ── Source labels ───────────────────────────────────────────────────────────── #}
 <section id="source-labels" class="mb-8 scroll-mt-20">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
     Quellen-Labels
   </h2>
-  <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">Bezeichnungen für Quell-Werte bei Meldungen. Systemeinträge sind schreibgeschützt.</p>
+  <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">{{ L['admin.source_labels_hint'] }}</p>
 
   <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
 

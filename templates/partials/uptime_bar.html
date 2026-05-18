@@ -17,8 +17,8 @@
   {% endfor %}
 </div>
 <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
-  <span>{% if _range_days == 1 %}vor 24h{% else %}vor {{ _range_days }} Tagen{% endif %}</span>
-  <span>heute</span>
+  <span>{% if _range_days == 1 %}{{ L['ui.range.ago_24h'] }}{% else %}{{ L['ui.range.ago_days'].format(n=_range_days) }}{% endif %}</span>
+  <span>{{ L['datetime.today'] }}</span>
   {% if service.uptime_percentage is not none %}
   <span class="font-medium text-gray-600 dark:text-gray-300 ml-3">{{ "%.2f"|format(service.uptime_percentage) }} %</span>
   {% endif %}
