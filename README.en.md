@@ -95,6 +95,24 @@ On first visit you will be redirected to Entra ID.
 
 ---
 
+## Admin authorization (app role)
+
+By default **every** authenticated tenant user can access `/admin` (legacy behaviour; a warning is logged at startup). For production, restrict the admin area via an **Entra ID app role** — conveniently driven by a security group:
+
+1. **App registration → App roles → Create app role:**
+   - Display name: `Admin`
+   - Value: `Admin`  *(must match `ADMIN_ROLE`, default `Admin`)*
+   - Allowed member types: **Users/Groups**
+2. **Enterprise application → Users and groups → Add:**
+   - Assign a user **or a security group** to the `Admin` role.
+3. Done. Anyone with the role (directly or via the group) receives the `roles: ["Admin"]` claim in their token and gains `/admin` access. To onboard new admins, just add them to the group.
+
+> **App role over a groups claim:** the `roles` claim is always present in the token (no "group overage" beyond 200 groups, no extra Graph lookup) and uses readable names instead of group GUIDs. A role can still be assigned to a group, so group membership drives access.
+
+Alternatively or in addition, set an email allowlist (`ADMIN_EMAILS`, OR-combined with the role). Note: since the public status page also requires login, non-admins can still **view** the page — the allowlist/role only gates `/admin`.
+
+---
+
 ## Configuration reference
 
 | Variable | Description | Default |
@@ -105,6 +123,8 @@ On first visit you will be redirected to Entra ID.
 | `AZURE_REDIRECT_URI` | OAuth callback URL | `http://localhost:8000/auth/callback` |
 | `SECRET_KEY` | Session signing key (≥32 byte hex). Empty = auto-generated on first start, persisted to `data/secret_key` | *(auto)* |
 | `EMBED_API_KEY` | Token for widget access without login | *(empty)* |
+| `ADMIN_ROLE` | Required app-role value for `/admin` access (`roles` claim) | `Admin` |
+| `ADMIN_EMAILS` | Optional email/UPN allowlist (OR-combined with `ADMIN_ROLE`) | *(empty)* |
 | `DATABASE_URL` | SQLAlchemy async URL | `sqlite+aiosqlite:///./data/statuspage.db` |
 | `MONITORED_SERVICES` | Comma-separated service names (must match Graph API names exactly) | Exchange Online, SharePoint Online, Microsoft Teams |
 | `POLL_INTERVAL_MINUTES` | Polling interval in minutes | `10` |
