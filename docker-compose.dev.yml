@@ -1,5 +1,6 @@
-# Development overrides – applied automatically when running `docker compose up`
-# in a development environment. Do NOT commit secrets in this file.
+# Development overrides – use explicitly via `make docker` or:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Do NOT commit secrets in this file.
 services:
   statuspage:
     build:
