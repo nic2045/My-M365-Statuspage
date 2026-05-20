@@ -46,6 +46,17 @@ class Settings(BaseSettings):
     # Dev: bypass Entra ID OIDC – all routes accessible without login
     DISABLE_AUTH: bool = False
 
+    # Admin authorization.
+    # Primary mechanism: an Entra ID app role. Assign the role (or a security
+    # group) to the app in "Enterprise applications → Users and groups"; the
+    # token then carries it in the `roles` claim. ADMIN_ROLE is the role value
+    # to require (the appRole "value" defined in the app manifest).
+    ADMIN_ROLE: str = "Admin"
+    # Optional additional allowlist of emails/UPNs (OR-combined with the role).
+    # Both empty *and* no role claim in the token = every authenticated tenant
+    # user is admin (legacy behaviour) – a warning is logged on startup.
+    ADMIN_EMAILS: str = ""
+
     # UI language fallback when the visitor has no cookie, no Accept-Language
     # header and no admin-configured default. Supported: "de", "en".
     DEFAULT_LANGUAGE: str = "de"
@@ -108,6 +119,10 @@ class Settings(BaseSettings):
     @property
     def teams_webhook_list(self) -> list[str]:
         return [u.strip() for u in self.TEAMS_WEBHOOK_URLS.split(",") if u.strip()]
+
+    @property
+    def admin_emails_list(self) -> list[str]:
+        return [e.strip().lower() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
 
     @computed_field
     @property

@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from html import escape as _esc
 
 import httpx
 
@@ -155,9 +156,10 @@ async def send_test_email(to: str) -> tuple[bool, str]:
 
 async def send_confirmation_email(email: str, confirm_url: str) -> bool:
     subject = "Statuspage – E-Mail-Adresse bestätigen"
+    safe_url = _esc(confirm_url, quote=True)
     html = f"""
 <p>Bitte bestätige deine E-Mail-Adresse, um Benachrichtigungen zu erhalten:</p>
-<p><a href="{confirm_url}">{confirm_url}</a></p>
+<p><a href="{safe_url}">{_esc(confirm_url)}</a></p>
 <p>Falls du dich nicht angemeldet hast, ignoriere diese E-Mail.</p>
 """
     text = f"Bitte bestätige deine E-Mail-Adresse:\n{confirm_url}\n"
@@ -174,14 +176,19 @@ async def send_incident_notification(
     unsubscribe_urls: dict[str, str],
 ) -> None:
     """Send incident notification to a list of confirmed subscriber emails."""
+    e_subject = _esc(subject)
+    e_service = _esc(service_name)
+    e_title = _esc(incident_title)
+    e_desc = _esc(description) if description else ""
+    e_status_url = _esc(status_url, quote=True)
     for email in subscribers:
-        unsub_url = unsubscribe_urls.get(email, "")
+        unsub_url = _esc(unsubscribe_urls.get(email, ""), quote=True)
         html = f"""
-<h2 style="margin:0 0 8px">M365 Dienststatus – {subject}</h2>
-<p><strong>Dienst:</strong> {service_name}</p>
-<p><strong>Meldung:</strong> {incident_title}</p>
-{f'<p>{description}</p>' if description else ''}
-<p><a href="{status_url}">Statusseite öffnen</a></p>
+<h2 style="margin:0 0 8px">M365 Dienststatus – {e_subject}</h2>
+<p><strong>Dienst:</strong> {e_service}</p>
+<p><strong>Meldung:</strong> {e_title}</p>
+{f'<p>{e_desc}</p>' if e_desc else ''}
+<p><a href="{e_status_url}">Statusseite öffnen</a></p>
 <hr style="margin:16px 0">
 <p style="font-size:12px;color:#666">
   <a href="{unsub_url}">Abmelden</a>

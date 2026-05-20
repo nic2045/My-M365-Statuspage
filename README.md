@@ -92,6 +92,24 @@ Beim ersten Aufruf wird man zu Entra ID weitergeleitet.
 
 ---
 
+## Admin-Berechtigung (App-Rolle)
+
+Standardmäßig hat **jeder** authentifizierte Tenant-Benutzer Zugriff auf `/admin` (Legacy-Verhalten; beim Start wird gewarnt). Für Produktion solltest du den Admin-Bereich über eine **Entra-ID App-Rolle** einschränken — bequem steuerbar per Security-Gruppe:
+
+1. **App-Registrierung → App-Rollen → Rolle erstellen:**
+   - Anzeigename: `Admin`
+   - Wert: `Admin`  *(muss `ADMIN_ROLE` entsprechen, Standard `Admin`)*
+   - Erlaubte Mitgliedstypen: **Benutzer/Gruppen**
+2. **Enterprise-Anwendung → Benutzer und Gruppen → Hinzufügen:**
+   - Einen Benutzer **oder eine Security-Gruppe** der Rolle `Admin` zuweisen.
+3. Fertig. Wer die Rolle (direkt oder über die Gruppe) hat, bekommt im Token den Claim `roles: ["Admin"]` und damit `/admin`-Zugriff. Neue Admins fügst du anschließend nur noch der Gruppe hinzu.
+
+> **App-Rolle statt Gruppen-Claim:** Der `roles`-Claim ist immer im Token (kein „group overage" ab >200 Gruppen, kein zusätzlicher Graph-Lookup) und nutzt lesbare Namen statt Gruppen-GUIDs. Eine Rolle lässt sich trotzdem einer Gruppe zuweisen — so steuert die Gruppenmitgliedschaft den Zugriff.
+
+Alternativ oder ergänzend kannst du eine E-Mail-Allowlist setzen (`ADMIN_EMAILS`, ODER-verknüpft mit der Rolle). Hinweis: Da auch die öffentliche Statusseite Login erfordert, dürfen Nicht-Admins die Seite weiterhin **ansehen** — die Allowlist/Rolle gilt nur für `/admin`.
+
+---
+
 ## Konfigurationsreferenz
 
 | Variable | Beschreibung | Standard |
@@ -102,6 +120,8 @@ Beim ersten Aufruf wird man zu Entra ID weitergeleitet.
 | `AZURE_REDIRECT_URI` | OAuth-Callback-URL | `http://localhost:8000/auth/callback` |
 | `SECRET_KEY` | Session-Signaturschlüssel (≥32 Byte Hex). Leer = Auto-Generierung beim ersten Start, persistiert in `data/secret_key` | *(auto)* |
 | `EMBED_API_KEY` | Token für Widget-Zugriff ohne Login | *(leer)* |
+| `ADMIN_ROLE` | Geforderter App-Rollen-Wert für `/admin`-Zugriff (`roles`-Claim) | `Admin` |
+| `ADMIN_EMAILS` | Optionale E-Mail-/UPN-Allowlist (ODER-verknüpft mit `ADMIN_ROLE`) | *(leer)* |
 | `DATABASE_URL` | SQLAlchemy Async URL | `sqlite+aiosqlite:///./data/statuspage.db` |
 | `MONITORED_SERVICES` | Kommagetrennte Dienstnamen (Graph API exakt) | Exchange Online, SharePoint Online, Microsoft Teams |
 | `POLL_INTERVAL_MINUTES` | Abfrageintervall in Minuten | `10` |

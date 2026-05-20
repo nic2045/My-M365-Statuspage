@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from typing import Any
 
-import bleach
+import nh3
 from sqlalchemy import desc, or_, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,15 +24,15 @@ from app.schemas import (
     StatusPageSchema,
 )
 
-ALLOWED_HTML_TAGS = ["p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "br", "span",
-                     "h1", "h2", "h3", "h4", "div", "table", "thead", "tbody", "tr", "td", "th"]
-ALLOWED_HTML_ATTRS = {"a": ["href", "title"]}
+ALLOWED_HTML_TAGS = {"p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "br", "span",
+                     "h1", "h2", "h3", "h4", "div", "table", "thead", "tbody", "tr", "td", "th"}
+ALLOWED_HTML_ATTRS = {"a": {"href", "title"}}
 
 _STATUS_SEVERITY = {"operational": 0, "unknown": 1, "degraded": 2, "interrupted": 3}
 
 
 def _sanitize_html(raw: str) -> str:
-    return bleach.clean(raw, tags=ALLOWED_HTML_TAGS, attributes=ALLOWED_HTML_ATTRS, strip=True)
+    return nh3.clean(raw, tags=ALLOWED_HTML_TAGS, attributes=ALLOWED_HTML_ATTRS)
 
 
 def _parse_dt(value: str | None) -> datetime | None:

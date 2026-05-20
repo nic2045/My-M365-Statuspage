@@ -18,7 +18,7 @@ from app.app_settings import (
     verify_azure_connection,
     verify_smtp_connection,
 )
-from app.auth import require_auth
+from app.auth import require_admin
 from app.config import settings
 from app.crud import (
     add_incident_post,
@@ -163,7 +163,7 @@ def _schedule_delayed_poll(delay: float = 8.0) -> None:
 async def admin_dashboard(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
     services_with_status = await get_enabled_services_with_status(db)
@@ -183,7 +183,7 @@ async def admin_dashboard(
 async def admin_search(
     q: str = "",
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     """JSON endpoint backing the Cmd+K palette in the admin area."""
     return JSONResponse(await search_global(db, q))
@@ -193,7 +193,7 @@ async def admin_search(
 async def admin_settings(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
     all_services, known_groups, subscribers, email_cfg, azure_cfg, source_labels, app_lang = await asyncio.gather(
@@ -229,7 +229,7 @@ async def admin_save_language(
     request: Request,
     default_language: Annotated[str, Form()],
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     if default_language not in LABELS_BY_LANG:
         raise HTTPException(status_code=400, detail="unsupported language")
@@ -251,7 +251,7 @@ async def admin_save_email_settings(
     smtp_tls: Annotated[str | None, Form()] = None,
     graph_from_address: Annotated[str, Form()] = "",
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     if auth_method not in {"none", "password", "graph_oauth2"}:
         auth_method = "none"
@@ -293,7 +293,7 @@ async def admin_send_test_email(
     request: Request,
     to: Annotated[str, Form()],
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     ok, message = await send_test_email(to.strip())
     flash(request, message, "success" if ok else "error")
@@ -307,7 +307,7 @@ async def admin_save_azure_settings(
     client_id: Annotated[str, Form()] = "",
     client_secret: Annotated[str, Form()] = "",
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     await save_azure_settings(
         db,
@@ -332,7 +332,7 @@ async def api_save_source_label(
     source: Annotated[str, Form()],
     label: Annotated[str, Form()],
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     src = source.strip()
     lbl = label.strip()
@@ -348,7 +348,7 @@ async def settings_save_source_label(
     source: Annotated[str, Form()],
     label: Annotated[str, Form()],
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     src = source.strip()
     lbl = label.strip()
@@ -363,7 +363,7 @@ async def settings_delete_source_label(
     request: Request,
     source: str,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     await delete_source_label(db, source)
     flash(request, "Label entfernt.")
@@ -375,7 +375,7 @@ async def admin_delete_subscriber(
     request: Request,
     subscriber_id: int,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     await delete_subscriber(db, subscriber_id)
     await db.commit()
@@ -389,7 +389,7 @@ async def admin_incidents_all(
     source: str | None = None,
     classification: str | None = None,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
     """List ALL incidents (active + resolved). Supports ?source=manual|graph
@@ -439,7 +439,7 @@ async def admin_incidents_all(
 async def admin_maintenances_all(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
     maintenances = await get_all_maintenances(db)
@@ -459,7 +459,7 @@ async def admin_maintenances_all(
 async def new_incident_form(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
     enabled_services, known_sources, all_labels = await asyncio.gather(
@@ -494,7 +494,7 @@ async def create_incident(
     source: Annotated[str, Form()] = "manual",
     external_id: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     incident = await create_manual_incident(
         db,
@@ -547,7 +547,7 @@ async def incident_detail(
     request: Request,
     incident_id: int,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
     incident = await get_incident_by_id(db, incident_id)
@@ -590,7 +590,7 @@ async def update_incident(
     source: Annotated[str | None, Form()] = None,
     external_id: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     old = await get_incident_by_id(db, incident_id)
     old_status = old.status if old else None
@@ -634,7 +634,7 @@ async def update_incident(
 async def delete_incident(
     incident_id: int,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     deleted = await crud_delete_incident(db, incident_id)
     if not deleted:
@@ -649,7 +649,7 @@ async def add_post(
     content: Annotated[str, Form()],
     notify_subscribers: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     do_notify = notify_subscribers == "on"
     await add_incident_post(
@@ -696,7 +696,7 @@ async def add_post(
 @router.post("/services/refresh")
 async def refresh_services(
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     """Fetch all services from Graph API and register any new ones as disabled."""
     try:
@@ -715,7 +715,7 @@ async def refresh_services(
 async def toggle_service(
     service_name: str,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     """Enable or disable a service on the status page. Triggers backfill when enabling."""
     result = await db.execute(
@@ -738,7 +738,7 @@ async def toggle_service(
 async def toggle_uptime_display(
     service_name: str,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     """Toggle whether the 90-day uptime percentage is shown for this service."""
     result = await db.execute(
@@ -757,7 +757,7 @@ async def admin_move_service(
     service_name: str,
     direction: Annotated[str, Form()],
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     """Move service one slot up or down within its group (changes public-page order)."""
     moved = await move_service(db, service_name, direction)
@@ -772,7 +772,7 @@ async def update_service_group(
     service_name: str,
     group_name: Annotated[str, Form()] = "",
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     """Assign (or clear) the group for a monitored service."""
     await set_service_group(db, service_name, group_name)
@@ -785,7 +785,7 @@ async def set_service_status(
     service_name: str,
     status: Annotated[str, Form()],
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     await set_service_status_manual(db, service_name, status)
     await db.commit()
@@ -796,7 +796,7 @@ async def set_service_status(
 async def suppress_incident(
     incident_id: int,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     await toggle_suppress_incident(db, incident_id, suppress=True)
     await db.commit()
@@ -807,7 +807,7 @@ async def suppress_incident(
 async def unsuppress_incident(
     incident_id: int,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     await toggle_suppress_incident(db, incident_id, suppress=False)
     await db.commit()
@@ -823,7 +823,7 @@ async def acknowledge_incident(
     request: Request,
     incident_id: int,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     email = _user_email(user)
     if email is None:
@@ -846,7 +846,7 @@ async def release_incident(
     request: Request,
     incident_id: int,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     await admin_update_incident(
         db,
@@ -864,7 +864,7 @@ async def release_incident(
 async def new_maintenance_form(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
     enabled_services = await get_enabled_services(db)
@@ -888,7 +888,7 @@ async def create_maintenance(
     scheduled_start: Annotated[str | None, Form()] = None,
     scheduled_end: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
 ):
     incident = await create_manual_incident(
         db,
@@ -910,7 +910,7 @@ async def create_maintenance(
 async def debug_page(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
     enabled = await get_enabled_services(db)
@@ -934,7 +934,7 @@ async def debug_page(
 async def debug_fetch(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
     """Live-fetch all Microsoft service health data and display raw results."""
