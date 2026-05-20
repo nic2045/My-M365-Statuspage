@@ -1,0 +1,34 @@
+[project]
+name = "my-m365-statuspage"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.136.1",
+    "uvicorn[standard]==0.47.0",
+    "jinja2==3.1.6",
+    "python-multipart==0.0.29",
+    "authlib==1.7.2",
+    "itsdangerous==2.2.0",
+    "msal==1.36.0",
+    "httpx==0.28.1",
+    "sqlalchemy[asyncio]==2.0.49",
+    "aiosqlite==0.22.1",
+    "apscheduler==3.11.2",
+    "pydantic-settings==2.14.1",
+    "python-dotenv==1.2.2",
+    "nh3==0.2.20",
+    "mistune==3.2.1",
+    "starlette==1.0.0",
+    "cryptography>=48.0.0,<49",
+    "aiosmtplib==5.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[tool.ruff]
+extend = "ruff.toml"
