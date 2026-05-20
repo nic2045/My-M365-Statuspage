@@ -1,8 +1,9 @@
 import logging
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -27,13 +28,33 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    if settings.DISABLE_AUTH:
+        logger.warning(
+            "DISABLE_AUTH is enabled – ALL routes are accessible without login. "
+            "This must never be used in production."
+        )
+    if not settings.admin_emails_list and not settings.DISABLE_AUTH:
+        logger.warning(
+            "No ADMIN_EMAILS allowlist configured. Restrict the admin area by "
+            "assigning the '%s' app role (or a security group) to this app in "
+            "Entra ID, or by setting ADMIN_EMAILS. Until a role-bearing token "
+            "is seen, every authenticated tenant user has full admin access.",
+            settings.ADMIN_ROLE,
+        )
     await init_db()
     start_scheduler()
     yield
     stop_scheduler()
+
+
+# Methods that must not mutate state and are therefore exempt from the CSRF
+# origin check.
+_CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 
 
 app = FastAPI(
@@ -50,6 +71,52 @@ app.add_middleware(
     https_only=not settings.DEBUG,
     same_site="lax",
 )
+
+# Content-Security-Policy: 'unsafe-inline' is required for the inline scripts/
+# styles and the Tailwind CDN in base.html. The real wins here are
+# frame-ancestors (anti-clickjacking), form-action, object-src and base-uri.
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "img-src 'self' data:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'self'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "object-src 'none'"
+)
+
+
+@app.middleware("http")
+async def csrf_protect(request: Request, call_next):
+    """Origin/Referer-based CSRF defense for state-changing requests.
+
+    Combined with the SameSite=lax session cookie this blocks cross-site
+    form submissions. The host of the Origin (or, as a fallback, Referer)
+    header must match the request's Host header.
+    """
+    if request.method not in _CSRF_SAFE_METHODS and not settings.DISABLE_AUTH:
+        host = request.headers.get("host")
+        source = request.headers.get("origin") or request.headers.get("referer")
+        if not source or urlparse(source).netloc != host:
+            return JSONResponse({"detail": "CSRF validation failed"}, status_code=403)
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    # /embed is intentionally framable from any origin (it sets its own CSP),
+    # so don't impose frame restrictions there.
+    if not request.url.path.startswith("/embed"):
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault("Content-Security-Policy", _CSP)
+    return response
+
 
 @app.middleware("http")
 async def language_middleware(request: Request, call_next):

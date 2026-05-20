@@ -1,3 +1,4 @@
+import secrets
 from collections.abc import AsyncGenerator
 
 from fastapi import Depends, HTTPException, Query
@@ -59,7 +60,7 @@ async def require_embed_access(
     """
     if settings.DISABLE_AUTH:
         return
-    if settings.EMBED_API_KEY and token == settings.EMBED_API_KEY:
+    if settings.EMBED_API_KEY and token and secrets.compare_digest(token, settings.EMBED_API_KEY):
         return
     user = await get_current_user(request)
     if user is None:

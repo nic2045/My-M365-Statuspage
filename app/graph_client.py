@@ -87,9 +87,11 @@ async def fetch_issues_since(service_name: str, days: int = 90) -> list[dict]:
     """Fetch all issues (including resolved) for a service over the past N days, for backfill."""
     token = await _get_access_token()
     since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
+    # Escape single quotes per OData rules (doubled) to prevent $filter injection.
+    safe_service = service_name.replace("'", "''")
     base_url = (
         f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
-        f"?$filter=service eq '{service_name}' and startDateTime ge {since}"
+        f"?$filter=service eq '{safe_service}' and startDateTime ge {since}"
         f"&$select=id,service,title,classification,status,startDateTime,endDateTime,lastModifiedDateTime,isResolved,severity,impactDescription"
         f"&$top=100"
     )

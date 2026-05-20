@@ -1,8 +1,8 @@
 """Shared Jinja2 templates instance with all globals and filters pre-registered."""
 from datetime import datetime
 
-import bleach
 import mistune
+import nh3
 from fastapi.templating import Jinja2Templates
 
 from app import __version__
@@ -16,8 +16,8 @@ from app.i18n import (
 )
 from app.models import INCIDENT_BORDER, STATUS_BADGE_CLASSES, STATUS_TAILWIND_BAR
 
-_ALLOWED_MD_TAGS = ["p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "br", "code", "pre", "blockquote"]
-_ALLOWED_MD_ATTRS = {"a": ["href", "title"]}
+_ALLOWED_MD_TAGS = {"p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "br", "code", "pre", "blockquote"}
+_ALLOWED_MD_ATTRS = {"a": {"href", "title"}}
 _md = mistune.create_markdown(escape=False)
 
 templates = Jinja2Templates(directory="templates")
@@ -204,7 +204,7 @@ def _render_md(text: str | None) -> str:
     if not text:
         return ""
     raw_html = _md(text)
-    return bleach.clean(raw_html, tags=_ALLOWED_MD_TAGS, attributes=_ALLOWED_MD_ATTRS, strip=True)
+    return nh3.clean(raw_html, tags=_ALLOWED_MD_TAGS, attributes=_ALLOWED_MD_ATTRS)
 
 
 templates.env.filters["strftime_de"] = _strftime_localized
