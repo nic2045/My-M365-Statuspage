@@ -22,7 +22,7 @@ jobs:
     needs: ci
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Extract version from tag
         id: version
@@ -72,7 +72,7 @@ jobs:
     needs: docker
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Log in to GHCR (to pull the just-pushed image)
         uses: docker/login-action@v4
@@ -119,9 +119,9 @@ jobs:
     needs: ci
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Run pip-audit
         run: |
@@ -132,7 +132,7 @@ jobs:
             | tee audit-report.md
 
       - name: Upload audit report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pip-audit-report-${{ github.ref_name }}
           path: audit-report.md

@@ -13,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
 
@@ -71,9 +71,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
 
@@ -85,9 +85,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Run pip-audit
         run: |
@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload audit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pip-audit-report
           path: audit-report.md
@@ -114,7 +114,7 @@ jobs:
       CONTAINER: statuspage-ci
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # ── 1. Build (with GHA layer cache) ─────────────────────────────────────
       - name: Set up Docker Buildx
@@ -190,7 +190,7 @@ jobs:
           curl -sf http://localhost:8000/api/v1/health \
             || { echo "FAIL: app not ready after 60 s"; docker logs "$CONTAINER"; exit 1; }
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
 

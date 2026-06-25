@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Run pip-audit (markdown output)
         id: audit
@@ -39,7 +39,7 @@ jobs:
           exit 0   # never fail the step; we handle findings via issue
 
       - name: Upload audit report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pip-audit-report
           path: audit-report.md
