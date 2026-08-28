@@ -168,6 +168,19 @@ getrennt statt eine Seite mit allem):
      (Status "Scheduled"), **abgeschlossen:** "Patchday Server Gruppe 1 & 2"
      (Status "Completed" - erzählerischer Vorgänger von Gruppe 3)
    - Ankündigung "Geplantes Firewall-Upgrade (Barracuda)"
+   - **Vergangene Sicherheitsereignisse** (mitarbeiterverständlich, drei
+     bereits abgeschlossene Incidents): "Verdächtige Anmeldeversuche
+     erkannt und blockiert" (Anmeldung/SSO, vor 14 Tagen), "Phishing-
+     E-Mail-Welle abgewehrt" (E-Mail senden/empfangen, vor 28 Tagen),
+     "Außerplanmäßiges Sicherheitsupdate eingespielt" (VPN-Zugang, vor 21
+     Tagen) - alle sofort als `Resolved` angelegt, bewusst ohne
+     Fachbegriffe formuliert und mit einer klaren Entwarnung im Text
+     ("Es kam zu keinem unbefugten Zugriff" etc.), damit sichtbar wird,
+     dass Sicherheitsvorfälle transparent kommuniziert werden, statt nur
+     intern zu bleiben. Datum kommt über `Incident.declaredAt` (dynamisch
+     relativ zu "heute", wie jedes andere Datum in diesem Skript) - live
+     bestätigt: erscheinen korrekt in `timelineIncidents` der
+     Status-Page-Overview-API, neben dem aktiven DocuWare-Incident.
 
    Alle Dienste sind feste `Manual`-Monitore ohne Sensor, starten
    automatisch grün und werden nur gezielt (z.B. via Wartung/Incident) auf

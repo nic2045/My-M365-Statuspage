@@ -637,6 +637,67 @@ for stale_name in ("Finanzapplikationen", "Projektmanagement-Tools"):
 
 blueant_monitor_id = monitor_ids["Blueant"]
 
+# ── Vergangene Sicherheitsereignisse (mitarbeiterverständlich) ─────────────
+# Drei bereits abgeschlossene, bewusst nicht-technisch formulierte
+# Vorfälle - zeigen auf der Statusseite, dass Sicherheitsthemen
+# transparent kommuniziert werden, ohne Mitarbeitende mit Fachbegriffen
+# zu überfordern. Alle drei sind sofort als Resolved angelegt (kein
+# Sensor treibt sie, wie bei den anderen Manual-Ressourcen) und liegen
+# über `declaredAt` dynamisch relativ zu "heute" in der Vergangenheit,
+# damit die Demo auch Wochen später noch aktuell wirkt.
+security_severity = next((s["_id"] for s in severities if "Minor" in s.get("name", "")), severity)
+security_resolved_state_id = next(
+    s["_id"] for s in get_list("incident-state", select={"_id": True, "isResolvedState": True})
+    if s.get("isResolvedState"))
+
+
+def ensure_security_incident(title, monitor_id, days_ago, description):
+    declared_at = datetime.now() - timedelta(days=days_ago)
+    payload = {
+        "title": title,
+        "description": description,
+        "incidentSeverityId": security_severity,
+        "currentIncidentStateId": security_resolved_state_id,
+        "monitors": [entity_ref(monitor_id)],
+        "declaredAt": iso(declared_at),
+    }
+    existing = find_by_name("incident", title, select={"_id": True, "title": True}, legacy=[], name_field="title")
+    if existing:
+        call(f"/api/incident/{existing['_id']}", {"data": payload}, method="PUT")
+        print(f"    updated security incident '{title}'")
+    else:
+        payload["projectId"] = project_id
+        call("/api/incident", {"data": payload})
+        print(f"    created security incident '{title}' ({declared_at.strftime('%d.%m.%Y')})")
+
+
+SECURITY_EVENTS = [
+    ("Verdächtige Anmeldeversuche erkannt und blockiert",
+     monitor_ids["Anmeldung (SSO)"], 14,
+     "Unser Sicherheitssystem hat ungewöhnliche Anmeldeversuche auf mehrere "
+     "Mitarbeiterkonten erkannt und automatisch blockiert. Die betroffenen "
+     "Konten wurden vorsorglich gesperrt, die IT hat sich mit den "
+     "betroffenen Kolleginnen und Kollegen persönlich in Verbindung "
+     "gesetzt.\n\n**Es kam zu keinem unbefugten Zugriff.**"),
+    ("Phishing-E-Mail-Welle abgewehrt",
+     monitor_ids["E-Mail senden/empfangen"], 28,
+     "Eine gezielte Phishing-Kampagne mit gefälschten E-Mails wurde von "
+     "unserem Mail-Sicherheitssystem erkannt. Der Großteil wurde direkt "
+     "blockiert, ein kleiner Teil erreichte kurzzeitig Postfächer und "
+     "wurde automatisch nachträglich entfernt.\n\n**Es sind keine "
+     "Zugangsdaten kompromittiert worden.** Bitte meldet verdächtige "
+     "E-Mails weiterhin über den \"Phishing melden\"-Button in Outlook."),
+    ("Außerplanmäßiges Sicherheitsupdate eingespielt",
+     monitor_ids["VPN-Zugang"], 21,
+     "Um eine kritische Sicherheitslücke zeitnah zu schließen, hat die IT "
+     "außerplanmäßig ein Update eingespielt. Für rund 10 Minuten war die "
+     "VPN-Verbindung eingeschränkt nutzbar.\n\n**Zu keinem Zeitpunkt bestand "
+     "eine Gefährdung eurer Daten** - das Update war eine reine "
+     "Vorsichtsmaßnahme."),
+]
+for title, monitor_id, days_ago, description in SECURITY_EVENTS:
+    ensure_security_incident(title, monitor_id, days_ago, description)
+
 # DocuWare-Cluster: einfache Nutzeransicht + Major Incident. Deliberately a
 # Manual monitor, NOT the demo-broken-site-style heartbeat: the whole
 # point of this example is "site reachable, login broken" - a distinction
