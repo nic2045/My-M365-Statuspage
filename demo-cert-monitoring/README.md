@@ -390,13 +390,42 @@ https://oneuptime.com/reference), falls ihr das Anlegen/Auflösen von
 Incidents zusätzlich skripten wollt - die genauen Endpunkt-/Payload-
 Details dort prüfen, da sie sich zwischen Versionen ändern können.
 
+## Live-E-Mail-Demo (Mailpit)
+
+Zusätzlich zu den Mockups unten gibt es einen **echten, live auslösbaren**
+E-Mail-Versand - kein Mockup, sondern die tatsächliche
+OneUptime-Benachrichtigungs-Pipeline (echter SMTP-Handshake, echter
+Subscriber-Notification-Cronjob), nur dass die Mail in einem lokalen
+Postfach statt im echten Internet landet.
+
+- `mailpit`-Container (`docker-compose.yml`) fängt jede ausgehende Mail
+  lokal ab - Web-Oberfläche unter **http://localhost:8025**, es verlässt
+  nichts diesen Rechner
+- `seed-oneuptime.sh` konfiguriert OneUptimes **Global SMTP**
+  (`/api/global-config`, die feste Singleton-Zeile mit ID
+  `00000000-0000-0000-0000-000000000000` - nur per Master-Admin-Session
+  beschreibbar, unser Demo-Account ist das automatisch) auf
+  `host.docker.internal:1025` und legt einen Demo-Abonnenten
+  (`mitarbeiter@pyur-demo.local`) auf der Zertifikats- und der
+  IT-Services-Seite an (`isSubscriptionConfirmed: true`, sonst überspringt
+  der Notification-Cron ihn als unbestätigt)
+
+**Live auslösen:** `./break-demo.sh` - nach Ablauf des
+Heartbeat-Fensters (Default 5 Minuten) legt OneUptime automatisch einen
+Incident an; der Subscriber-Notification-Cronjob läuft jede Minute und
+verschickt daraufhin eine echte E-Mail. Insgesamt bis zu ~6 Minuten bis
+sie in Mailpit auftaucht. Schon die Anlage des Abonnenten selbst löst
+sofort eine Bestätigungsmail aus - guter erster Funktionstest, ohne auf
+den Heartbeat zu warten.
+
 ## Benachrichtigungs-Mockups (E-Mail, Teams, Mobil)
 
 `mockups/` enthält statische, in sich geschlossene HTML-Seiten, die
 zeigen, wie eine Statuspage-Benachrichtigung für Abonnenten in
 verschiedenen Kanälen aussehen würde - reine Anschauungs-Mockups für die
-Management-Demo, **keine echten Integrationen** (es wird nichts
-verschickt, kein SMTP/Teams-Webhook/SMS-Gateway angebunden). Jede Seite
+Management-Demo (Teams/Mobil bleiben Mockup - **keine echten
+Integrationen**, es wird nichts verschickt, kein Teams-Webhook/
+SMS-Gateway angebunden; nur E-Mail ist oben live). Jede Seite
 zeigt sowohl den DocuWare-Major-Incident als auch einen alltagsnahen
 Minor Incident ("E-Mail-Versand verzögert") - zwei Schweregrade, eine
 Mitarbeiterperspektive.

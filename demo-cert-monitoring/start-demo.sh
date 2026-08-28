@@ -111,6 +111,7 @@ GRAFANA_PORT="$(env_value GRAFANA_PORT)";              GRAFANA_PORT="${GRAFANA_P
 PROMETHEUS_PORT="$(env_value PROMETHEUS_PORT)";        PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
 BLACKBOX_PORT="$(env_value BLACKBOX_EXPORTER_PORT)";   BLACKBOX_PORT="${BLACKBOX_PORT:-9115}"
 BROKEN_SITE_PORT="$(env_value DEMO_BROKEN_SITE_PORT)"; BROKEN_SITE_PORT="${BROKEN_SITE_PORT:-8443}"
+MAILPIT_WEB_PORT="$(env_value MAILPIT_WEB_PORT)";      MAILPIT_WEB_PORT="${MAILPIT_WEB_PORT:-8025}"
 
 # Ports already bound by *our own* running containers are fine - compose
 # will reuse them. Only warn about ports held by something else.
@@ -209,6 +210,7 @@ echo "  Prometheus ....... http://localhost:$PROMETHEUS_PORT"
 echo "  Alerts ........... http://localhost:$PROMETHEUS_PORT/alerts"
 echo "  blackbox ......... http://localhost:$BLACKBOX_PORT"
 echo "  Demo fixture ..... https://localhost:$BROKEN_SITE_PORT (self-signed on purpose)"
+echo "  Mailpit .......... http://localhost:$MAILPIT_WEB_PORT (live email demo inbox)"
 if [ "$WITH_ONEUPTIME" = "1" ]; then
   echo "  OneUptime ........ ${ONEUPTIME_URL:-http://localhost}"
   if [ "${SEEDED:-0}" = "1" ] && [ -f .oneuptime-demo-summary ]; then

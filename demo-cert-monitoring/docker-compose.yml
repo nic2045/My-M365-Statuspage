@@ -88,6 +88,20 @@ services:
     ports:
       - "${DOCUWARE_METRICS_PORT:-9200}:9200"
 
+  mailpit:
+    # Local mail catcher: lets OneUptime send REAL emails (real SMTP
+    # handshake, real subscriber-notification job) that land in a web
+    # inbox here instead of a static mockup - see seed-oneuptime.sh
+    # (configures OneUptime's Global SMTP + a demo subscriber) and
+    # break-demo.sh (the live trigger). No real mail ever leaves this
+    # machine.
+    image: axllent/mailpit:latest
+    container_name: cert-demo-mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_WEB_PORT:-8025}:8025"
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: cert-demo-prometheus

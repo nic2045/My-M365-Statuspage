@@ -964,6 +964,50 @@ for name, desc in LLM_MONITORS:
     mid = ensure_manual_monitor(name, desc)
     attach_to_monitor_group(llm_group, mid)
 
+# ── 7) Live-E-Mail-Demo (Mailpit) ────────────────────────────────────────────
+# Turns the static notification mockups into a real, triggerable one: point
+# OneUptime's Global SMTP at the local Mailpit container and subscribe a
+# demo address, so break-demo.sh (a real heartbeat-timeout -> auto-created
+# incident, already proven end-to-end earlier) sends an ACTUAL email that
+# lands in Mailpit's web UI - no external mail server, nothing leaves this
+# machine. GlobalConfig is a singleton row (fixed all-zero id) writable only
+# by a master admin session (empty TableAccessControl otherwise) - our demo
+# account is master admin, so the existing Bearer token already qualifies.
+GLOBAL_CONFIG_ID = "00000000-0000-0000-0000-000000000000"
+MAILPIT_SMTP_HOST = "host.docker.internal"  # same cross-project reachability
+MAILPIT_SMTP_PORT = 1025                    # trick as the OneUptime API calls above
+
+call(f"/api/global-config/{GLOBAL_CONFIG_ID}", {"data": {
+    "isSMTPSecure": False,
+    "smtpHost": typed("Hostname", MAILPIT_SMTP_HOST),
+    "smtpPort": typed("Port", MAILPIT_SMTP_PORT),
+    "smtpFromEmail": typed("Email", "status-demo@pyur-demo.local"),
+    "smtpFromName": "Statusseite Demo",
+}}, method="PUT")
+print("==> Configured Global SMTP -> Mailpit (host.docker.internal:1025)")
+
+
+def ensure_subscriber(page_id, email):
+    existing = get_list("status-page-subscriber", query={"statusPageId": page_id},
+                        select={"_id": True, "subscriberEmail": True})
+    for row in existing:
+        addr = row.get("subscriberEmail")
+        addr = addr.get("value") if isinstance(addr, dict) else addr
+        if addr == email:
+            return row["_id"]
+    created = call("/api/status-page-subscriber", {"data": {
+        "statusPageId": page_id, "projectId": project_id,
+        "subscriberEmail": typed("Email", email),
+        "isSubscriptionConfirmed": True,
+    }})
+    print(f"    subscribed {email} to status page")
+    return created["_id"]
+
+
+DEMO_SUBSCRIBER_EMAIL = "mitarbeiter@pyur-demo.local"
+ensure_subscriber(page_id, DEMO_SUBSCRIBER_EMAIL)
+ensure_subscriber(it_service_page_id, DEMO_SUBSCRIBER_EMAIL)
+
 # ── Write heartbeat URLs back into .env ─────────────────────────────────────
 ordered = ",".join(heartbeats[name] for _u, name in wanted if name != DEMO_MONITOR_NAME)
 demo_url = heartbeats[DEMO_MONITOR_NAME]
