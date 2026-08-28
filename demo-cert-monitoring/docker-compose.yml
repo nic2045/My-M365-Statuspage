@@ -102,6 +102,20 @@ services:
       - "${MAILPIT_SMTP_PORT:-1025}:1025"
       - "${MAILPIT_WEB_PORT:-8025}:8025"
 
+  customer-care-metrics-exporter:
+    # Synthetic Prometheus exporter simulating the distributed
+    # Customer-Care service (Avaya ACD/SIP, Citrix, support/billing apps,
+    # Cognigy, and 6 sites' site-to-site VPN links into the Leipzig
+    # datacenter) - see scripts/customer-care-metrics-exporter.py.
+    image: python:3.12-alpine
+    container_name: cert-demo-customer-care-metrics
+    restart: unless-stopped
+    volumes:
+      - ./scripts/customer-care-metrics-exporter.py:/customer-care-metrics-exporter.py:ro
+    entrypoint: ["python3", "/customer-care-metrics-exporter.py"]
+    ports:
+      - "${CUSTOMER_CARE_METRICS_PORT:-9300}:9300"
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: cert-demo-prometheus
@@ -116,6 +130,8 @@ services:
       demo-docuware-site:
         condition: service_started
       docuware-metrics-exporter:
+        condition: service_started
+      customer-care-metrics-exporter:
         condition: service_started
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro

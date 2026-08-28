@@ -82,3 +82,12 @@ scrape_configs:
       - targets: ["docuware-metrics-exporter:9200"]
         labels:
           instance: "docuware-cluster"
+
+  # Customer-Care-Demo: synthetischer Exporter fuer Telefonie (Avaya ACD/
+  # SIP), Citrix, Kundensupport-/Rechnungswesen-App, Cognigy und die
+  # Standort-VPN-Strecken - siehe scripts/customer-care-metrics-exporter.py.
+  - job_name: "customer_care"
+    static_configs:
+      - targets: ["customer-care-metrics-exporter:9300"]
+        labels:
+          instance: "customer-care-cluster"

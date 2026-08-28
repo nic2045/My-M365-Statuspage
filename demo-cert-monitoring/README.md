@@ -253,6 +253,51 @@ Für Cloud-Trial (https://oneuptime.com) oder eigene Einrichtung:
    Ping aus, markiert OneUptime den Monitor nach seiner eigenen
    Kulanzzeit als "down" - dort konfigurierbar.
 
+## Customer Care: Standortübersicht für den technischen Owner (Grafana)
+
+Reines Grafana-Dashboard (kein OneUptime-Anteil diesmal) für den
+technischen Owner eines verteilten Customer-Care-Service - Hauptziel:
+technische Störungen erkennen, Performance/Auslastung sehen.
+
+**Modellierter Service** (`scripts/customer-care-metrics-exporter.py`):
+Telefonie (Avaya ACD, SIP-Trunk), Citrix (Agenten-Desktops), eine
+Kundensupport-App, eine Rechnungswesen-App, Cognigy (Chat-/Voicebot -
+die einzige Cloud-/SaaS-Komponente, alles andere on-prem) inkl. dessen
+Anfragen an die interne LLM (`llm.pyur.com`), sowie die zugrunde
+liegende Infrastruktur. Customer Care ist auf **6 Standorte** verteilt,
+die jeweils per Site-to-Site-VPN an das Rechenzentrum in **Leipzig**
+angebunden sind: Berlin, Dresden, Chemnitz, Halle (Saale), Rostock,
+Erfurt.
+
+**Grafana-Dashboard "Customer Care – Standortübersicht (Technical
+Owner)"** (`grafana/dashboards/customer-care-overview.json`, 21 Panels,
+automatisch provisioniert):
+- Gesamtstatus-Stats oben (Störungserkennung auf einen Blick: Anzahl
+  Standorte mit VPN-Störung, Warteschlange, Wartezeit)
+- Telefonie/Avaya ACD, Citrix, Kundensupport-/Rechnungswesen-App,
+  Cognigy/LLM, Infrastruktur - je eigene Zeile
+- **Deutschlandkarte** (Grafana-Geomap-Panel, echte Koordinaten der 6
+  Standorte) - Marker färben sich rot bei VPN-Ausfall. Technischer
+  Hinweis: Prometheus-Labels (`lat`/`lon`) kommen aus Grafanas
+  Query-Engine nur als Feld-Metadaten, nicht als eigene Spalten - das
+  Geomap-Panel braucht aber benannte Felder für `location.mode: coords`.
+  Deshalb hängt am Panel eine `labelsToFields`-Transformation
+  (Live-verifiziert: Grafana nimmt das Dashboard inkl. Geomap-Panel und
+  Transformation an; die tatsächliche Kartendarstellung selbst lässt
+  sich ohne Browser in dieser Umgebung nicht einsehen)
+- Dazu vier Tabellen je Standort: Bandbreitenauslastung (%),
+  VoIP-Qualität (MOS-Score), Latenz zum RZ Leipzig, gleichzeitige
+  Anrufe
+
+Alle 34 Panel-Queries live gegen Prometheus verifiziert. Baseline
+bewusst "geschäftig, aber gesund" (~45-75 % Auslastung mit sichtbarer
+Bewegung, keine Störung) - `./break-customer-care.sh` lässt live den
+VPN-Link nach **Chemnitz** hart einbrechen (Paketverlust, schlechter
+MOS-Score, Bandbreiten-Kollaps) und die Avaya-Warteschlange
+volllaufen; `./fix-customer-care.sh` macht es rückgängig. Live
+verifiziert: Chemnitz-VPN ging auf 0, "Standorte mit VPN-Störung"
+sprang auf 1, die Warteschlange auf 39 Anrufe.
+
 ## DocuWare-Cluster: App-Owner-Tiefe + einfache Nutzeransicht
 
 Zeigt beide Zielgruppen eines Monitoring-Stacks am selben Beispiel: **tief

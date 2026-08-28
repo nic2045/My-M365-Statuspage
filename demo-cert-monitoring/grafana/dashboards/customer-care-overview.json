@@ -1,0 +1,799 @@
+{
+ "title": "Customer Care – Standortübersicht (Technical Owner)",
+ "uid": "customer-care-overview",
+ "timezone": "browser",
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "schemaVersion": 39,
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "Customer Care – Gesamtstatus (1 = gesund)",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 0,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "min(cc_site_vpn_up) * on() cc_avaya_sip_registration_status",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Standorte mit VPN-Störung",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 6,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "count(cc_site_vpn_up == 0) or vector(0)",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Anrufe in Warteschlange",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 12,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_avaya_calls_queued",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 15
+       },
+       {
+        "color": "red",
+        "value": 30
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Ø Wartezeit (Sekunden)",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 18,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_avaya_avg_wait_seconds",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 60
+       },
+       {
+        "color": "red",
+        "value": 120
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "Warteschlange & Wartezeit",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 6
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_avaya_calls_queued",
+     "legendFormat": "Anrufe in Warteschlange",
+     "refId": "A"
+    },
+    {
+     "expr": "cc_avaya_avg_wait_seconds",
+     "legendFormat": "Ø Wartezeit (s)",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "SIP-Trunk-Auslastung & abgebrochene Anrufe (Rate/Min)",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 6
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_avaya_sip_trunk_utilization_percent",
+     "legendFormat": "Trunk-Auslastung %",
+     "refId": "A"
+    },
+    {
+     "expr": "rate(cc_avaya_calls_abandoned_total[5m]) * 60",
+     "legendFormat": "Abgebrochen/Min",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "type": "table",
+   "title": "Agenten je Standort (verfügbar / im Gespräch)",
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 13
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_avaya_agents_available",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    },
+    {
+     "expr": "cc_avaya_agents_busy",
+     "instant": true,
+     "format": "table",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "Citrix – Aktive Sessions je Standort",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 20
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_citrix_active_sessions",
+     "legendFormat": "{{site}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "type": "timeseries",
+   "title": "Citrix – ICA-Latenz je Standort",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 20
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_citrix_ica_latency_ms",
+     "legendFormat": "{{site}}",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 10,
+   "type": "timeseries",
+   "title": "Citrix-Server – CPU/RAM",
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 27
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_citrix_server_cpu_percent{server=\"citrix1\"}",
+     "legendFormat": "citrix1 CPU",
+     "refId": "A"
+    },
+    {
+     "expr": "cc_citrix_server_memory_percent{server=\"citrix1\"}",
+     "legendFormat": "citrix1 RAM",
+     "refId": "B"
+    },
+    {
+     "expr": "cc_citrix_server_cpu_percent{server=\"citrix2\"}",
+     "legendFormat": "citrix2 CPU",
+     "refId": "C"
+    },
+    {
+     "expr": "cc_citrix_server_memory_percent{server=\"citrix2\"}",
+     "legendFormat": "citrix2 RAM",
+     "refId": "D"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 11,
+   "type": "timeseries",
+   "title": "Kundensupport-App – Antwortzeit & Fehlerquote",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 34
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_support_app_response_time_ms",
+     "legendFormat": "Antwortzeit (ms)",
+     "refId": "A"
+    },
+    {
+     "expr": "cc_support_app_error_rate_percent",
+     "legendFormat": "Fehlerquote %",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "type": "timeseries",
+   "title": "Rechnungswesen-App – Antwortzeit",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 34
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_billing_app_response_time_ms",
+     "legendFormat": "Antwortzeit (ms)",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 13,
+   "type": "timeseries",
+   "title": "Cognigy (Cloud) – API-Latenz & Bot-Sessions",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 41
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_cognigy_api_latency_ms",
+     "legendFormat": "API-Latenz (ms)",
+     "refId": "A"
+    },
+    {
+     "expr": "cc_cognigy_bot_sessions_active",
+     "legendFormat": "Aktive Bot-Sessions",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "type": "stat",
+   "title": "Cognigy – Intent-Erfolgsquote",
+   "gridPos": {
+    "h": 7,
+    "w": 6,
+    "x": 12,
+    "y": 41
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_cognigy_intent_success_rate_percent",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 90
+       },
+       {
+        "color": "green",
+        "value": 95
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 15,
+   "type": "stat",
+   "title": "LLM-Anfragen vom Bot (Rate/Min)",
+   "gridPos": {
+    "h": 7,
+    "w": 6,
+    "x": 18,
+    "y": 41
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "rate(cc_llm_requests_from_bot_total[5m]) * 60",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   }
+  },
+  {
+   "id": 16,
+   "type": "timeseries",
+   "title": "Infrastruktur-Server – CPU/RAM",
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 48
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_infra_server_cpu_percent{role=\"Kundensupport-App\"}",
+     "legendFormat": "Support-App CPU",
+     "refId": "A"
+    },
+    {
+     "expr": "cc_infra_server_memory_percent{role=\"Kundensupport-App\"}",
+     "legendFormat": "Support-App RAM",
+     "refId": "B"
+    },
+    {
+     "expr": "cc_infra_server_cpu_percent{role=\"Rechnungswesen-App\"}",
+     "legendFormat": "Billing-App CPU",
+     "refId": "C"
+    },
+    {
+     "expr": "cc_infra_server_memory_percent{role=\"Rechnungswesen-App\"}",
+     "legendFormat": "Billing-App RAM",
+     "refId": "D"
+    },
+    {
+     "expr": "cc_infra_server_cpu_percent{role=\"Avaya ACD\"}",
+     "legendFormat": "Avaya-ACD CPU",
+     "refId": "E"
+    },
+    {
+     "expr": "cc_infra_server_memory_percent{role=\"Avaya ACD\"}",
+     "legendFormat": "Avaya-ACD RAM",
+     "refId": "F"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 17,
+   "type": "geomap",
+   "title": "Deutschlandkarte – VPN-Status je Standort (Leipzig = RZ)",
+   "gridPos": {
+    "h": 14,
+    "w": 14,
+    "x": 0,
+    "y": 55
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_site_vpn_up",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "view": {
+     "id": "fitData"
+    },
+    "controls": {
+     "showZoom": true,
+     "mouseWheelZoom": true,
+     "showAttribution": true,
+     "showScale": false,
+     "showMeasure": false
+    },
+    "basemap": {
+     "type": "osm-standard",
+     "name": "Basiskarte",
+     "config": {}
+    },
+    "layers": [
+     {
+      "type": "markers",
+      "name": "Standorte",
+      "config": {
+       "style": {
+        "size": {
+         "fixed": 14,
+         "min": 8,
+         "max": 20
+        },
+        "color": {
+         "field": "Value",
+         "fixed": "dark-green"
+        },
+        "opacity": 0.9,
+        "symbol": {
+         "mode": "fixed",
+         "fixed": "img/icons/marker/circle.svg"
+        }
+       },
+       "showLegend": true
+      },
+      "location": {
+       "mode": "coords",
+       "latitude": "lat",
+       "longitude": "lon"
+      },
+      "tooltip": true
+     }
+    ]
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 0.5
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "transformations": [
+    {
+     "id": "labelsToFields",
+     "options": {}
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "type": "table",
+   "title": "Bandbreitenauslastung je Standort (%)",
+   "gridPos": {
+    "h": 7,
+    "w": 10,
+    "x": 14,
+    "y": 55
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 19,
+   "type": "table",
+   "title": "VoIP-Qualität je Standort (MOS-Score)",
+   "gridPos": {
+    "h": 7,
+    "w": 10,
+    "x": 14,
+    "y": 62
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_site_voip_mos_score",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "type": "table",
+   "title": "Latenz zum RZ Leipzig je Standort (ms)",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 69
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_site_vpn_latency_ms",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 21,
+   "type": "table",
+   "title": "Gleichzeitige Anrufe je Standort",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 69
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_site_voip_concurrent_calls",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    }
+   ]
+  }
+ ]
+}
