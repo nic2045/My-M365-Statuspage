@@ -15,7 +15,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(probe_success{job=\"website_probes\"})",
+          "expr": "sum(probe_success{job=~\"website_probes|demo_broken_site\"})",
           "instant": true,
           "refId": "A"
         }
@@ -45,7 +45,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "count(probe_success{job=\"website_probes\"})",
+          "expr": "count(probe_success{job=~\"website_probes|demo_broken_site\"})",
           "instant": true,
           "refId": "A"
         }
@@ -63,7 +63,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "min((probe_ssl_earliest_cert_expiry{job=\"website_probes\"} - time()) / 86400)",
+          "expr": "min((probe_ssl_earliest_cert_expiry{job=~\"website_probes|demo_broken_site\"} - time()) / 86400)",
           "instant": true,
           "refId": "A"
         }
@@ -96,33 +96,49 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "probe_success{job=\"website_probes\"}",
+          "expr": "probe_success{job=~\"website_probes|demo_broken_site\"}",
           "instant": true,
           "format": "table",
           "refId": "A"
         },
         {
-          "expr": "(probe_ssl_earliest_cert_expiry{job=\"website_probes\"} - time()) / 86400",
+          "expr": "(probe_ssl_earliest_cert_expiry{job=~\"website_probes|demo_broken_site\"} - time()) / 86400",
           "instant": true,
           "format": "table",
           "refId": "B"
         },
         {
-          "expr": "probe_duration_seconds{job=\"website_probes\"}",
+          "expr": "probe_duration_seconds{job=~\"website_probes|demo_broken_site\"}",
           "instant": true,
           "format": "table",
           "refId": "C"
         }
       ],
       "transformations": [
-        { "id": "merge", "options": {} },
+        {
+          "id": "joinByField",
+          "options": { "byField": "instance", "mode": "outer" }
+        },
         {
           "id": "organize",
           "options": {
             "excludeByName": {
               "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
               "__name__": true,
-              "job": true
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "__name__ 3": true,
+              "job": true,
+              "job 1": true,
+              "job 2": true,
+              "job 3": true,
+              "demo_fixture": true,
+              "demo_fixture 1": true,
+              "demo_fixture 2": true,
+              "demo_fixture 3": true
             },
             "renameByName": {
               "instance": "Website",
@@ -188,7 +204,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "probe_duration_seconds{job=\"website_probes\"}",
+          "expr": "probe_duration_seconds{job=~\"website_probes|demo_broken_site\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -203,7 +219,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "(probe_ssl_earliest_cert_expiry{job=\"website_probes\"} - time()) / 86400",
+          "expr": "(probe_ssl_earliest_cert_expiry{job=~\"website_probes|demo_broken_site\"} - time()) / 86400",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }

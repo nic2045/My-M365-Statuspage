@@ -9,3 +9,20 @@ modules:
       follow_redirects: true
       tls_config:
         insecure_skip_verify: false
+
+  # Nur für die feste demo-broken-site-Fixture: TLS-Verifikation wird
+  # übersprungen (selbstsigniertes Zertifikat), damit
+  # probe_ssl_earliest_cert_expiry auch bei bereits abgelaufenem
+  # Zertifikat zuverlässig ausgelesen wird, statt dass die Verbindung
+  # komplett fehlschlägt. Für echte Ziele (http_2xx-Modul oben) bleibt
+  # strikte Verifikation aktiv.
+  https_expired_cert_demo:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      method: GET
+      preferred_ip_protocol: "ip4"
+      follow_redirects: true
+      tls_config:
+        insecure_skip_verify: true

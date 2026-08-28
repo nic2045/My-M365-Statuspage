@@ -31,3 +31,26 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox_exporter:9115
+
+  # Feste Demo-Fixture (demo-broken-site): eigenes Modul mit
+  # insecure_skip_verify, damit probe_ssl_earliest_cert_expiry auch bei
+  # abgelaufenem/selbstsigniertem Zertifikat zuverlässig ausgelesen wird -
+  # unabhängig davon, ob TLS-Verifikation die Verbindung selbst ablehnen
+  # würde. So lässt sich "Zertifikat läuft ab" sauber von "Site nicht
+  # erreichbar" unterscheiden. Per break-demo.sh / fix-demo.sh live
+  # umschaltbar, kein Neustart von Prometheus nötig.
+  - job_name: "demo_broken_site"
+    metrics_path: /probe
+    params:
+      module: [https_expired_cert_demo]
+    static_configs:
+      - targets: ["https://demo-broken-site"]
+        labels:
+          demo_fixture: "true"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - target_label: instance
+        replacement: "demo-broken-site (absichtlich abgelaufenes Zertifikat)"
+      - target_label: __address__
+        replacement: blackbox_exporter:9115

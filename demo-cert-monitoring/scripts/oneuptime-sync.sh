@@ -7,26 +7,72 @@
 # Request" / "Heartbeat" monitor URL, which OneUptime uses to derive
 # up/down state on the public status page.
 #
+# Optionally also syncs the fixed demo-broken-site fixture (see
+# ../break-demo.sh) via ONEUPTIME_DEMO_HEARTBEAT_URL - for that target,
+# a healthy ping additionally requires the certificate not be critically
+# close to expiry (DEMO_CERT_CRITICAL_DAYS, matches the
+# CertificateExpiringCritical alert threshold), so breaking the demo
+# cert stops the heartbeat even though the site itself stays reachable
+# (insecure_skip_verify is used for that fixture - see blackbox.yml).
+#
 # This keeps Prometheus/Grafana as the single source of truth: OneUptime
 # never probes the targets itself, it just reflects what Prometheus saw.
 #
-# If ONEUPTIME_HEARTBEAT_URLS is empty, the loop logs that and exits 0 -
-# the rest of the demo (Prometheus + Grafana) works fine without it.
+# If neither ONEUPTIME_HEARTBEAT_URLS nor ONEUPTIME_DEMO_HEARTBEAT_URL is
+# set, the loop logs that and exits 0 - the rest of the demo
+# (Prometheus + Grafana) works fine without it.
 set -eu
 
 PROM_URL="${PROM_URL:-http://prometheus:9090}"
 INTERVAL="${SYNC_INTERVAL_SECONDS:-60}"
 TARGETS="${DEMO_TARGET_URLS:-}"
 HEARTBEATS="${ONEUPTIME_HEARTBEAT_URLS:-}"
+DEMO_HEARTBEAT="${ONEUPTIME_DEMO_HEARTBEAT_URL:-}"
+CERT_CRITICAL_DAYS="${DEMO_CERT_CRITICAL_DAYS:-3}"
+DEMO_TARGET="https://demo-broken-site"
 
-if [ -z "$HEARTBEATS" ]; then
-  echo "[oneuptime-sync] ONEUPTIME_HEARTBEAT_URLS not set - nothing to sync, exiting."
+if [ -z "$HEARTBEATS" ] && [ -z "$DEMO_HEARTBEAT" ]; then
+  echo "[oneuptime-sync] Neither ONEUPTIME_HEARTBEAT_URLS nor ONEUPTIME_DEMO_HEARTBEAT_URL is set - nothing to sync, exiting."
   echo "[oneuptime-sync] Prometheus/Grafana keep monitoring regardless."
   exit 0
 fi
 
 echo "[oneuptime-sync] installing curl + jq..."
 apk add --no-cache curl jq >/dev/null
+
+# Pings $heartbeat for $target only if it's reachable (probe_success==1)
+# and, when $require_cert_ok=1, its cert isn't within
+# CERT_CRITICAL_DAYS of expiry (or already expired).
+ping_if_healthy() {
+  target="$1"
+  heartbeat="$2"
+  require_cert_ok="$3"
+
+  success=$(curl -s --max-time 5 "$PROM_URL/api/v1/query" \
+    --data-urlencode "query=probe_success{instance=\"$target\"}" \
+    | jq -r '.data.result[0].value[1] // "0"' 2>/dev/null || echo "0")
+
+  healthy="$success"
+
+  if [ "$require_cert_ok" = "1" ] && [ "$success" = "1" ]; then
+    cert_days=$(curl -s --max-time 5 "$PROM_URL/api/v1/query" \
+      --data-urlencode "query=(probe_ssl_earliest_cert_expiry{instance=\"$target\"} - time()) / 86400" \
+      | jq -r '.data.result[0].value[1] // "-999"' 2>/dev/null || echo "-999")
+
+    if awk -v d="$cert_days" -v t="$CERT_CRITICAL_DAYS" 'BEGIN{exit !(d < t)}'; then
+      echo "[oneuptime-sync] $target reachable but cert expires in ${cert_days} days (< ${CERT_CRITICAL_DAYS}) -> treating as unhealthy"
+      healthy=0
+    fi
+  fi
+
+  if [ "$healthy" = "1" ]; then
+    echo "[oneuptime-sync] $target UP -> pinging OneUptime heartbeat"
+    curl -s -o /dev/null --max-time 5 "$heartbeat" \
+      || echo "[oneuptime-sync] WARN: heartbeat ping failed for $target"
+  else
+    echo "[oneuptime-sync] $target DOWN/unhealthy -> not pinging (OneUptime marks it down after its own grace period)"
+  fi
+}
 
 echo "[oneuptime-sync] starting sync loop, interval=${INTERVAL}s, prometheus=${PROM_URL}"
 
@@ -45,18 +91,12 @@ while true; do
       continue
     fi
 
-    success=$(curl -s --max-time 5 "$PROM_URL/api/v1/query" \
-      --data-urlencode "query=probe_success{instance=\"$target\"}" \
-      | jq -r '.data.result[0].value[1] // "0"' 2>/dev/null || echo "0")
-
-    if [ "$success" = "1" ]; then
-      echo "[oneuptime-sync] $target UP -> pinging OneUptime heartbeat"
-      curl -s -o /dev/null --max-time 5 "$heartbeat" \
-        || echo "[oneuptime-sync] WARN: heartbeat ping failed for $target"
-    else
-      echo "[oneuptime-sync] $target DOWN or unknown -> not pinging (OneUptime marks it down after its own grace period)"
-    fi
+    ping_if_healthy "$target" "$heartbeat" "0"
   done
+
+  if [ -n "$DEMO_HEARTBEAT" ]; then
+    ping_if_healthy "$DEMO_TARGET" "$DEMO_HEARTBEAT" "1"
+  fi
 
   sleep "$INTERVAL"
 done

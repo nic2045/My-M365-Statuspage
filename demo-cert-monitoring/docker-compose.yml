@@ -8,6 +8,11 @@
 #   OneUptime-Heartbeat-Monitore meldet, damit die öffentliche Statuspage
 #   für Endnutzer denselben Stand zeigt. Ohne ONEUPTIME_HEARTBEAT_URLS in
 #   .env läuft er einfach nicht mit.
+# - demo-broken-site: feste Demo-Fixture mit absichtlich abgelaufenem
+#   TLS-Zertifikat (DEMO_CERT_DAYS_REMAINING), damit sich ein echter
+#   Zertifikats-Vorfall durch den gesamten Stack verfolgen lässt:
+#   blackbox_exporter -> Prometheus/Alert -> Grafana -> oneuptime-sync ->
+#   OneUptime-Statuspage.
 #
 # Unabhängig vom Haupt-docker-compose.yml der M365-Statuspage-App -
 # separat starten mit: docker compose -f demo-cert-monitoring/docker-compose.yml up -d
@@ -33,6 +38,30 @@ services:
     ports:
       - "${BLACKBOX_EXPORTER_PORT:-9115}:9115"
 
+  demo-cert-init:
+    image: alpine:3.20
+    container_name: cert-demo-cert-init
+    env_file:
+      - .env
+    volumes:
+      - ./scripts/gen-demo-cert.sh:/gen-demo-cert.sh:ro
+      - demo_cert_data:/certs
+    entrypoint: ["sh", "/gen-demo-cert.sh"]
+    restart: "no"
+
+  demo-broken-site:
+    image: nginx:1.27-alpine
+    container_name: cert-demo-broken-site
+    restart: unless-stopped
+    depends_on:
+      demo-cert-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./demo-broken-site/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - demo_cert_data:/certs:ro
+    ports:
+      - "${DEMO_BROKEN_SITE_PORT:-8443}:443"
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: cert-demo-prometheus
@@ -41,6 +70,8 @@ services:
       target-init:
         condition: service_completed_successfully
       blackbox_exporter:
+        condition: service_started
+      demo-broken-site:
         condition: service_started
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -85,3 +116,4 @@ volumes:
   prometheus_targets:
   prometheus_data:
   grafana_data:
+  demo_cert_data:
