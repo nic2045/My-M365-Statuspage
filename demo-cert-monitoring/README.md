@@ -441,6 +441,14 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
   per "Vorfall auslösen"-Knopf **animiert** (reines CSS/JS, kein Backend) -
   Benachrichtigungen federn wie echte Push-Meldungen von oben ein,
   SMS-Bubbles poppen nacheinander auf; "Zurücksetzen" spielt es erneut ab
+- `mockups/backend-bmc-itsm.html` - **Backend-Sicht statt Mitarbeiter-Sicht**:
+  zeigt, wie OneUptime im Hintergrund einen BMC-ITSM-Vorfall meldet und ein
+  Ticket eröffnet. "Vorfall auslösen" spielt eine dreistufige
+  Integrations-Leiste ab (OneUptime erkennt Störung → REST-API-Aufruf an BMC
+  ITSM → Ticket angelegt), danach poppt das neue Ticket
+  (`INC000000222127`, dieselbe Nummer wie im DocuWare-Major-Incident, für
+  eine durchgängige Story) oben in eine Vorfalls-Warteschlange und wechselt
+  kurz danach automatisch von "Neu" auf "Zugewiesen"
 
 ## Aufräumen
 

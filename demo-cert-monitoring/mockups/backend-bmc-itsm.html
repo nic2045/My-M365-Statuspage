@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Mockup: BMC-ITSM-Backend-Integration</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --header-bg: #0b3d3d;
+    --header-accent: #14a89d;
+    --border: #dfe2e6;
+    --text: #1c1c1e;
+    --muted: #6b6f76;
+    --card-bg: #ffffff;
+    --danger: #c4314b;
+    --danger-bg: #fdf2f4;
+    --ok: #14a89d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: #ddd;
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+  .hint {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #201f1e;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    opacity: 0.85;
+    z-index: 10;
+  }
+  .app {
+    width: 100%;
+    max-width: 1180px;
+    background: var(--bg);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    overflow: hidden;
+  }
+  .app-header {
+    background: var(--header-bg);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .app-header .brand { font-weight: 700; font-size: 16px; letter-spacing: 0.02em; }
+  .app-header nav { display: flex; gap: 20px; font-size: 13px; }
+  .app-header nav span { opacity: 0.75; padding-bottom: 4px; }
+  .app-header nav span.active { opacity: 1; font-weight: 600; border-bottom: 2px solid var(--header-accent); }
+
+  .body { padding: 24px; }
+
+  /* Integration flow strip */
+  .flow {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 220px;
+  }
+  .flow-step .dot {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 2px solid #c9ccd1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700;
+    color: #c9ccd1;
+    background: #fff;
+    transition: all 0.4s ease;
+  }
+  .flow-step.done .dot {
+    border-color: var(--ok);
+    background: var(--ok);
+    color: #fff;
+  }
+  .flow-step .label { font-size: 12px; color: var(--muted); margin-top: 8px; max-width: 160px; }
+  .flow-step.done .label { color: var(--text); font-weight: 600; }
+  .flow-line {
+    flex: 1;
+    height: 2px;
+    background: #c9ccd1;
+    margin: 0 -4px;
+    position: relative;
+    top: -22px;
+    transition: background 0.4s ease;
+  }
+  .flow-line.done { background: var(--ok); }
+
+  .queue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .queue-header h1 { font-size: 16px; margin: 0; }
+  .controls { display: flex; gap: 10px; }
+  .controls button {
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-trigger { background: var(--danger); color: #fff; }
+  .btn-trigger:hover { background: #a82a41; }
+  .btn-reset { background: #e2e2e5; color: var(--text); }
+  .btn-reset:hover { background: #d3d3d7; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  thead th {
+    text-align: left;
+    background: #f0f1f3;
+    padding: 10px 14px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.static { color: var(--muted); }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .badge-new { background: var(--danger-bg); color: var(--danger); }
+  .badge-assigned { background: #fff4ce; color: #7a5b00; }
+  .badge-progress { background: #e0f5f3; color: #0b6b62; }
+  .badge-closed { background: #eef0f2; color: var(--muted); }
+  .priority-1 { color: var(--danger); font-weight: 700; }
+
+  /* New ticket row animation - same spring-in trick as the other mockups.
+     max-height/overflow transitions on <tr> are unreliable across
+     browsers, so this toggles display:none -> table-row first (JS forces
+     a reflow before adding .show, since a display change itself can't be
+     transitioned) and animates the cell contents instead. */
+  #new-row { display: none; }
+  #new-row.visible { display: table-row; }
+  #new-row td {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.35s ease, transform 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  #new-row.show td {
+    opacity: 1;
+    transform: translateY(0);
+    animation: flash 1.2s ease;
+  }
+  @keyframes flash {
+    0% { background: #fff4ce; }
+    100% { background: transparent; }
+  }
+</style>
+</head>
+<body>
+  <div class="hint">MOCKUP – keine echte BMC-Anbindung, nur animierte Demo-Ansicht</div>
+  <div class="app">
+    <div class="app-header">
+      <div class="brand">BMC Helix ITSM</div>
+      <nav>
+        <span>Übersicht</span>
+        <span class="active">Vorfälle</span>
+        <span>Probleme</span>
+        <span>Changes</span>
+        <span>Wissen</span>
+      </nav>
+    </div>
+    <div class="body">
+
+      <div class="flow">
+        <div class="flow-step" id="flow-1">
+          <div class="dot">1</div>
+          <div class="label">OneUptime erkennt Störung</div>
+        </div>
+        <div class="flow-line" id="flow-line-1"></div>
+        <div class="flow-step" id="flow-2">
+          <div class="dot">2</div>
+          <div class="label">REST-API-Aufruf an BMC ITSM</div>
+        </div>
+        <div class="flow-line" id="flow-line-2"></div>
+        <div class="flow-step" id="flow-3">
+          <div class="dot">3</div>
+          <div class="label">Ticket angelegt &amp; zugewiesen</div>
+        </div>
+      </div>
+
+      <div class="queue-header">
+        <h1>Vorfalls-Warteschlange</h1>
+        <div class="controls">
+          <button class="btn-trigger" onclick="playBmc()">Vorfall auslösen</button>
+          <button class="btn-reset" onclick="resetBmc()">Zurücksetzen</button>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Incident-Nr.</th>
+            <th>Kurzbeschreibung</th>
+            <th>Priorität</th>
+            <th>Status</th>
+            <th>Zugewiesene Gruppe</th>
+            <th>Erstellt</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="new-row">
+            <td>INC000000222127</td>
+            <td>DocuWare | Anmeldung in DocuWare nicht möglich</td>
+            <td class="priority-1">1 – Kritisch</td>
+            <td><span class="badge badge-new" id="new-row-badge">Neu</span></td>
+            <td id="new-row-group">–</td>
+            <td>soeben</td>
+          </tr>
+          <tr class="static">
+            <td>INC000000222014</td>
+            <td>Passwort-Reset Self-Service liefert Fehlermeldung</td>
+            <td>2 – Mittel</td>
+            <td><span class="badge badge-progress">In Bearbeitung</span></td>
+            <td>Service Desk</td>
+            <td>vor 3 Stunden</td>
+          </tr>
+          <tr class="static">
+            <td>INC000000221980</td>
+            <td>Netzwerk-Switch-Austausch Serverraum 2 abgeschlossen</td>
+            <td>3 – Niedrig</td>
+            <td><span class="badge badge-closed">Geschlossen</span></td>
+            <td>Netzwerk-Team</td>
+            <td>gestern</td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+  <script>
+    function playBmc() {
+      var steps = ["flow-1", "flow-line-1", "flow-2", "flow-line-2", "flow-3"];
+      steps.forEach(function (id, i) {
+        setTimeout(function () {
+          document.getElementById(id).classList.add("done");
+        }, i * 500);
+      });
+      setTimeout(function () {
+        var row = document.getElementById("new-row");
+        row.classList.add("visible");
+        void row.offsetWidth; // force reflow so display:none -> table-row is committed before transitioning
+        requestAnimationFrame(function () { row.classList.add("show"); });
+      }, steps.length * 500);
+      setTimeout(function () {
+        var badge = document.getElementById("new-row-badge");
+        badge.textContent = "Zugewiesen";
+        badge.className = "badge badge-assigned";
+        document.getElementById("new-row-group").textContent = "Anwendungsbetrieb DocuWare";
+      }, steps.length * 500 + 1200);
+    }
+    function resetBmc() {
+      ["flow-1", "flow-line-1", "flow-2", "flow-line-2", "flow-3"].forEach(function (id) {
+        document.getElementById(id).classList.remove("done");
+      });
+      document.getElementById("new-row").classList.remove("show", "visible");
+      var badge = document.getElementById("new-row-badge");
+      badge.textContent = "Neu";
+      badge.className = "badge badge-new";
+      document.getElementById("new-row-group").textContent = "–";
+    }
+  </script>
+</body>
+</html>
