@@ -291,3 +291,9 @@ Active phases (`active`/`acknowledged`/`monitoring`/`in_progress`) and non-opera
 | **Trivy Image Scan** | Docker image scanned for OS / library CVEs |
 | **Weekly Audit** | Monday-morning security scan, opens an issue on findings |
 | **Release workflow** | Tag `v*.*.*` → GHCR push (multi-arch) → GitHub release |
+
+---
+
+## Related: Certificate & Availability Monitoring (Demo)
+
+[`demo-cert-monitoring/`](demo-cert-monitoring/) contains a standalone demo stack (Prometheus + blackbox_exporter + Grafana + optional OneUptime) showing how generic website/TLS-certificate monitoring can be surfaced for two audiences: app owners (a Grafana dashboard) and end users (a public OneUptime status page). It's fully separate from this app — its own compose file, its own `.env`, no effect on this repo's CI/build.

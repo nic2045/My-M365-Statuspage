@@ -1,0 +1,87 @@
+# Eigenständiger Demo-Stack: Zertifikats- & Verfügbarkeits-Monitoring.
+#
+# - Prometheus + blackbox_exporter: probt DEMO_TARGET_URLS (HTTP-Check +
+#   TLS-Zertifikats-Ablauf) und ist die einzige Quelle der Wahrheit.
+# - Grafana: technisches Dashboard für App-Owner (Response-Time,
+#   Zertifikats-Countdown, Alarm-Schwellen).
+# - oneuptime-sync: optionaler Brückendienst, der Prometheus-Ergebnisse an
+#   OneUptime-Heartbeat-Monitore meldet, damit die öffentliche Statuspage
+#   für Endnutzer denselben Stand zeigt. Ohne ONEUPTIME_HEARTBEAT_URLS in
+#   .env läuft er einfach nicht mit.
+#
+# Unabhängig vom Haupt-docker-compose.yml der M365-Statuspage-App -
+# separat starten mit: docker compose -f demo-cert-monitoring/docker-compose.yml up -d
+
+services:
+  target-init:
+    image: alpine:3.20
+    container_name: cert-demo-target-init
+    env_file:
+      - .env
+    volumes:
+      - ./scripts/gen-targets.sh:/gen-targets.sh:ro
+      - prometheus_targets:/etc/prometheus/targets
+    entrypoint: ["sh", "/gen-targets.sh"]
+    restart: "no"
+
+  blackbox_exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: cert-demo-blackbox-exporter
+    restart: unless-stopped
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    ports:
+      - "${BLACKBOX_EXPORTER_PORT:-9115}:9115"
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: cert-demo-prometheus
+    restart: unless-stopped
+    depends_on:
+      target-init:
+        condition: service_completed_successfully
+      blackbox_exporter:
+        condition: service_started
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_targets:/etc/prometheus/targets:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: cert-demo-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+
+  oneuptime-sync:
+    image: alpine:3.20
+    container_name: cert-demo-oneuptime-sync
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    env_file:
+      - .env
+    environment:
+      PROM_URL: http://prometheus:9090
+    volumes:
+      - ./scripts/oneuptime-sync.sh:/oneuptime-sync.sh:ro
+    entrypoint: ["sh", "/oneuptime-sync.sh"]
+
+volumes:
+  prometheus_targets:
+  prometheus_data:
+  grafana_data:
