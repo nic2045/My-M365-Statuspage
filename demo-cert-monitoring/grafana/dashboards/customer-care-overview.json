@@ -766,10 +766,8 @@
    ],
    "options": {
     "view": {
-     "id": "coords",
-     "lat": 51.15,
-     "lon": 10.85,
-     "zoom": 5.9
+     "id": "fitData",
+     "padding": 32
     },
     "controls": {
      "showZoom": true,
@@ -783,51 +781,11 @@
      "type": "carto",
      "name": "Basiskarte",
      "config": {
-      "theme": "auto",
-      "showLabels": true
+      "theme": "light",
+      "showLabels": false
      }
     },
     "layers": [
-     {
-      "type": "markers",
-      "name": "Standorte",
-      "config": {
-       "style": {
-        "size": {
-         "fixed": 13,
-         "min": 8,
-         "max": 20
-        },
-        "color": {
-         "mode": "field",
-         "field": "Value"
-        },
-        "opacity": 0.9,
-        "symbol": {
-         "mode": "fixed",
-         "fixed": "img/icons/marker/circle.svg"
-        },
-        "text": {
-         "mode": "field",
-         "field": "company"
-        },
-        "textConfig": {
-         "fontSize": 11,
-         "offsetX": 0,
-         "offsetY": -14,
-         "textAlign": "center",
-         "textBaseline": "bottom"
-        }
-       },
-       "showLegend": false
-      },
-      "location": {
-       "mode": "coords",
-       "latitude": "lat",
-       "longitude": "lon"
-      },
-      "tooltip": true
-     },
      {
       "type": "route",
       "name": "VPN-Verbindungen (Leipzig ↔ Standort)",
@@ -851,6 +809,63 @@
        "longitude": "lon"
       },
       "tooltip": true
+     },
+     {
+      "type": "photos",
+      "name": "Standorte",
+      "config": {
+       "src": "photo",
+       "kind": "circle",
+       "crop": true,
+       "shadow": true,
+       "border": 1,
+       "color": "rgb(255, 255, 255)",
+       "radius": 18
+      },
+      "location": {
+       "mode": "coords",
+       "latitude": "lat",
+       "longitude": "lon"
+      },
+      "tooltip": true
+     },
+     {
+      "type": "markers",
+      "name": "Standort-Beschriftung",
+      "config": {
+       "style": {
+        "size": {
+         "fixed": 1
+        },
+        "color": {
+         "mode": "fixed",
+         "fixed": "transparent"
+        },
+        "opacity": 0,
+        "symbol": {
+         "mode": "fixed",
+         "fixed": "img/icons/marker/circle.svg"
+        },
+        "text": {
+         "mode": "field",
+         "field": "company"
+        },
+        "textConfig": {
+         "fontSize": 11,
+         "offsetX": 0,
+         "offsetY": 22,
+         "textAlign": "center",
+         "textBaseline": "top"
+        }
+       },
+       "showLegend": false
+      },
+      "location": {
+       "mode": "coords",
+       "latitude": "lat",
+       "longitude": "lon"
+      },
+      "tooltip": false
      }
     ]
    },

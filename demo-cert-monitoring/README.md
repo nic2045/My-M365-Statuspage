@@ -300,29 +300,47 @@ automatisch provisioniert):
   statt Rohtabellen (gleiches Entrümpeln), zusätzlich mit Schwellenwert-
   Einfärbung (z. B. MOS < 3.5 rot, 3.5-4.0 gelb, ≥ 4.0 grün)
 - **Deutschlandkarte** (Grafana-Geomap-Panel, echte Koordinaten der 6
-  Standorte + Leipzig als Hub): schlankere `carto`-Basiskarte statt
-  `osm-standard` (weniger Straßen-/POI-Rauschen, nur grobe Orientierung),
-  fester Kartenausschnitt auf Deutschland zugeschnitten
-  (`view: {lat: 51.15, lon: 10.85, zoom: 5.9}`). Jeder Standort trägt
-  einen frei erfundenen Call-Center-Firmennamen (`company`-Label im
-  Exporter, z. B. "NordCom Kundenkontakt Berlin") - als Text direkt am
-  Marker eingeblendet (`style.text`/`textConfig`, kein Tooltip-Zwang).
-  Marker- und Verbindungslinienfarbe kommt aus einer dreistufigen
-  Health-Formel (`(vpn_up*2) - (vpn_up*(auslastung>=85%))`): 0 = VPN down
-  (rot), 1 = VPN up aber Link überlastet ≥ 85 % (gelb), 2 = gesund
-  (grün) - je Standort live gegen Prometheus verifiziert. Die 6
-  Verbindungslinien Leipzig↔Standort sind bewusst 6 **getrennte**
-  2-Punkt-Queries (nicht eine verkettete Route über alle Punkte), damit
-  jede Linie unabhängig radial vom Hub ausgeht statt die Standorte
-  der Reihe nach zu verbinden. Technischer Hinweis: Prometheus-Labels
-  kommen aus Grafanas Query-Engine nur als Feld-Metadaten, nicht als
-  eigene Spalten - das Geomap-Panel braucht aber benannte Felder für
-  `location.mode: coords`, deshalb hängt am Panel eine
-  `labelsToFields`-Transformation. Alle 7 Kartenqueries (Gesamtansicht +
-  6 Hub-Standort-Paare) live gegen Prometheus auf die erwartete
-  Zeilenzahl geprüft; die tatsächliche Kartendarstellung selbst lässt
-  sich ohne Grafana-Image-Renderer-Plugin (nicht installiert) nicht als
-  Screenshot verifizieren - bitte einmal im Browser gegenprüfen.
+  Standorte + Leipzig als Hub, drei Layer):
+  - **Basiskarte**: `carto`-Basemap statt `osm-standard`, Theme "light",
+    `showLabels: false` - zeigt nur Länder-/Bundesländergrenzen in
+    zurückhaltenden Farben, keine Straßen/POIs/Ortsnamen aus der
+    Kartenquelle selbst (die einzigen sichtbaren Texte sind unsere
+    eigenen, siehe Beschriftungs-Layer unten). Kartenausschnitt per
+    `view: {id: "fitData", padding: 32}` automatisch auf die 7 Punkte
+    zugeschnitten statt eines festen Zoom-Levels.
+  - **Standorte (Photos-Layer)**: statt schlichter Farbpunkte zeigt jeder
+    Standort ein kleines rundes Icon - Büro-Symbol für die 6
+    Call-Center-Standorte, Server-/Rack-Symbol für den Leipziger Hub
+    (`assets/icons/*.svg`, als Data-URI im `photo`-Label des Exporters
+    eingebettet, da nur die Skriptdatei selbst in den Exporter-Container
+    gemountet ist). Die Icon-**Farbe kodiert direkt den Gesundheitsstatus**
+    (grün/gelb/rot) - der Photos-Layer selbst unterstützt anders als
+    Marker/Route keine wertabhängige Einfärbung, deshalb entscheidet der
+    Exporter serverseitig, welches der drei vorgerenderten Icons er
+    ausliefert.
+  - **Standort-Beschriftung**: ein zweiter, unsichtbarer Marker-Layer
+    (Opacity 0, nur fürs Text-Rendering) zeigt den frei erfundenen
+    Call-Center-Firmennamen jedes Standorts unter dessen Icon
+    (`company`-Label, z. B. "NordCom Kundenkontakt Berlin") - der
+    Photos-Layer selbst hat keine eigene Text-Option.
+  - **VPN-Verbindungen (Route-Layer)**: Linienfarbe kommt aus einer
+    dreistufigen Health-Formel (`(vpn_up*2) - (vpn_up*(auslastung>=85%))`):
+    0 = VPN down (rot), 1 = VPN up aber Link überlastet ≥ 85 % (gelb),
+    2 = gesund (grün) - dieselbe Formel bestimmt auch die Icon-Farbe. Die
+    6 Verbindungslinien Leipzig↔Standort sind bewusst 6 **getrennte**
+    2-Punkt-Queries (nicht eine verkettete Route über alle Punkte), damit
+    jede Linie unabhängig radial vom Hub ausgeht statt die Standorte der
+    Reihe nach zu verbinden.
+
+  Technischer Hinweis: Prometheus-Labels kommen aus Grafanas Query-Engine
+  nur als Feld-Metadaten, nicht als eigene Spalten - das Geomap-Panel
+  braucht aber benannte Felder für `location.mode: coords`, deshalb hängt
+  am Panel eine `labelsToFields`-Transformation. Alle 7 Kartenqueries
+  (Gesamtansicht + 6 Hub-Standort-Paare) live gegen Prometheus auf die
+  erwartete Zeilenzahl und das Vorhandensein von `photo`/`company`
+  geprüft; die tatsächliche Kartendarstellung selbst lässt sich ohne
+  Grafana-Image-Renderer-Plugin (nicht installiert) nicht als Screenshot
+  verifizieren - bitte einmal im Browser gegenprüfen.
 
 Alle 34 Panel-Queries live gegen Prometheus verifiziert. Baseline
 bewusst "geschäftig, aber gesund" (~45-75 % Auslastung mit sichtbarer

@@ -58,6 +58,17 @@ SITE_COMPANIES = {
 }
 HUB_COMPANY = "PYUR Rechenzentrum Leipzig"
 
+# Small badge icons for the Geomap "Photos" layer (source SVGs under
+# assets/icons/, inlined here as data URIs since only this one script file
+# is bind-mounted into the exporter container - see docker-compose.yml).
+# Colour encodes the site's current health tier directly in the icon,
+# since the Photos layer's own style has no per-value colour binding
+# (only a fixed border colour) - unlike the markers/route layers.
+ICON_CALLCENTER_GREEN = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij4KICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0iIzJlN2QzMiIvPgogIDxyZWN0IHg9IjIwIiB5PSIyMiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjE4IiByeD0iMyIgZmlsbD0iI2ZmZmZmZiIvPgogIDxyZWN0IHg9IjI0IiB5PSIyNiIgd2lkdGg9IjYiIGhlaWdodD0iNiIgZmlsbD0iIzJlN2QzMiIvPgogIDxyZWN0IHg9IjM0IiB5PSIyNiIgd2lkdGg9IjYiIGhlaWdodD0iNiIgZmlsbD0iIzJlN2QzMiIvPgogIDxyZWN0IHg9IjI0IiB5PSIzNCIgd2lkdGg9IjYiIGhlaWdodD0iNCIgZmlsbD0iIzJlN2QzMiIvPgogIDxyZWN0IHg9IjM0IiB5PSIzNCIgd2lkdGg9IjYiIGhlaWdodD0iNCIgZmlsbD0iIzJlN2QzMiIvPgogIDxyZWN0IHg9IjI2IiB5PSIxNiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjYiIHJ4PSIyIiBmaWxsPSIjZmZmZmZmIi8+Cjwvc3ZnPgo="
+ICON_CALLCENTER_YELLOW = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij4KICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0iI2Y5YTgyNSIvPgogIDxyZWN0IHg9IjIwIiB5PSIyMiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjE4IiByeD0iMyIgZmlsbD0iI2ZmZmZmZiIvPgogIDxyZWN0IHg9IjI0IiB5PSIyNiIgd2lkdGg9IjYiIGhlaWdodD0iNiIgZmlsbD0iI2Y5YTgyNSIvPgogIDxyZWN0IHg9IjM0IiB5PSIyNiIgd2lkdGg9IjYiIGhlaWdodD0iNiIgZmlsbD0iI2Y5YTgyNSIvPgogIDxyZWN0IHg9IjI0IiB5PSIzNCIgd2lkdGg9IjYiIGhlaWdodD0iNCIgZmlsbD0iI2Y5YTgyNSIvPgogIDxyZWN0IHg9IjM0IiB5PSIzNCIgd2lkdGg9IjYiIGhlaWdodD0iNCIgZmlsbD0iI2Y5YTgyNSIvPgogIDxyZWN0IHg9IjI2IiB5PSIxNiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjYiIHJ4PSIyIiBmaWxsPSIjZmZmZmZmIi8+Cjwvc3ZnPgo="
+ICON_CALLCENTER_RED = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij4KICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0iI2M2MjgyOCIvPgogIDxyZWN0IHg9IjIwIiB5PSIyMiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjE4IiByeD0iMyIgZmlsbD0iI2ZmZmZmZiIvPgogIDxyZWN0IHg9IjI0IiB5PSIyNiIgd2lkdGg9IjYiIGhlaWdodD0iNiIgZmlsbD0iI2M2MjgyOCIvPgogIDxyZWN0IHg9IjM0IiB5PSIyNiIgd2lkdGg9IjYiIGhlaWdodD0iNiIgZmlsbD0iI2M2MjgyOCIvPgogIDxyZWN0IHg9IjI0IiB5PSIzNCIgd2lkdGg9IjYiIGhlaWdodD0iNCIgZmlsbD0iI2M2MjgyOCIvPgogIDxyZWN0IHg9IjM0IiB5PSIzNCIgd2lkdGg9IjYiIGhlaWdodD0iNCIgZmlsbD0iI2M2MjgyOCIvPgogIDxyZWN0IHg9IjI2IiB5PSIxNiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjYiIHJ4PSIyIiBmaWxsPSIjZmZmZmZmIi8+Cjwvc3ZnPgo="
+ICON_HUB = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij4KICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0iIzBmNmNiZCIvPgogIDxyZWN0IHg9IjE5IiB5PSIxNiIgd2lkdGg9IjI2IiBoZWlnaHQ9IjMyIiByeD0iMyIgZmlsbD0iI2ZmZmZmZiIvPgogIDxyZWN0IHg9IjIzIiB5PSIyMSIgd2lkdGg9IjE4IiBoZWlnaHQ9IjUiIGZpbGw9IiMwZjZjYmQiLz4KICA8cmVjdCB4PSIyMyIgeT0iMjkiIHdpZHRoPSIxOCIgaGVpZ2h0PSI1IiBmaWxsPSIjMGY2Y2JkIi8+CiAgPHJlY3QgeD0iMjMiIHk9IjM3IiB3aWR0aD0iMTgiIGhlaWdodD0iNSIgZmlsbD0iIzBmNmNiZCIvPgogIDxjaXJjbGUgY3g9IjM5IiBjeT0iMjMuNSIgcj0iMS40IiBmaWxsPSIjZmZmZmZmIi8+CiAgPGNpcmNsZSBjeD0iMzkiIGN5PSIzMS41IiByPSIxLjQiIGZpbGw9IiNmZmZmZmYiLz4KICA8Y2lyY2xlIGN4PSIzOSIgY3k9IjM5LjUiIHI9IjEuNCIgZmlsbD0iI2ZmZmZmZiIvPgo8L3N2Zz4K"
+
 
 def is_unhealthy():
     try:
@@ -86,7 +97,8 @@ def render_metrics():
     lines += [
         "# HELP cc_site_info Static info row per Customer-Care site (value always 1) - used for the Germany map.",
         "# TYPE cc_site_info gauge",
-        f'cc_site_info{{site="{name}",lat="{lat}",lon="{lon}",role="hub",company="{HUB_COMPANY}"}} 1',
+        f'cc_site_info{{site="{name}",lat="{lat}",lon="{lon}",role="hub",'
+        f'company="{HUB_COMPANY}",photo="{ICON_HUB}"}} 1',
     ]
 
     # ── Telefonie: Avaya ACD / SIP ────────────────────────────────────────
@@ -240,7 +252,6 @@ def render_metrics():
     ]
     for site, (lat, lon, capacity) in SITES.items():
         degraded_here = unhealthy and site == DEGRADED_SITE
-        labels = f'site="{site}",lat="{lat}",lon="{lon}",company="{SITE_COMPANIES[site]}"'
         if degraded_here:
             vpn_up = 0
             used = capacity * random.uniform(0.05, 0.15)
@@ -255,6 +266,16 @@ def render_metrics():
             mos = wave(60, 4.1, 4.7, phase=hash(site) % 10)
             jitter = wave(50, 2, 12, phase=hash(site) % 10)
             calls = round(wave(50, 2, 9, phase=hash(site) % 10))
+
+        if not vpn_up:
+            icon = ICON_CALLCENTER_RED
+        elif used / capacity >= 0.85:
+            icon = ICON_CALLCENTER_YELLOW
+        else:
+            icon = ICON_CALLCENTER_GREEN
+        labels = (f'site="{site}",lat="{lat}",lon="{lon}",'
+                  f'company="{SITE_COMPANIES[site]}",photo="{icon}"')
+
         site_lines.append(f'cc_site_vpn_up{{{labels}}} {vpn_up}')
         site_lines.append(f'cc_site_vpn_bandwidth_used_mbps{{{labels}}} {used:.1f}')
         site_lines.append(f'cc_site_vpn_bandwidth_capacity_mbps{{{labels}}} {capacity}')
