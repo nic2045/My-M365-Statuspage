@@ -181,10 +181,23 @@ nach `.env` zurückgeschrieben und `oneuptime-sync` neu gestartet.
 verspielt. OneUptime hat kein Icon-Feld pro Ressource/Gruppe, aber ein
 `logoFileId` pro Statusseite (`headerHTML`/`customCSS`/`footerHTML`
 funktionieren dagegen nur mit verifizierter Custom-Domain - auf der
-lokalen Demo-URL unsichtbar, deshalb ungenutzt). Jede der drei Seiten
-bekommt ein eigenes, schlichtes SVG-Logo (hochgeladen als `File`,
-`isPublic: true`) - blau/Schild für Zertifikate, grün/Chat für
-IT-Services, orange/Pin für Leipzig.
+lokalen Demo-URL unsichtbar, deshalb ungenutzt). Zertifikate und Leipzig
+bekommen je ein schlichtes SVG-Logo (hochgeladen als `File`,
+`isPublic: true`) - blau/Schild bzw. orange/Pin. Die IT-Services-Seite
+zeigt stattdessen das echte DocuWare-Logo (`assets/docuware-logo.png`,
+© DocuWare Corporation, [CC BY-SA
+4.0](https://de.wikipedia.org/wiki/Datei:Docuware_logo_2018_bg_white_0.png)
+via Wikimedia Commons) - DocuWare ist die zentrale Anwendung auf dieser
+Seite.
+
+> **Stabile URLs?** Geprüft: echtes CNAME-Custom-Domain-Routing
+> (`StatusPageDomain`) verifiziert beim Setzen von `isVerified` aktiv per
+> DNS-TXT-Abfrage gegen echte Nameserver - für eine rein lokale Demo ohne
+> echte Domain (auch `*.localhost`) nicht erfüllbar, live getestet und
+> verworfen. Nicht nötig ist es ohnehin: `seed-oneuptime.sh` findet
+> Seiten/Monitore über ihren Namen wieder statt sie neu anzulegen, die
+> `/status-page/<id>`-URLs bleiben über Neustarts hinweg stabil (in dieser
+> Session über zahlreiche Läufe hinweg bestätigt).
 
 **Admin-/Infrastruktur- und AI-Observability-Beispiel** (nicht auf einer
 öffentlichen Statusseite - `MonitorGroup`/`MonitorGroupResource`

@@ -488,6 +488,32 @@ def ensure_page_logo(key, page_id):
     call(f"/api/status-page/{page_id}", {"data": {"logoFileId": file_id}}, method="PUT")
 
 
+def ensure_page_logo_from_file(key, page_id, file_path, mime):
+    """Same caching scheme as ensure_page_logo, but for a real image file on
+    disk instead of a generated SVG (e.g. a vendor logo under assets/)."""
+    marker = f".oneuptime-logo-{key}.id"
+    file_id = None
+    if os.path.exists(marker):
+        candidate = open(marker).read().strip()
+        try:
+            urllib.request.urlopen(f"{BASE}/api/file/image/{candidate}", timeout=10)
+            file_id = candidate
+        except urllib.error.URLError:
+            pass
+    if not file_id:
+        with open(file_path, "rb") as fh:
+            data = fh.read()
+        created = call("/api/file", {"data": {
+            "name": os.path.basename(file_path), "fileType": mime, "isPublic": True,
+            "file": {"_type": "Buffer", "value": {"type": "Buffer", "data": list(data)}},
+        }})
+        file_id = created["_id"]
+        with open(marker, "w") as fh:
+            fh.write(file_id)
+        print(f"    uploaded logo for '{key}' ({file_path})")
+    call(f"/api/status-page/{page_id}", {"data": {"logoFileId": file_id}}, method="PUT")
+
+
 # ── 1) Zertifikats-Monitoring: reiner Showcase für Website-/Zertifikats-
 # Überwachung (rohe Ziel-URLs aus DEMO_TARGET_URLS) - bewusst KEINE
 # Mitarbeiter-Dienste hier, die leben auf der IT-Service-Seite unten. ───────
@@ -548,7 +574,15 @@ it_service_page_id = ensure_status_page(
     IT_SERVICE_PAGE_NAME, "IT-Services für Mitarbeitende",
     "Aktueller Status der internen IT-Services - zeigt euch, ob ihr eure "
     "Arbeit uneingeschränkt erledigen könnt.")
-ensure_page_logo("itservice", it_service_page_id)
+# Real DocuWare wordmark (CC BY-SA 4.0, DocuWare Corporation, via Wikimedia
+# Commons - see README credit) instead of the generic SVG mark: DocuWare is
+# the flagship example on this page, so its own logo reads better here than
+# an abstract chat-bubble icon.
+DOCUWARE_LOGO_PATH = "assets/docuware-logo.png"
+if os.path.exists(DOCUWARE_LOGO_PATH):
+    ensure_page_logo_from_file("itservice", it_service_page_id, DOCUWARE_LOGO_PATH, "image/png")
+else:
+    ensure_page_logo("itservice", it_service_page_id)
 
 jira_group = ensure_group(it_service_page_id, "Aufgabenverwaltung (Jira)", 10,
                           "Status der Ticket- und Aufgabenverwaltung.")
@@ -681,6 +715,41 @@ else:
 # contradictory - reflect it on the status page too. "Degraded" (not
 # Offline): the site itself stays reachable, only the login flow is down.
 set_monitor_status(docuware_monitor_id, degraded)
+
+# Service Level Objectives (App-Owner view, OneUptime's own SLO dashboard -
+# not on any public status page). "Downtime" for both SLOs counts Offline
+# AND Degraded, so the currently-Degraded backend visibly burns error
+# budget instead of the SLO staying a flat 100% while an incident runs.
+def ensure_slo(name, monitor_id, target_percentage, description):
+    found = find_by_name("service-level-objective", name,
+                         select={"_id": True, "name": True}, legacy=[])
+    payload = {
+        "name": name, "description": description,
+        "sliType": "Monitor Uptime",
+        "monitors": [entity_ref(monitor_id)],
+        "downtimeMonitorStatuses": [entity_ref(offline), entity_ref(degraded)],
+        "targetPercentage": target_percentage,
+        "windowType": "Rolling", "windowDays": 30,
+        "isEnabled": True,
+    }
+    if found:
+        call(f"/api/service-level-objective/{found['_id']}", {"data": payload}, method="PUT")
+        print(f"    updated SLO '{name}'")
+        return found["_id"]
+    payload["projectId"] = project_id
+    created = call("/api/service-level-objective", {"data": payload})
+    print(f"    created SLO '{name}'")
+    return created["_id"]
+
+
+ensure_slo(
+    "DocuWare – Verfügbarkeit intern (Backend)", docuware_monitor_id, 99.5,
+    "Verfügbarkeit des internen DocuWare-Backends für Mitarbeitende, die dort direkt "
+    "arbeiten. Rollierendes 30-Tage-Fenster.")
+ensure_slo(
+    "DocuWare – Verfügbarkeit Kundenportal (Rechnungsabruf)", docuware_portal_monitor_id, 99.9,
+    "Verfügbarkeit des Rechnungsabrufs für Kundinnen und Kunden - höheres Ziel als das "
+    "interne Backend, da kundenseitig sichtbar. Rollierendes 30-Tage-Fenster.")
 
 # ── 3) Standort Leipzig (eigene Statusseite, eigener Case: standortbezogene
 # Facility-IT statt firmenweiter Dienste) ────────────────────────────────────
