@@ -1,0 +1,4 @@
+# setup.sh clones OneUptime's own release branch here at run time -
+# it's a separate, large upstream project and must never be committed
+# into this repo.
+oneuptime/
