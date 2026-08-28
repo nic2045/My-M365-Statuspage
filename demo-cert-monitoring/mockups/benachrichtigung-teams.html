@@ -188,7 +188,12 @@
     padding: 10px 14px;
     font-size: 13px;
     display: inline-block;
+    cursor: pointer;
   }
+  .plain-msg:hover { background: #ececec; }
+  .card { cursor: pointer; }
+  .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.14); }
+  .card-actions button { cursor: pointer; }
 
   /* Same trick as the mobile mockup: messages start collapsed and spring
      into place on trigger, so a new Teams post reads as arriving live
@@ -238,6 +243,104 @@
   .btn-trigger:hover { background: #a82a41; }
   .btn-reset { background: #f0f0f0; color: var(--text); }
   .btn-reset:hover { background: #e2e2e5; }
+
+  /* Detail modal - same overlay+scale-in pattern as the BMC ITSM mockup,
+     just re-themed to Teams' purple. */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 27, 46, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal-overlay.show { opacity: 1; }
+  .modal {
+    width: 100%;
+    max-width: 600px;
+    max-height: 84vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    transform: translateY(-16px) scale(0.97);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(.34,1.56,.64,1), opacity 0.25s ease;
+  }
+  .modal-overlay.show .modal { transform: translateY(0) scale(1); opacity: 1; }
+  .modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-header .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 8px;
+  }
+  .modal-header .title { font-size: 16px; font-weight: 700; }
+  .modal-header .subtitle { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .modal-close {
+    border: none;
+    background: #f0f0f0;
+    color: var(--text);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: #e2e2e5; }
+  .modal-body { padding: 20px 22px; }
+  .modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 20px;
+    margin-bottom: 18px;
+    font-size: 13px;
+  }
+  .modal-grid .field-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
+  .modal-section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 18px 0 8px; }
+  .modal-section-label:first-child { margin-top: 0; }
+  .modal-description { font-size: 13px; line-height: 1.55; }
+  .worklog { list-style: none; margin: 0; padding: 0; }
+  .worklog li { font-size: 13px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .worklog li:last-child { border-bottom: none; }
+  .worklog .who { font-weight: 600; }
+  .worklog .when { color: var(--muted); font-size: 11px; float: right; }
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    background: #fafafb;
+  }
+  .modal-footer button {
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .modal-footer .btn-primary { background: var(--purple); color: #fff; }
+  .modal-footer .btn-secondary { background: #f0f0f0; color: var(--text); }
+  .modal-footer .btn-secondary:hover { background: #e2e2e5; }
+  .modal-footer button:disabled { cursor: not-allowed; opacity: 0.6; }
 </style>
 </head>
 <body>
@@ -269,7 +372,7 @@
           <div class="avatar">OU</div>
           <div class="msg-body">
             <div class="msg-meta"><span class="name">OneUptime Statuspage</span><span class="time">Heute 14:32</span></div>
-            <div class="card">
+            <div class="card" onclick="openDetail('mail')">
               <div class="card-bar" style="background:#e8b800;"></div>
               <div class="card-body">
                 <div class="card-badge" style="background:#fff4ce;color:#7a5b00;">Minor Incident</div>
@@ -280,7 +383,7 @@
                   Empfangene E-Mails sind nicht betroffen. Wir gehen davon aus, das Problem in Kürze zu beheben.
                 </p>
                 <div class="card-actions">
-                  <button class="primary">Statusseite öffnen</button>
+                  <button class="primary" onclick="event.stopPropagation(); openDetail('mail')">Statusseite öffnen</button>
                 </div>
               </div>
             </div>
@@ -291,7 +394,7 @@
           <div class="avatar">OU</div>
           <div class="msg-body">
             <div class="msg-meta"><span class="name">OneUptime Statuspage</span><span class="time">Heute 16:08</span></div>
-            <div class="plain-msg">Wartung gestartet: <strong>Patchday Server Gruppe 3</strong> – Blueant kurzzeitig gestört, sonst keine Auswirkungen.</div>
+            <div class="plain-msg" onclick="openDetail('maintenance')">Wartung gestartet: <strong>Patchday Server Gruppe 3</strong> – Blueant kurzzeitig gestört, sonst keine Auswirkungen.</div>
           </div>
         </div>
 
@@ -299,7 +402,7 @@
           <div class="avatar">OU</div>
           <div class="msg-body">
             <div class="msg-meta"><span class="name">OneUptime Statuspage</span><span class="time">Heute 17:58</span></div>
-            <div class="card">
+            <div class="card" onclick="openDetail('docuware')">
               <div class="card-bar"></div>
               <div class="card-body">
                 <div class="card-badge">Major Incident</div>
@@ -312,8 +415,8 @@
                   Referenz: BMC Incident INC000000222127
                 </p>
                 <div class="card-actions">
-                  <button class="primary">Statusseite öffnen</button>
-                  <button>Incident-Details</button>
+                  <button class="primary" onclick="event.stopPropagation(); openDetail('docuware')">Statusseite öffnen</button>
+                  <button onclick="event.stopPropagation(); openDetail('docuware')">Incident-Details</button>
                 </div>
               </div>
             </div>
@@ -327,7 +430,130 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modal-overlay" onclick="if (event.target === this) closeDetail()">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="badge" id="modal-badge">–</div>
+          <div class="title" id="modal-title">–</div>
+          <div class="subtitle" id="modal-subtitle">–</div>
+        </div>
+        <button class="modal-close" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-grid" id="modal-grid"></div>
+        <div class="modal-section-label">Beschreibung</div>
+        <div class="modal-description" id="modal-description">–</div>
+        <div class="modal-section-label" id="modal-worklog-label" style="display:none;">Verlauf</div>
+        <ul class="worklog" id="modal-worklog"></ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeDetail()">Schließen</button>
+        <button class="btn-primary" disabled title="Mockup – keine echte Statuspage-Verlinkung">Statusseite öffnen ↗</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // Detail content per message - kept separate from the chat markup so
+    // the same info can be shown identically whether the click came from
+    // the card body or one of its action buttons.
+    var DETAILS = {
+      mail: {
+        badge: "Minor Incident", badgeBg: "#fff4ce", badgeColor: "#7a5b00",
+        title: "E-Mail senden/empfangen ist eingeschränkt",
+        subtitle: "Statusseite: IT-Services (Mitarbeiter)",
+        fields: [
+          ["Status", "Identified"], ["Betroffenes System", "E-Mail senden/empfangen (Outlook)"],
+          ["Auswirkung", "Verzögerter Versand"], ["Empfang", "Nicht betroffen"],
+        ],
+        description: "Der Versand von E-Mails über Outlook kann sich aktuell um wenige Minuten " +
+          "verzögern. Empfangene E-Mails sind nicht betroffen. Wir gehen davon aus, das Problem " +
+          "in Kürze zu beheben.",
+        worklog: [
+          { who: "OneUptime", when: "14:32", text: "Vorfall automatisch erkannt: Versandverzögerung über 3 Minuten festgestellt." },
+          { who: "IT-Betrieb", when: "14:36", text: "Ursache wird untersucht (Exchange-Warteschlange)." },
+        ],
+      },
+      maintenance: {
+        badge: "Wartung", badgeBg: "#e8e8fa", badgeColor: "#4b4fa8",
+        title: "Patchday Server Gruppe 3",
+        subtitle: "Statusseite: IT-Services (Mitarbeiter)",
+        fields: [
+          ["Status", "Ongoing"], ["Betroffenes System", "Blueant"],
+          ["Auswirkung", "Kurzzeitig gestört"], ["Sonstige Systeme", "Keine Auswirkung"],
+        ],
+        description: "Geplante Patches für Server-Gruppe 3 laufen. Blueant ist während des " +
+          "Wartungsfensters kurzzeitig eingeschränkt erreichbar, alle anderen Dienste sind nicht betroffen.",
+        worklog: [],
+      },
+      docuware: {
+        badge: "Major Incident", badgeBg: "#fdf2f4", badgeColor: "#c4314b",
+        title: "DocuWare | Anmeldung in DocuWare nicht möglich",
+        subtitle: "Statusseite: IT-Services (Mitarbeiter) · BMC Incident INC000000222127",
+        fields: [
+          ["Status", "In Behebung"], ["Betroffenes System", "DocuWare-Backend (Login)"],
+          ["Kundenportal", "Nicht betroffen"], ["Referenz", "BMC INC000000222127"],
+        ],
+        description: "Aktuell können sich Mitarbeitende nicht bei DocuWare anmelden. Bereits " +
+          "geöffnete Dokumente bleiben nutzbar, ein Neustart der Anwendung führt jedoch zu einer " +
+          "Fehlermeldung beim Login. Die IT arbeitet an der Behebung. Der Rechnungsabruf für " +
+          "Kundinnen und Kunden ist nicht betroffen.",
+        worklog: [
+          { who: "OneUptime-Integration", when: "17:58", text: "Ticket automatisch angelegt aus Major Incident „DocuWare | Anmeldung in DocuWare nicht möglich“." },
+          { who: "System", when: "17:58", text: "Zugewiesen an Anwendungsbetrieb DocuWare." },
+          { who: "Anwendungsbetrieb DocuWare", when: "18:03", text: "Erste Analyse gestartet: Login-Service des Backends antwortet nicht, DB-Cluster wird geprüft." },
+        ],
+      },
+    };
+
+    function openDetail(key) {
+      var d = DETAILS[key];
+      if (!d) return;
+
+      var badge = document.getElementById("modal-badge");
+      badge.textContent = d.badge;
+      badge.style.background = d.badgeBg;
+      badge.style.color = d.badgeColor;
+      document.getElementById("modal-title").textContent = d.title;
+      document.getElementById("modal-subtitle").textContent = d.subtitle;
+      document.getElementById("modal-description").textContent = d.description;
+
+      var grid = document.getElementById("modal-grid");
+      grid.innerHTML = "";
+      d.fields.forEach(function (pair) {
+        var cell = document.createElement("div");
+        cell.innerHTML = '<div class="field-label">' + pair[0] + '</div><div>' + pair[1] + '</div>';
+        grid.appendChild(cell);
+      });
+
+      var worklogLabel = document.getElementById("modal-worklog-label");
+      var worklog = document.getElementById("modal-worklog");
+      worklog.innerHTML = "";
+      if (d.worklog.length) {
+        worklogLabel.style.display = "block";
+        d.worklog.forEach(function (entry) {
+          var li = document.createElement("li");
+          li.innerHTML = '<span class="when">' + entry.when + '</span>' +
+            '<span class="who">' + entry.who + '</span><br>' + entry.text;
+          worklog.appendChild(li);
+        });
+      } else {
+        worklogLabel.style.display = "none";
+      }
+
+      var overlay = document.getElementById("modal-overlay");
+      overlay.classList.add("visible");
+      void overlay.offsetWidth;
+      requestAnimationFrame(function () { overlay.classList.add("show"); });
+    }
+
+    function closeDetail() {
+      var overlay = document.getElementById("modal-overlay");
+      overlay.classList.remove("show");
+      setTimeout(function () { overlay.classList.remove("visible"); }, 250);
+    }
+
     function playTeams() {
       document.getElementById("teams-empty").classList.add("hide");
       var ids = ["teams-msg-1", "teams-msg-2", "teams-msg-3"];

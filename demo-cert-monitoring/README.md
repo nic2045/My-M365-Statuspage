@@ -299,6 +299,49 @@ Für Cloud-Trial (https://oneuptime.com) oder eigene Einrichtung:
    Ping aus, markiert OneUptime den Monitor nach seiner eigenen
    Kulanzzeit als "down" - dort konfigurierbar.
 
+## Website & Zertifikats-Dashboard (Grafana, App-Owner)
+
+`grafana/dashboards/website-cert-monitoring.json` - technisches
+Gegenstück zur Zertifikate-Statusseite, für den App-Owner statt für
+Endnutzer. Überarbeitet nach dem Vorbild von [Grafana Dashboard #13922
+"Certificates Expiration (X509 Certificate
+Exporter)"](https://grafana.com/grafana/dashboards/13922-certificates-expiration-x509-certificate-exporter/)
+- übernommen wurden die **Ideen** (Übersichts-Stats mit Schwellenwerten,
+Top-Aussteller-Tabelle, sortierte "kürzeste Restlaufzeit"-Tabelle,
+Dashboard-Variablen für die Schwellenwerte), nicht die Dashboard-Datei
+selbst: #13922 basiert auf dem `x509-certificate-exporter` (Kubernetes
+Secrets/Host-Zertifikatsdateien, eigene Metriken wie
+`x509_cert_not_after`) - unser Stack nutzt `blackbox_exporter`
+(`probe_ssl_earliest_cert_expiry`, `probe_success`,
+`probe_ssl_last_chain_info`), ein komplett anderes Metrik-Schema für
+HTTP(S)-Synthetic-Checks statt Kubernetes/Dateisystem. Ein 1:1-Import
+wäre an den Metriknamen gescheitert.
+
+- **Übersicht** (Zeile mit Stats): Überwachte Websites, Nicht erreichbar,
+  Zertifikate abgelaufen, Läuft ab in `$critical_threshold`/
+  `$warning_threshold` Tagen (Dashboard-Variablen, Default 7/30 Tage,
+  direkt im Dashboard änderbar), kürzeste Restlaufzeit
+- **Details je Website**: die bestehende Statustabelle (Erreichbarkeit,
+  Zertifikats-Restlaufzeit, Antwortzeit je Website)
+- **Analyse** (neu): "Top Zertifikatsaussteller" (`count by (issuer)
+  (probe_ssl_last_chain_info)`) und "Kürzeste Restlaufzeit" (sortierte
+  Tabelle, `sortBy`-Transformation)
+- **Verlauf**: die bestehenden Zeitreihen (Antwortzeit, Restlaufzeit je
+  Website)
+
+> **Bug gefunden & behoben (vermutlich seit Erstellung unentdeckt): die
+> Statustabelle "Status je Website" war vermutlich nie korrekt befüllt.**
+> Live per `/api/ds/query` bestätigt: `probe_success`/
+> `probe_ssl_earliest_cert_expiry`/`probe_duration_seconds` liefern für 4
+> überwachte Ziele 4 separate 1-Zeilen-Frames statt einer Tabelle -
+> `instance` existierte nur als Feld-Metadaten, nicht als echte Spalte,
+> die `joinByField`-Transformation (Verknüpfung über `instance`) griff
+> dadurch ins Leere. Fix: `labelsToFields` vor `joinByField` ergänzt
+> (siehe ausführlicher Bug-Hinweis im Customer-Care-Abschnitt unten für
+> die technischen Details des allgemeinen Musters). Live mit
+> `./break-demo.sh`/`./fix-demo.sh` durchgetestet: "Zertifikate
+> abgelaufen" sprang korrekt von 0 auf 1 und zurück.
+
 ## Customer Care: Standortübersicht für den technischen Owner (Grafana)
 
 Reines Grafana-Dashboard (kein OneUptime-Anteil diesmal) für den
@@ -315,6 +358,26 @@ die jeweils per Site-to-Site-VPN an das Rechenzentrum in **Leipzig**
 angebunden sind: Berlin, Dresden, Chemnitz, Halle (Saale), Rostock,
 Erfurt.
 
+> **Bug gefunden & behoben: Balken-Charts und das Topologie-Panel blieben
+> leer.** Live per `/api/ds/query` nachvollzogen: eine Prometheus-Instant-
+> Tabellenabfrage mit mehreren Zeitreihen liefert Grafana **eine separate
+> 1-Zeilen-Datenframe pro Zeitreihe** - Labels (z. B. `site`) existieren
+> nur als Feld-Metadaten, nicht als echte Spalte, und der Wertname wird
+> bei einer reinen Metrik-Abfrage nach der Metrik selbst benannt (z. B.
+> `cc_avaya_agents_available`, nicht generisch `Value`). Panels wie
+> Table/Bar-Chart/Node-Graph brauchen aber echte Zeilen in **einer**
+> Frame. Fix, angewendet auf jedes betroffene Panel: `labelsToFields`
+> (Labels → echte Felder) gefolgt von `merge` (mehrere gleich-geformte
+> 1-Zeilen-Frames einer Abfrage → eine mehrzeilige Tabelle) bzw. bei
+> mehreren verschieden geformten Abfragen zusätzlich `joinByField` zum
+> Verknüpfen. Für die Verbindungslinien der Deutschlandkarte (siehe
+> unten) musste `merge` sogar **pro Ziel-Query gescoped** laufen
+> (`filter: {id: "byFrameRefID", options: "<refId>"}`), sonst wären alle
+> 6 Standort-Linien wieder zu einer einzigen verketteten Route
+> zusammengefasst worden. Dieselbe Ursache betraf auch die
+> Zertifikats-Tabelle im Website-Dashboard (siehe unten) - vermutlich
+> seit deren ursprünglicher Erstellung unbemerkt leer/falsch.
+
 **Grafana-Dashboard "Customer Care – Standortübersicht (Technical
 Owner)"** (`grafana/dashboards/customer-care-overview.json`, 22 Panels,
 automatisch provisioniert):
@@ -323,11 +386,11 @@ automatisch provisioniert):
 - Telefonie/Avaya ACD, Citrix, Kundensupport-/Rechnungswesen-App,
   Cognigy/LLM, Infrastruktur - je eigene Zeile
 - **Agenten je Standort** (verfügbar / im Gespräch): gruppierter
-  vertikaler Balken-Chart statt Rohtabelle - zwei Prometheus-Queries per
-  `joinByField` (auf `site`) zusammengeführt, `organize`-Transformation
-  blendet `Time`/`__name__`/`instance`/`job`/`lat`/`lon`/`company` aus
-  und benennt `site` in "Standort" um; die beiden Serien heißen über
-  `byFrameRefID`-Overrides "Verfügbar"/"Im Gespräch" statt "Value #A"
+  vertikaler Balken-Chart statt Rohtabelle - `labelsToFields` + zwei
+  quer-gescopte `merge`-Schritte (je Abfrage) + `joinByField` (auf
+  `site`) führen "Verfügbar"/"Im Gespräch" zusammen, `organize` blendet
+  `Time`/`__name__`/`instance`/`job` aus und benennt `site` in "Standort"
+  sowie die beiden Metrikspalten in "Verfügbar"/"Im Gespräch" um
 - **Bandbreitenauslastung (%), VoIP-Qualität (MOS-Score), Latenz zum RZ
   Leipzig, gleichzeitige Anrufe** je Standort: ebenfalls Balken-Charts
   statt Rohtabellen (gleiches Entrümpeln), zusätzlich mit Schwellenwert-
@@ -369,7 +432,13 @@ automatisch provisioniert):
     6 Verbindungslinien Leipzig↔Standort sind bewusst 6 **getrennte**
     2-Punkt-Queries (nicht eine verkettete Route über alle Punkte), damit
     jede Linie unabhängig radial vom Hub ausgeht statt die Standorte der
-    Reihe nach zu verbinden.
+    Reihe nach zu verbinden. Jedes der 6 Ziele braucht dafür seinen
+    Hub+Standort in **einer** Frame (siehe Bug-Hinweis oben) - deshalb 6
+    einzeln auf ihre `refId` gescopte `merge`-Schritte statt eines
+    einzigen globalen `merge`, das sonst den 6-fach wiederholten
+    Hub-Punkt über alle Ziele hinweg zu einer einzigen 7-Punkte-Frame
+    zusammengefasst und damit genau die verkettete Route zurückgebracht
+    hätte, die dieses Design eigentlich vermeidet.
 
   Technischer Hinweis: Prometheus-Labels kommen aus Grafanas Query-Engine
   nur als Feld-Metadaten, nicht als eigene Spalten - das Geomap-Panel
@@ -392,10 +461,16 @@ automatisch provisioniert):
   (RZ)"` auf, der zweite kopiert das vorhandene `site`-Label nach
   `target`, sodass keine Grafana-seitigen Konstanten-Transformationen
   nötig sind). Gleiche dreistufige Health-Formel/Farbcodierung wie Karte
-  und Balken-Charts. Beide Queries live gegen Prometheus auf die
+  und Balken-Charts. War zunächst leer (siehe Bug-Hinweis oben) - Fix:
+  `labelsToFields` + je einen `merge`-Schritt gescoped auf Query A bzw. B
+  (`filter: {id: "byFrameRefID", options: "A"|"B"}`), damit die 7
+  Nodes-Frames und 6 Edges-Frames getrennt zu genau den zwei Tabellen
+  zusammengeführt werden, die das Node-Graph-Panel erwartet, statt sich
+  gegenseitig zu vermischen. Beide Queries live gegen Prometheus auf die
   erwartete Zeilenzahl (7 Nodes, 6 Edges) und die Felder `id`/`title`/
-  `mainStat`/`source`/`target` geprüft; auch hier keine visuelle
-  Bestätigung ohne Image-Renderer-Plugin möglich.
+  `mainStat`/`source`/`target` geprüft; die tatsächliche Darstellung
+  selbst weiterhin ohne Image-Renderer-Plugin nicht per Screenshot
+  prüfbar - bitte im Browser gegenchecken.
 
 Alle 34 Panel-Queries live gegen Prometheus verifiziert. Baseline
 bewusst "geschäftig, aber gesund" (~45-75 % Auslastung mit sichtbarer
@@ -603,7 +678,11 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
 - `mockups/benachrichtigung-email.html` - Posteingang-Ansicht (E-Mail-Client), zwischen mehreren Nachrichten klickbar
 - `mockups/benachrichtigung-teams.html` - Microsoft-Teams-Kanal mit Adaptive Cards,
   gleicher "Vorfall auslösen"/"Zurücksetzen"-Trick wie beim Mobil-Mockup -
-  Nachrichten poppen animiert im Kanalverlauf auf
+  Nachrichten poppen animiert im Kanalverlauf auf. **Jede Nachricht ist
+  klickbar** (Karten und die einfache Wartungs-Textnachricht) und öffnet
+  ein Detail-Modal (Status, betroffenes System, Beschreibung, bei den
+  beiden Incidents zusätzlich ein Verlauf) - gleiches Muster wie das
+  BMC-ITSM-Mockup, nur im Teams-Farbschema
 - `mockups/benachrichtigung-mobil.html` - Smartphone-Sperrbildschirm (Push) + SMS-Verlauf,
   per "Vorfall auslösen"-Knopf **animiert** (reines CSS/JS, kein Backend) -
   Benachrichtigungen federn wie echte Push-Meldungen von oben ein,

@@ -295,6 +295,26 @@
    ],
    "transformations": [
     {
+     "id": "labelsToFields",
+     "options": {}
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "A"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "B"
+     }
+    },
+    {
      "id": "joinByField",
      "options": {
       "byField": "site",
@@ -306,22 +326,18 @@
      "options": {
       "excludeByName": {
        "Time": true,
-       "__name__": true,
-       "instance": true,
-       "job": true,
-       "lat": true,
-       "lon": true,
-       "company": true,
        "Time 2": true,
+       "__name__": true,
        "__name__ 2": true,
+       "instance": true,
        "instance 2": true,
-       "job 2": true,
-       "lat 2": true,
-       "lon 2": true,
-       "company 2": true
+       "job": true,
+       "job 2": true
       },
       "renameByName": {
-       "site": "Standort"
+       "site": "Standort",
+       "cc_avaya_agents_available": "Verfügbar",
+       "cc_avaya_agents_busy": "Im Gespräch"
       }
      }
     }
@@ -336,14 +352,10 @@
     "overrides": [
      {
       "matcher": {
-       "id": "byFrameRefID",
-       "options": "A"
+       "id": "byName",
+       "options": "Verfügbar"
       },
       "properties": [
-       {
-        "id": "displayName",
-        "value": "Verfügbar"
-       },
        {
         "id": "color",
         "value": {
@@ -355,14 +367,10 @@
      },
      {
       "matcher": {
-       "id": "byFrameRefID",
-       "options": "B"
+       "id": "byName",
+       "options": "Im Gespräch"
       },
       "properties": [
-       {
-        "id": "displayName",
-        "value": "Im Gespräch"
-       },
        {
         "id": "color",
         "value": {
@@ -898,6 +906,54 @@
     {
      "id": "labelsToFields",
      "options": {}
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "B"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "C"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "D"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "E"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "F"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "G"
+     }
     }
    ]
   },
@@ -924,6 +980,14 @@
     }
    ],
    "transformations": [
+    {
+     "id": "labelsToFields",
+     "options": {}
+    },
+    {
+     "id": "merge",
+     "options": {}
+    },
     {
      "id": "organize",
      "options": {
@@ -1017,6 +1081,14 @@
     }
    ],
    "transformations": [
+    {
+     "id": "labelsToFields",
+     "options": {}
+    },
+    {
+     "id": "merge",
+     "options": {}
+    },
     {
      "id": "organize",
      "options": {
@@ -1112,6 +1184,14 @@
    ],
    "transformations": [
     {
+     "id": "labelsToFields",
+     "options": {}
+    },
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
      "id": "organize",
      "options": {
       "excludeByName": {
@@ -1204,6 +1284,14 @@
     }
    ],
    "transformations": [
+    {
+     "id": "labelsToFields",
+     "options": {}
+    },
+    {
+     "id": "merge",
+     "options": {}
+    },
     {
      "id": "organize",
      "options": {
@@ -1307,6 +1395,22 @@
     {
      "id": "labelsToFields",
      "options": {}
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "A"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {},
+     "filter": {
+      "id": "byFrameRefID",
+      "options": "B"
+     }
     },
     {
      "id": "organize",
