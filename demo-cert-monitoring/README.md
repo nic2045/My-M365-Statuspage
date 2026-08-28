@@ -435,7 +435,10 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
 
 - `mockups/benachrichtigung-email.html` - Posteingang-Ansicht (E-Mail-Client), zwischen mehreren Nachrichten klickbar
 - `mockups/benachrichtigung-teams.html` - Microsoft-Teams-Kanal mit Adaptive Cards
-- `mockups/benachrichtigung-mobil.html` - Smartphone-Sperrbildschirm (Push) + SMS-Verlauf
+- `mockups/benachrichtigung-mobil.html` - Smartphone-Sperrbildschirm (Push) + SMS-Verlauf,
+  per "Vorfall auslösen"-Knopf **animiert** (reines CSS/JS, kein Backend) -
+  Benachrichtigungen federn wie echte Push-Meldungen von oben ein,
+  SMS-Bubbles poppen nacheinander auf; "Zurücksetzen" spielt es erneut ab
 
 ## Aufräumen
 

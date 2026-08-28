@@ -2,11 +2,10 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<title>Mockup: Mobile Benachrichtigung (Push &amp; SMS)</title>
+<title>Mockup: Mobile Benachrichtigung (Push &amp; SMS, animiert)</title>
 <style>
   :root {
     --danger: #ff3b30;
-    --ok-bg: #1c1c1e;
     --text: #ffffff;
   }
   * { box-sizing: border-box; }
@@ -34,8 +33,23 @@
     opacity: 0.85;
     z-index: 10;
   }
-  .col { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .col .label { font-size: 13px; font-weight: 600; color: #444; }
+
+  .controls { display: flex; gap: 10px; }
+  .controls button {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-trigger { background: #ff3b30; color: #fff; }
+  .btn-trigger:hover { background: #e0332a; }
+  .btn-reset { background: #e2e2e5; color: #201f1e; }
+  .btn-reset:hover { background: #d3d3d7; }
 
   .phone {
     width: 320px;
@@ -79,16 +93,33 @@
   .lock-clock .time { font-size: 62px; font-weight: 300; line-height: 1; }
   .lock-clock .date { font-size: 15px; margin-top: 6px; opacity: 0.9; }
 
-  .notif {
-    margin: 26px 14px 0;
-    background: rgba(255,255,255,0.16);
-    backdrop-filter: blur(6px);
+  /* Notifications start collapsed (no gap on the clean lock screen) and
+     spring open on trigger - the overshoot in the cubic-bezier is what
+     reads as a native push-notification "pop" rather than a plain fade. */
+  .notif, .notif2 {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    margin: 0 14px;
+    padding: 0 14px;
     border-radius: 16px;
-    padding: 12px 14px;
     color: #fff;
     display: flex;
     gap: 10px;
+    transform: translateY(-18px);
+    transition: max-height 0.45s cubic-bezier(.34,1.56,.64,1),
+                opacity 0.3s ease,
+                margin 0.45s cubic-bezier(.34,1.56,.64,1),
+                padding 0.45s cubic-bezier(.34,1.56,.64,1),
+                transform 0.45s cubic-bezier(.34,1.56,.64,1);
   }
+  .notif.show, .notif2.show {
+    max-height: 140px;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .notif { background: rgba(255,255,255,0.16); backdrop-filter: blur(6px); }
+  .notif.show { margin: 26px 14px 0; padding: 12px 14px; }
   .notif .icon {
     width: 32px; height: 32px; border-radius: 8px;
     background: var(--danger);
@@ -105,24 +136,25 @@
   .notif .title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
   .notif .body-text { font-size: 13px; opacity: 0.92; line-height: 1.35; }
 
-  .notif2 {
-    margin: 10px 14px 0;
-    background: rgba(255,255,255,0.10);
-    border-radius: 16px;
-    padding: 10px 14px;
-    color: #fff;
-    display: flex;
-    gap: 10px;
-  }
+  .notif2 { background: rgba(255,255,255,0.10); }
+  .notif2.show { margin: 10px 14px 0; padding: 10px 14px; }
   .notif2 .icon {
     width: 28px; height: 28px; border-radius: 7px;
-    background: #34c759;
     display: flex; align-items: center; justify-content: center;
     font-size: 13px;
     flex-shrink: 0;
   }
   .notif2 .title { font-size: 13px; font-weight: 700; }
   .notif2 .body-text { font-size: 12px; opacity: 0.85; }
+
+  .empty-hint {
+    text-align: center;
+    color: rgba(255,255,255,0.55);
+    font-size: 12px;
+    margin-top: 36px;
+    transition: opacity 0.3s;
+  }
+  .empty-hint.hide { opacity: 0; }
 
   /* SMS thread phone */
   .sms-screen { background: #f2f2f7; }
@@ -134,6 +166,12 @@
   .sms-header .name { font-weight: 700; font-size: 15px; }
   .sms-header .sub { font-size: 11px; color: #8e8e93; }
   .sms-body { padding: 16px 14px; }
+  .msg {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+    transition: opacity 0.35s ease, transform 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .msg.show { opacity: 1; transform: translateY(0) scale(1); }
   .bubble {
     background: #e5e5ea;
     color: #000;
@@ -151,22 +189,32 @@
     text-align: center;
     margin: 10px 0 12px;
   }
+  .empty-hint-sms {
+    text-align: center;
+    color: #8e8e93;
+    font-size: 12px;
+    margin-top: 24px;
+    transition: opacity 0.3s;
+  }
+  .empty-hint-sms.hide { opacity: 0; }
 </style>
 </head>
 <body>
-  <div class="hint">MOCKUP – keine echte Push-/SMS-Zustellung, nur zur Demo-Ansicht</div>
+  <div class="hint">MOCKUP – keine echte Push-/SMS-Zustellung, nur animierte Demo-Ansicht</div>
 
   <div class="col">
     <div class="label">Push-Benachrichtigung (Sperrbildschirm)</div>
     <div class="phone">
       <div class="screen">
         <div class="notch"></div>
-        <div class="statusbar"><span>17:58</span><span>📶 🔋 92%</span></div>
+        <div class="statusbar"><span>17:58</span><span>Netz · Akku 92%</span></div>
         <div class="lock-clock">
           <div class="time">17:58</div>
           <div class="date">Freitag, 28. August</div>
         </div>
-        <div class="notif">
+        <div class="empty-hint" id="push-empty">Keine Benachrichtigungen</div>
+
+        <div class="notif" id="push-1">
           <div class="icon">!</div>
           <div class="content">
             <div class="top-row"><span class="app-name">STATUSSEITE</span><span>jetzt</span></div>
@@ -174,14 +222,14 @@
             <div class="body-text">Anmeldung in DocuWare nicht möglich. Die IT arbeitet an der Behebung.</div>
           </div>
         </div>
-        <div class="notif2" style="background:rgba(232,184,0,0.18);">
+        <div class="notif2" id="push-2">
           <div class="icon" style="background:#e8b800;">!</div>
           <div class="content">
             <div class="title">Minor Incident: E-Mail</div>
             <div class="body-text">Versand kann sich verzögern, Empfang nicht betroffen</div>
           </div>
         </div>
-        <div class="notif2">
+        <div class="notif2" id="push-3">
           <div class="icon" style="background:#8e8e93;">i</div>
           <div class="content">
             <div class="title">Patchday Server Gruppe 3 läuft</div>
@@ -190,6 +238,10 @@
         </div>
       </div>
     </div>
+    <div class="controls">
+      <button class="btn-trigger" onclick="playPush()">Vorfall auslösen</button>
+      <button class="btn-reset" onclick="resetPush()">Zurücksetzen</button>
+    </div>
   </div>
 
   <div class="col">
@@ -197,28 +249,74 @@
     <div class="phone">
       <div class="screen sms-screen">
         <div class="notch"></div>
-        <div class="statusbar" style="color:#000;"><span>17:58</span><span>📶 🔋 92%</span></div>
+        <div class="statusbar" style="color:#000;"><span>17:58</span><span>Netz · Akku 92%</span></div>
         <div class="sms-header">
           <div class="name">Statusseite</div>
           <div class="sub">Kurzmitteilung</div>
         </div>
         <div class="sms-body">
-          <div class="bubble">
-            MAJOR INCIDENT – DocuWare: Anmeldung nicht möglich. IT arbeitet an Behebung.
-            Status: <span class="link">status.pyur.com/docuware</span>
+          <div class="empty-hint-sms" id="sms-empty">Noch keine Nachrichten</div>
+
+          <div class="msg" id="sms-1">
+            <div class="bubble">
+              MAJOR INCIDENT – DocuWare: Anmeldung nicht möglich. IT arbeitet an Behebung.
+              Status: <span class="link">status.pyur.com/docuware</span>
+            </div>
+            <div class="bubble-time">Heute 17:58</div>
           </div>
-          <div class="bubble-time">Heute 17:58</div>
-          <div class="bubble">
-            MINOR INCIDENT – E-Mail-Versand verzögert, Empfang nicht betroffen.
+          <div class="msg" id="sms-2">
+            <div class="bubble">
+              MINOR INCIDENT – E-Mail-Versand verzögert, Empfang nicht betroffen.
+            </div>
+            <div class="bubble-time">Heute 14:32</div>
           </div>
-          <div class="bubble-time">Heute 14:32</div>
-          <div class="bubble">
-            Wartung: Patchday Server Gruppe 3 hat begonnen. Blueant kurzzeitig gestört.
+          <div class="msg" id="sms-3">
+            <div class="bubble">
+              Wartung: Patchday Server Gruppe 3 hat begonnen. Blueant kurzzeitig gestört.
+            </div>
+            <div class="bubble-time">Heute 16:08</div>
           </div>
-          <div class="bubble-time">Heute 16:08</div>
         </div>
       </div>
     </div>
+    <div class="controls">
+      <button class="btn-trigger" onclick="playSms()">Vorfall auslösen</button>
+      <button class="btn-reset" onclick="resetSms()">Zurücksetzen</button>
+    </div>
   </div>
+
+  <script>
+    function playPush() {
+      document.getElementById("push-empty").classList.add("hide");
+      var ids = ["push-1", "push-2", "push-3"];
+      ids.forEach(function (id, i) {
+        setTimeout(function () {
+          document.getElementById(id).classList.add("show");
+        }, i * 650);
+      });
+    }
+    function resetPush() {
+      ["push-1", "push-2", "push-3"].forEach(function (id) {
+        document.getElementById(id).classList.remove("show");
+      });
+      document.getElementById("push-empty").classList.remove("hide");
+    }
+
+    function playSms() {
+      document.getElementById("sms-empty").classList.add("hide");
+      var ids = ["sms-3", "sms-2", "sms-1"]; // chronological: Patchday -> Minor -> Major
+      ids.forEach(function (id, i) {
+        setTimeout(function () {
+          document.getElementById(id).classList.add("show");
+        }, i * 600);
+      });
+    }
+    function resetSms() {
+      ["sms-1", "sms-2", "sms-3"].forEach(function (id) {
+        document.getElementById(id).classList.remove("show");
+      });
+      document.getElementById("sms-empty").classList.remove("hide");
+    }
+  </script>
 </body>
 </html>
