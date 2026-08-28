@@ -189,16 +189,65 @@
     font-size: 13px;
     display: inline-block;
   }
+
+  /* Same trick as the mobile mockup: messages start collapsed and spring
+     into place on trigger, so a new Teams post reads as arriving live
+     instead of being statically laid out on page load. */
+  .msg {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    margin-bottom: 0;
+    transform: translateY(14px);
+    transition: max-height 0.45s cubic-bezier(.34,1.56,.64,1),
+                opacity 0.35s ease,
+                margin-bottom 0.45s cubic-bezier(.34,1.56,.64,1),
+                transform 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .msg.show {
+    max-height: 400px;
+    opacity: 1;
+    margin-bottom: 24px;
+    transform: translateY(0);
+  }
+  .empty-hint {
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    margin-top: 40px;
+    transition: opacity 0.3s;
+  }
+  .empty-hint.hide { opacity: 0; }
+  .controls {
+    padding: 12px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .controls button {
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-trigger { background: var(--danger); color: #fff; }
+  .btn-trigger:hover { background: #a82a41; }
+  .btn-reset { background: #f0f0f0; color: var(--text); }
+  .btn-reset:hover { background: #e2e2e5; }
 </style>
 </head>
 <body>
-  <div class="hint">MOCKUP – kein echter Teams-Post, nur zur Demo-Ansicht</div>
+  <div class="hint">MOCKUP – kein echter Teams-Post, nur animierte Demo-Ansicht</div>
   <div class="client">
     <div class="rail">
-      <div class="item active">💬</div>
-      <div class="item">👥</div>
-      <div class="item">📅</div>
-      <div class="item">📁</div>
+      <div class="item active">C</div>
+      <div class="item">T</div>
+      <div class="item">K</div>
+      <div class="item">D</div>
     </div>
     <div class="nav">
       <div class="nav-header">Teams</div>
@@ -214,15 +263,9 @@
         # Status-Updates <span class="sub">IT &amp; Betrieb</span>
       </div>
       <div class="messages">
-        <div class="msg">
-          <div class="avatar">OU</div>
-          <div class="msg-body">
-            <div class="msg-meta"><span class="name">OneUptime Statuspage</span><span class="time">Heute 16:08</span></div>
-            <div class="plain-msg">🟡 Wartung gestartet: <strong>Patchday Server Gruppe 3</strong> – Blueant kurzzeitig gestört, sonst keine Auswirkungen.</div>
-          </div>
-        </div>
+        <div class="empty-hint" id="teams-empty">Noch keine neuen Nachrichten in diesem Kanal</div>
 
-        <div class="msg">
+        <div class="msg" id="teams-msg-1">
           <div class="avatar">OU</div>
           <div class="msg-body">
             <div class="msg-meta"><span class="name">OneUptime Statuspage</span><span class="time">Heute 14:32</span></div>
@@ -244,7 +287,15 @@
           </div>
         </div>
 
-        <div class="msg">
+        <div class="msg" id="teams-msg-2">
+          <div class="avatar">OU</div>
+          <div class="msg-body">
+            <div class="msg-meta"><span class="name">OneUptime Statuspage</span><span class="time">Heute 16:08</span></div>
+            <div class="plain-msg">Wartung gestartet: <strong>Patchday Server Gruppe 3</strong> – Blueant kurzzeitig gestört, sonst keine Auswirkungen.</div>
+          </div>
+        </div>
+
+        <div class="msg" id="teams-msg-3">
           <div class="avatar">OU</div>
           <div class="msg-body">
             <div class="msg-meta"><span class="name">OneUptime Statuspage</span><span class="time">Heute 17:58</span></div>
@@ -269,7 +320,29 @@
           </div>
         </div>
       </div>
+      <div class="controls">
+        <button class="btn-trigger" onclick="playTeams()">Vorfall auslösen</button>
+        <button class="btn-reset" onclick="resetTeams()">Zurücksetzen</button>
+      </div>
     </div>
   </div>
+
+  <script>
+    function playTeams() {
+      document.getElementById("teams-empty").classList.add("hide");
+      var ids = ["teams-msg-1", "teams-msg-2", "teams-msg-3"];
+      ids.forEach(function (id, i) {
+        setTimeout(function () {
+          document.getElementById(id).classList.add("show");
+        }, i * 700);
+      });
+    }
+    function resetTeams() {
+      ["teams-msg-1", "teams-msg-2", "teams-msg-3"].forEach(function (id) {
+        document.getElementById(id).classList.remove("show");
+      });
+      document.getElementById("teams-empty").classList.remove("hide");
+    }
+  </script>
 </body>
 </html>
