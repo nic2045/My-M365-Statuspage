@@ -1,0 +1,29 @@
+groups:
+  - name: website-and-certificate-alerts
+    rules:
+      - alert: WebsiteDown
+        expr: probe_success{job="website_probes"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} ist nicht erreichbar"
+          description: "Der HTTP(S)-Check für {{ $labels.instance }} schlägt seit mehr als 2 Minuten fehl."
+
+      - alert: CertificateExpiringSoon
+        expr: (probe_ssl_earliest_cert_expiry{job="website_probes"} - time()) / 86400 < 14
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS-Zertifikat für {{ $labels.instance }} läuft bald ab"
+          description: "Das Zertifikat für {{ $labels.instance }} läuft in weniger als 14 Tagen ab."
+
+      - alert: CertificateExpiringCritical
+        expr: (probe_ssl_earliest_cert_expiry{job="website_probes"} - time()) / 86400 < 3
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TLS-Zertifikat für {{ $labels.instance }} läuft in Kürze ab"
+          description: "Das Zertifikat für {{ $labels.instance }} läuft in weniger als 3 Tagen ab."
