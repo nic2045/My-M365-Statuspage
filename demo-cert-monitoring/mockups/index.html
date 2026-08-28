@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Benachrichtigungs-Mockups</title>
+<style>
+  :root {
+    --bg: #f4f4f5;
+    --card-bg: #ffffff;
+    --border: #e2e2e5;
+    --text: #1c1c1e;
+    --muted: #6b6b70;
+    --accent: #0f6cbd;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 48px 24px;
+  }
+  header {
+    max-width: 920px;
+    margin: 0 auto 36px;
+  }
+  h1 { font-size: 26px; margin: 0 0 8px; }
+  header p { color: var(--muted); font-size: 15px; line-height: 1.6; margin: 0; max-width: 720px; }
+  .grid {
+    max-width: 920px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+  }
+  a.card {
+    display: block;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  a.card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+  }
+  .icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .card h2 { font-size: 17px; margin: 0 0 6px; }
+  .card p { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0; }
+  .card .tag {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  footer {
+    max-width: 920px;
+    margin: 40px auto 0;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Benachrichtigungs-Mockups</h1>
+    <p>
+      Statische, in sich geschlossene HTML-Vorschauen dessen, was Abonnentinnen und Abonnenten
+      der Statusseite in verschiedenen Kanälen sehen würden. Keine echten Integrationen -
+      es wird nichts verschickt, kein SMTP/Teams-Webhook/SMS-Gateway angebunden. Jede Karte
+      öffnet die jeweilige Ansicht.
+    </p>
+  </header>
+  <div class="grid">
+    <a class="card" href="benachrichtigung-email.html">
+      <div class="icon">✉</div>
+      <h2>E-Mail</h2>
+      <p>Posteingang-Ansicht mit mehreren Nachrichten - Major Incident (DocuWare), Minor
+         Incident (E-Mail-Versand), Wartung (Patchday) und Ankündigung (Firewall). Zwischen
+         den Nachrichten klickbar.</p>
+      <span class="tag">Öffnen →</span>
+    </a>
+    <a class="card" href="benachrichtigung-teams.html">
+      <div class="icon">T</div>
+      <h2>Microsoft Teams</h2>
+      <p>Team-Kanal „Status-Updates" mit Adaptive-Card-Nachrichten des OneUptime-Bots -
+         Minor Incident und Major Incident nacheinander, wie sie im Kanalverlauf erscheinen
+         würden.</p>
+      <span class="tag">Öffnen →</span>
+    </a>
+    <a class="card" href="benachrichtigung-mobil.html">
+      <div class="icon">M</div>
+      <h2>Mobil (Push &amp; SMS)</h2>
+      <p>Smartphone-Sperrbildschirm mit Push-Benachrichtigungen sowie ein SMS-Verlauf -
+         beide mit Major- und Minor-Incident-Beispiel.</p>
+      <span class="tag">Öffnen →</span>
+    </a>
+  </div>
+  <footer>
+    Teil der Demo unter <code>demo-cert-monitoring/</code> - siehe README.md, Abschnitt
+    „Benachrichtigungs-Mockups".
+  </footer>
+</body>
+</html>

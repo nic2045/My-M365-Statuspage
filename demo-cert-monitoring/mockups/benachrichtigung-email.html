@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Mockup: E-Mail-Benachrichtigung (Statuspage-Abo)</title>
+<style>
+  :root {
+    --chrome-bg: #f3f2f1;
+    --border: #e1dfdd;
+    --text: #201f1e;
+    --muted: #605e5c;
+    --accent: #0f6cbd;
+    --unread-bg: #eff6fc;
+    --hover-bg: #f3f2f1;
+    --card-bg: #ffffff;
+    --danger: #c4314b;
+    --danger-bg: #fdf2f4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: #ddd;
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+  }
+  .hint {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #201f1e;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    opacity: 0.85;
+    z-index: 10;
+  }
+  .client {
+    width: 100%;
+    max-width: 1180px;
+    height: 760px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .topbar {
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+  .topbar .logo {
+    width: 22px; height: 22px;
+    background: #fff;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+  .list {
+    width: 340px;
+    border-right: 1px solid var(--border);
+    background: var(--chrome-bg);
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .list-header {
+    padding: 12px 16px 8px;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .mail-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: default;
+  }
+  .mail-item .from { font-size: 13px; color: var(--muted); }
+  .mail-item .subject { font-size: 13px; margin-top: 2px; color: var(--muted); }
+  .mail-item .preview { font-size: 12px; color: #a19f9d; margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mail-item.active {
+    background: var(--unread-bg);
+    border-left: 3px solid var(--accent);
+  }
+  .mail-item.active .subject, .mail-item.active .from { color: var(--text); font-weight: 600; }
+  .reading {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 40px;
+    min-width: 0;
+  }
+  .reading h1 {
+    font-size: 20px;
+    margin: 0 0 14px;
+  }
+  .meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px;
+    flex-shrink: 0;
+  }
+  .meta .who { font-size: 13px; }
+  .meta .who .name { font-weight: 600; }
+  .meta .who .addr { color: var(--muted); }
+  .meta .when { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .badge {
+    display: inline-block;
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid #f3c6cf;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--danger);
+    border-radius: 6px;
+    padding: 18px 20px;
+    background: #fff;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 6px; }
+  .card .status-line { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .card p { font-size: 14px; line-height: 1.55; margin: 0 0 10px; }
+  .card a { color: var(--accent); }
+  .cta {
+    display: inline-block;
+    margin-top: 8px;
+    background: var(--accent);
+    color: #fff !important;
+    text-decoration: none;
+    padding: 9px 18px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .signoff {
+    margin-top: 26px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+  <div class="hint">MOCKUP – keine echte E-Mail, nur zur Demo-Ansicht</div>
+  <div class="client">
+    <div class="topbar">
+      <div class="logo">✉</div>
+      Posteingang – it-abteilung@pyur.com
+    </div>
+    <div class="body">
+      <div class="list">
+        <div class="list-header">Heute</div>
+        <div class="mail-item active" data-mail="docuware">
+          <div class="from">OneUptime Statuspage</div>
+          <div class="subject">[Statusseite IT-Services (Mitarbeiter)] Neuer Incident: DocuWare</div>
+          <div class="preview">DocuWare | Anmeldung in DocuWare nicht möglich – Aktuell können sich...</div>
+        </div>
+        <div class="mail-item" data-mail="email">
+          <div class="from">OneUptime Statuspage</div>
+          <div class="subject">[Statusseite IT-Services (Mitarbeiter)] Incident: E-Mail-Versand verzögert</div>
+          <div class="preview">Der Versand von E-Mails über Outlook kann sich aktuell...</div>
+        </div>
+        <div class="mail-item" data-mail="patchday">
+          <div class="from">OneUptime Statuspage</div>
+          <div class="subject">[Statusseite IT-Services (Mitarbeiter)] Wartung: Patchday Server Gruppe 3</div>
+          <div class="preview">Geplante Wartung hat begonnen...</div>
+        </div>
+        <div class="list-header">Diese Woche</div>
+        <div class="mail-item" data-mail="firewall">
+          <div class="from">OneUptime Statuspage</div>
+          <div class="subject">[Standort Leipzig] Ankündigung: Firewall-Upgrade</div>
+          <div class="preview">Zwischen Mittwoch 20:00 und Freitag 06:00...</div>
+        </div>
+      </div>
+      <div class="reading">
+
+        <article class="mail-content" id="mail-docuware">
+          <span class="badge">Major Incident</span>
+          <h1>[Statusseite IT-Services (Mitarbeiter)] Neuer Incident: DocuWare | Anmeldung in DocuWare nicht möglich</h1>
+          <div class="meta">
+            <div class="avatar">OU</div>
+            <div class="who">
+              <div class="name">OneUptime Statuspage</div>
+              <div class="addr">notifications@statuspage.pyur.com</div>
+            </div>
+            <div class="when">Heute, 17:58 Uhr</div>
+          </div>
+          <div class="card">
+            <h2>DocuWare | Anmeldung in DocuWare nicht möglich</h2>
+            <div class="status-line">Status: <strong>In Behebung</strong> · Schweregrad: <strong>Major Incident</strong></div>
+            <p>Aktuell können sich Mitarbeitende <strong>nicht bei DocuWare anmelden</strong>. Bereits geöffnete
+               Dokumente bleiben nutzbar, ein Neustart der Anwendung führt jedoch zu einer Fehlermeldung beim
+               Login. Die IT arbeitet an der Behebung.</p>
+            <p>Referenz: BMC Incident <a href="#">INC000000222127</a></p>
+            <a class="cta" href="#">Statusseite öffnen →</a>
+          </div>
+          <div class="signoff">
+            Diese Benachrichtigung wurde automatisch von der Statusseite „IT-Services (Mitarbeiter)“
+            verschickt, weil diese Mailbox den Dienst „DocuWare (Dokumentenmanagement)“ abonniert hat.<br>
+            Abo verwalten · Abmelden
+          </div>
+        </article>
+
+        <article class="mail-content" id="mail-email" hidden>
+          <span class="badge" style="background:#fff4ce;color:#7a5b00;border-color:#f4dd8c;">Minor Incident</span>
+          <h1>[Statusseite IT-Services (Mitarbeiter)] Incident: E-Mail-Versand verzögert</h1>
+          <div class="meta">
+            <div class="avatar">OU</div>
+            <div class="who">
+              <div class="name">OneUptime Statuspage</div>
+              <div class="addr">notifications@statuspage.pyur.com</div>
+            </div>
+            <div class="when">Heute, 14:32 Uhr</div>
+          </div>
+          <div class="card" style="border-left-color:#e8b800;">
+            <h2>E-Mail senden/empfangen ist eingeschränkt</h2>
+            <div class="status-line">Status: <strong>Identified</strong> · Schweregrad: <strong>Minor Incident</strong></div>
+            <p>Der Versand von E-Mails über Outlook kann sich aktuell um wenige Minuten verzögern.
+               <strong>Empfangene E-Mails sind nicht betroffen.</strong> Wir gehen davon aus, das Problem in
+               Kürze zu beheben.</p>
+            <a class="cta" href="#">Statusseite öffnen →</a>
+          </div>
+          <div class="signoff">
+            Diese Benachrichtigung wurde automatisch von der Statusseite „IT-Services (Mitarbeiter)“
+            verschickt, weil diese Mailbox den Dienst „E-Mail senden/empfangen“ abonniert hat.<br>
+            Abo verwalten · Abmelden
+          </div>
+        </article>
+
+        <article class="mail-content" id="mail-patchday" hidden>
+          <span class="badge" style="background:#fff4ce;color:#7a5b00;border-color:#f4dd8c;">Wartung</span>
+          <h1>[Statusseite IT-Services (Mitarbeiter)] Wartung: Patchday Server Gruppe 3</h1>
+          <div class="meta">
+            <div class="avatar">OU</div>
+            <div class="who">
+              <div class="name">OneUptime Statuspage</div>
+              <div class="addr">notifications@statuspage.pyur.com</div>
+            </div>
+            <div class="when">Heute, 16:08 Uhr</div>
+          </div>
+          <div class="card" style="border-left-color:#e8b800;">
+            <h2>Patchday Server Gruppe 3</h2>
+            <div class="status-line">Status: <strong>Läuft</strong></div>
+            <p>Im Rahmen des monatlichen Patchdays wird Server-Gruppe 3 aktualisiert und neu gestartet.
+               <strong>Blueant ist während dieses Zeitfensters gestört</strong> und kann kurzzeitig nicht
+               erreichbar sein. Alle anderen Dienste sind nicht betroffen.</p>
+            <a class="cta" href="#">Statusseite öffnen →</a>
+          </div>
+          <div class="signoff">
+            Diese Benachrichtigung wurde automatisch von der Statusseite „IT-Services (Mitarbeiter)“
+            verschickt.<br>Abo verwalten · Abmelden
+          </div>
+        </article>
+
+        <article class="mail-content" id="mail-firewall" hidden>
+          <span class="badge" style="background:#eff6fc;color:#0f6cbd;border-color:#c7e0f4;">Ankündigung</span>
+          <h1>[Standort Leipzig] Ankündigung: Firewall-Upgrade</h1>
+          <div class="meta">
+            <div class="avatar">OU</div>
+            <div class="who">
+              <div class="name">OneUptime Statuspage</div>
+              <div class="addr">notifications@statuspage.pyur.com</div>
+            </div>
+            <div class="when">Heute, 09:00 Uhr</div>
+          </div>
+          <div class="card" style="border-left-color:#0f6cbd;">
+            <h2>Geplantes Firewall-Upgrade (Barracuda)</h2>
+            <p>Zwischen Mittwoch 20:00 und Freitag 06:00 nächster Woche führt die IT ein geplantes Upgrade
+               der Barracuda-Firewall durch. Es kann zu kurzen, wenige Minuten dauernden Unterbrechungen der
+               Internetverbindung kommen.</p>
+            <a class="cta" href="#">Statusseite öffnen →</a>
+          </div>
+          <div class="signoff">
+            Diese Benachrichtigung wurde automatisch von der Statusseite „Standort Leipzig“ verschickt.<br>
+            Abo verwalten · Abmelden
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll(".mail-item").forEach(function (item) {
+      item.addEventListener("click", function () {
+        document.querySelectorAll(".mail-item").forEach(function (i) { i.classList.remove("active"); });
+        item.classList.add("active");
+        document.querySelectorAll(".mail-content").forEach(function (c) { c.hidden = true; });
+        document.getElementById("mail-" + item.dataset.mail).hidden = false;
+      });
+    });
+  </script>
+</body>
+</html>

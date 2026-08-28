@@ -54,3 +54,31 @@ scrape_configs:
         replacement: "demo-broken-site (absichtlich abgelaufenes Zertifikat)"
       - target_label: __address__
         replacement: blackbox_exporter:9115
+
+  # DocuWare-Demo: Fixture-Erreichbarkeit (docuware.pyur.com-Label, echte
+  # Anfrage geht an die lokale demo-docuware-site-Fixture - siehe
+  # demo-docuware-site/ und docker-compose.yml).
+  - job_name: "docuware_site"
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ["http://demo-docuware-site"]
+        labels:
+          demo_fixture: "docuware"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - target_label: instance
+        replacement: "docuware.pyur.com"
+      - target_label: __address__
+        replacement: blackbox_exporter:9115
+
+  # DocuWare-Demo: synthetischer Cluster-Metrics-Exporter (WAF/IIS/MSSQL/
+  # VMware/Hardware) - direkt gescraped, kein blackbox-Umweg, siehe
+  # scripts/docuware-metrics-exporter.py.
+  - job_name: "docuware_cluster"
+    static_configs:
+      - targets: ["docuware-metrics-exporter:9200"]
+        labels:
+          instance: "docuware-cluster"

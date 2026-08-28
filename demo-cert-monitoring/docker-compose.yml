@@ -62,6 +62,32 @@ services:
     ports:
       - "${DEMO_BROKEN_SITE_PORT:-8443}:443"
 
+  demo-docuware-site:
+    # Local fixture standing in for "docuware.pyur.com" - plain HTTP,
+    # always healthy. Deliberately NOT a real network call to any real
+    # pyur.com host: Prometheus relabels its instance to the display name
+    # below (same trick as demo-broken-site), so the demo shows the label
+    # without ever contacting the real domain.
+    image: nginx:1.27-alpine
+    container_name: cert-demo-docuware-site
+    restart: unless-stopped
+    volumes:
+      - ./demo-docuware-site/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${DEMO_DOCUWARE_SITE_PORT:-8080}:80"
+
+  docuware-metrics-exporter:
+    # Synthetic Prometheus exporter simulating the DocuWare cluster's
+    # WAF/IIS/MSSQL/VMware/hardware layer - see scripts/docuware-metrics-exporter.py.
+    image: python:3.12-alpine
+    container_name: cert-demo-docuware-metrics
+    restart: unless-stopped
+    volumes:
+      - ./scripts/docuware-metrics-exporter.py:/docuware-metrics-exporter.py:ro
+    entrypoint: ["python3", "/docuware-metrics-exporter.py"]
+    ports:
+      - "${DOCUWARE_METRICS_PORT:-9200}:9200"
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: cert-demo-prometheus
@@ -72,6 +98,10 @@ services:
       blackbox_exporter:
         condition: service_started
       demo-broken-site:
+        condition: service_started
+      demo-docuware-site:
+        condition: service_started
+      docuware-metrics-exporter:
         condition: service_started
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -101,13 +131,23 @@ services:
   oneuptime-sync:
     image: alpine:3.20
     container_name: cert-demo-oneuptime-sync
-    restart: unless-stopped
+    # on-failure statt unless-stopped: ohne ONEUPTIME_*-Heartbeat-URLs in
+    # .env beendet sich das Sync-Skript planmaessig mit Exit 0. Mit
+    # unless-stopped wuerde Docker diesen sauberen Exit endlos neu starten
+    # und der Container saehe faelschlich nach Dauer-Crash aus.
+    restart: on-failure
     depends_on:
       - prometheus
     env_file:
       - .env
     environment:
       PROM_URL: http://prometheus:9090
+    # The OneUptime heartbeat URLs point at the host (OneUptime runs in its
+    # own compose project, not on this network). Docker Desktop resolves
+    # host.docker.internal on its own; on Linux this mapping is what makes
+    # the same name work.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./scripts/oneuptime-sync.sh:/oneuptime-sync.sh:ro
     entrypoint: ["sh", "/oneuptime-sync.sh"]

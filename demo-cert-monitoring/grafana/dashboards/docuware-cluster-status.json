@@ -1,0 +1,610 @@
+{
+ "title": "DocuWare – Cluster-Status (App-Owner)",
+ "uid": "docuware-cluster-status",
+ "timezone": "browser",
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "schemaVersion": 39,
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "DocuWare – Gesamtstatus (1 = gesund)",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 0,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "min(docuware_mssql_cluster_node_up) * on() min(docuware_hardware_status) * on() probe_success{job=\"docuware_site\"}",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Website erreichbar (docuware.pyur.com)",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 6,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "probe_success{job=\"docuware_site\"}",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Aktive Website-Verbindungen",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 12,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_website_active_connections",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "WAF – blockierte Anfragen (pro Minute)",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 18,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "rate(docuware_waf_blocked_total[5m]) * 60",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 5
+       },
+       {
+        "color": "red",
+        "value": 20
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "Kundenportal – Rechnungsabruf (aktive Sitzungen)",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 6
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_customer_portal_active_sessions",
+     "legendFormat": "Aktive Sitzungen",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "Kundenportal – Anfragen & abgerufene Rechnungen (Rate/Min)",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 6
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "rate(docuware_customer_portal_requests_total[5m]) * 60",
+     "legendFormat": "Anfragen",
+     "refId": "A"
+    },
+    {
+     "expr": "rate(docuware_customer_portal_invoices_retrieved_total[5m]) * 60",
+     "legendFormat": "Rechnungen abgerufen",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "type": "timeseries",
+   "title": "DocuWare-Dienste – RAM-Nutzung vs. Alert-Limit",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 13
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_service_memory_used_mb{service=\"content-server\"}",
+     "legendFormat": "Content Server – belegt",
+     "refId": "A"
+    },
+    {
+     "expr": "docuware_service_memory_limit_mb{service=\"content-server\"}",
+     "legendFormat": "Content Server – Limit",
+     "refId": "B"
+    },
+    {
+     "expr": "docuware_service_memory_used_mb{service=\"platform-service\"}",
+     "legendFormat": "Platform Service – belegt",
+     "refId": "C"
+    },
+    {
+     "expr": "docuware_service_memory_limit_mb{service=\"platform-service\"}",
+     "legendFormat": "Platform Service – Limit",
+     "refId": "D"
+    },
+    {
+     "expr": "docuware_service_memory_used_mb{service=\"autoindex-service\"}",
+     "legendFormat": "Autoindex Service – belegt",
+     "refId": "E"
+    },
+    {
+     "expr": "docuware_service_memory_limit_mb{service=\"autoindex-service\"}",
+     "legendFormat": "Autoindex Service – Limit",
+     "refId": "F"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "decmbytes"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "DocuWare-Dienste – Abstand zum Alert-Limit (%)",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 13
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "100 * (1 - docuware_service_memory_used_mb{service=\"content-server\"} / docuware_service_memory_limit_mb{service=\"content-server\"})",
+     "legendFormat": "Content Server",
+     "refId": "A"
+    },
+    {
+     "expr": "100 * (1 - docuware_service_memory_used_mb{service=\"platform-service\"} / docuware_service_memory_limit_mb{service=\"platform-service\"})",
+     "legendFormat": "Platform Service",
+     "refId": "B"
+    },
+    {
+     "expr": "100 * (1 - docuware_service_memory_used_mb{service=\"autoindex-service\"} / docuware_service_memory_limit_mb{service=\"autoindex-service\"})",
+     "legendFormat": "Autoindex Service",
+     "refId": "C"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 9,
+   "type": "timeseries",
+   "title": "App-Server (2x, Windows) – CPU/RAM",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 20
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_appserver_cpu_percent{server=\"app1\"}",
+     "legendFormat": "app1 CPU",
+     "refId": "A"
+    },
+    {
+     "expr": "docuware_appserver_memory_percent{server=\"app1\"}",
+     "legendFormat": "app1 RAM",
+     "refId": "B"
+    },
+    {
+     "expr": "docuware_appserver_cpu_percent{server=\"app2\"}",
+     "legendFormat": "app2 CPU",
+     "refId": "C"
+    },
+    {
+     "expr": "docuware_appserver_memory_percent{server=\"app2\"}",
+     "legendFormat": "app2 RAM",
+     "refId": "D"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 10,
+   "type": "timeseries",
+   "title": "DB-Cluster (2x MSSQL) – CPU/RAM",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 20
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_dbserver_cpu_percent{server=\"db1\"}",
+     "legendFormat": "db1 CPU",
+     "refId": "A"
+    },
+    {
+     "expr": "docuware_dbserver_memory_percent{server=\"db1\"}",
+     "legendFormat": "db1 RAM",
+     "refId": "B"
+    },
+    {
+     "expr": "docuware_dbserver_cpu_percent{server=\"db2\"}",
+     "legendFormat": "db2 CPU",
+     "refId": "C"
+    },
+    {
+     "expr": "docuware_dbserver_memory_percent{server=\"db2\"}",
+     "legendFormat": "db2 RAM",
+     "refId": "D"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 11,
+   "type": "timeseries",
+   "title": "DB-Cluster – Replikations-Lag & APM Query-Dauer",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 28
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_mssql_replication_lag_seconds",
+     "legendFormat": "Replikations-Lag (s)",
+     "refId": "A"
+    },
+    {
+     "expr": "docuware_mssql_apm_query_duration_ms",
+     "legendFormat": "APM Query-Dauer (ms)",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "type": "table",
+   "title": "DB-Cluster – Knotenstatus",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 28
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_mssql_cluster_node_up",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "type": "timeseries",
+   "title": "BIG-IP F5 Loadbalancer",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 35
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_loadbalancer_cpu_percent",
+     "legendFormat": "CPU %",
+     "refId": "A"
+    },
+    {
+     "expr": "docuware_loadbalancer_throughput_mbps",
+     "legendFormat": "Durchsatz (Mbit/s)",
+     "refId": "B"
+    },
+    {
+     "expr": "docuware_loadbalancer_active_connections",
+     "legendFormat": "Aktive Verbindungen",
+     "refId": "C"
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "type": "timeseries",
+   "title": "VMware-Host – Auslastung",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 35
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_vmware_host_cpu_percent",
+     "legendFormat": "CPU %",
+     "refId": "A"
+    },
+    {
+     "expr": "docuware_vmware_host_memory_percent",
+     "legendFormat": "RAM %",
+     "refId": "B"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 15,
+   "type": "timeseries",
+   "title": "IIS/Web-Tier – Antwortzeit & aktive Anfragen",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 42
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_iis_response_time_ms",
+     "legendFormat": "Antwortzeit (ms)",
+     "refId": "A"
+    },
+    {
+     "expr": "docuware_iis_active_requests",
+     "legendFormat": "Aktive Anfragen",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 16,
+   "type": "timeseries",
+   "title": "WAF – Anfragen gesamt vs. blockiert (Rate/Min)",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 42
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "rate(docuware_waf_requests_total[5m]) * 60",
+     "legendFormat": "Anfragen gesamt",
+     "refId": "A"
+    },
+    {
+     "expr": "rate(docuware_waf_blocked_total[5m]) * 60",
+     "legendFormat": "Blockiert",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "type": "table",
+   "title": "Hardware-Status (SAN / Strom / Kühlung)",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 49
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_hardware_status",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    }
+   ]
+  }
+ ]
+}

@@ -11,8 +11,7 @@
 #
 # Usage:
 #   ./setup.sh          # clone + generate config.env, don't start
-#   ./setup.sh --start  # also run `npm start` (falls back to `docker
-#                          compose up -d` if npm is unavailable)
+#   ./setup.sh --start  # also start OneUptime via docker compose
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -92,15 +91,16 @@ echo "    a lightweight single container."
 if [ "${1:-}" = "--start" ]; then
   echo ""
   echo "==> Starting OneUptime ..."
-  if command -v npm >/dev/null 2>&1; then
-    npm start
-  else
-    export $(grep -v '^#' config.env | xargs)
-    docker compose up --remove-orphans -d
-  fi
+  # --env-file instead of 'export $(grep -v '^#' config.env | xargs)':
+  # config.env holds quoted values containing spaces (e.g.
+  # GLOBAL_PROBE_1_DESCRIPTION), which xargs splits into separate words,
+  # making export fail on the fragments. --env-file also picks up keys
+  # with digits in their name (GLOBAL_PROBE_1_KEY) correctly.
+  docker compose --env-file config.env up --remove-orphans -d
 else
   echo ""
   echo "==> Not starting automatically. To start now:"
-  echo "      cd $CLONE_DIR && npm start"
-  echo "    (or: cd $CLONE_DIR && export \$(grep -v '^#' config.env | xargs) && docker compose up --remove-orphans -d)"
+  echo "      cd $CLONE_DIR && docker compose --env-file config.env up --remove-orphans -d"
+  echo "    (avoid OneUptime's own 'npm start' here: it exports config.env"
+  echo "     through xargs, which breaks on quoted values containing spaces.)"
 fi

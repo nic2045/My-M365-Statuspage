@@ -221,3 +221,12 @@ __marimo__/
 
 # Background-agent worktrees (transient, never check in)
 .claude/worktrees/
+
+# seed-oneuptime.sh writes this: it contains live OneUptime heartbeat
+# secret keys (each is effectively a write token for that monitor).
+demo-cert-monitoring/.oneuptime-demo-summary
+
+# seed_oneuptime.py caches uploaded logo File ids here across runs
+# (Files are immutable in OneUptime - no update permission - so these
+# avoid re-uploading an identical logo on every seed run).
+demo-cert-monitoring/.oneuptime-logo-*.id

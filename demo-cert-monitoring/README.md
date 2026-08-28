@@ -49,6 +49,30 @@ startet **gesund** und lässt sich live per `./break-demo.sh` /
 
 ## Setup
 
+### Schnellstart (empfohlen)
+
+`./start-demo.sh` macht den kompletten Ablauf in einem Rutsch: prüft
+Docker und die Host-Ports, legt `.env` beim ersten Lauf aus
+`.env.example` an, startet den Stack und **wartet, bis Prometheus und
+Grafana wirklich antworten und die ersten Probe-Ergebnisse da sind** -
+damit eine Demo nie gegen ein noch bootendes Grafana startet. Am Ende
+gibt es alle URLs aus.
+
+```bash
+cd demo-cert-monitoring
+./start-demo.sh                    # nur der Kern-Stack (schnell)
+./start-demo.sh --break            # Kern-Stack, danach direkt den Zertifikats-Vorfall auslösen
+./start-demo.sh --with-oneuptime   # zusätzlich das selbstgehostete OneUptime (dauert lange, s.u.)
+```
+
+Herunterfahren mit `./stop-demo.sh` - stoppt automatisch **auch OneUptime**,
+falls eingerichtet (eigenes Compose-Projekt, das ein reines `docker compose
+down` in diesem Ordner nicht sieht - sonst laufen Postgres/ClickHouse/Redis/...
+unbemerkt weiter). Volumes bleiben dabei erhalten. `--no-oneuptime` lässt
+OneUptime laufen, `--purge` löscht zusätzlich alle Volumes (irreversibel).
+
+### Manuell
+
 ```bash
 cd demo-cert-monitoring
 cp .env.example .env
@@ -89,7 +113,106 @@ das wäre der nächste Ausbauschritt für einen Produktiveinsatz.
 
 Der `oneuptime-sync`-Dienst ist optional und macht bei leerem
 `ONEUPTIME_HEARTBEAT_URLS` nichts (Prometheus + Grafana laufen trotzdem
-vollständig). Für die volle Demo:
+vollständig).
+
+### Automatisch (empfohlen)
+
+`./start-demo.sh --with-oneuptime` startet OneUptime **und legt die
+komplette Demo-Einrichtung direkt an** - über `seed-oneuptime.sh`:
+
+- Demo-Account `demo@example.com` / `DemoDemo123!` (der erste Account
+  wird automatisch Master Admin; eine E-Mail-Verifizierung entfällt, weil
+  bei `BILLING_ENABLED=false` direkt als verifiziert angelegt wird - im
+  Stack läuft ohnehin kein Mailserver)
+- Projekt **Zertifikats-Monitoring Demo**
+
+**Drei öffentliche Statusseiten, drei unterschiedliche Fälle** (bewusst
+getrennt statt eine Seite mit allem):
+
+1. **Statusseite Zertifikats-Monitoring** - reiner Showcase für
+   Website-/Zertifikats-Überwachung: je ein **"Incoming Request"**-Monitor
+   pro `DEMO_TARGET_URLS`-Eintrag plus **Demo-Website
+   (Zertifikats-Fixture)**, Kriterium "kein Heartbeat seit 5 Minuten →
+   Offline + Incident". Zeigt nur die rohen Ziel-URLs, keine
+   Mitarbeiter-Dienste - "wie kann man Zertifikats-Monitoring darstellen".
+   Ein aus `DEMO_TARGET_URLS` entfernter Eintrag wird beim nächsten Lauf
+   automatisch samt Monitor von der Seite entfernt statt verwaist stehen
+   zu bleiben.
+2. **Statusseite IT-Services (Mitarbeiter)** - IT-Service-Sicht für
+   Mitarbeitende: "Kann ich gerade arbeiten?" Enthält:
+   - **Jira- und Outlook-„Health"** (Gruppen "Aufgabenverwaltung (Jira)" /
+     "E-Mail & Kalender (Outlook)"): nutzerfreundliche Teilstatus ohne
+     Technik-Begriffe ("Anmeldung & Ticket-Suche" statt "Tomcat", "E-Mail
+     senden/empfangen" statt "DB")
+   - **Weitere interne Dienste** (VPN, Finanzapplikationen,
+     Projektmanagement-Tools, Blueant) mit `displayDescription` als
+     Performance-Einordnung in Alltagssprache ("Antwortzeit: normal")
+   - **DocuWare** (Dokumentenmanagement) - siehe eigener Abschnitt unten
+   - Wartungen "Patchday Server Gruppe 3" (Status "Ongoing", Blueant
+     betroffen und auf "Degraded" gesetzt), "Wartungsfenster VPN-Gateway"
+     (Status "Scheduled"), **abgeschlossen:** "Patchday Server Gruppe 1 & 2"
+     (Status "Completed" - erzählerischer Vorgänger von Gruppe 3)
+   - Ankündigung "Geplantes Firewall-Upgrade (Barracuda)"
+
+   Alle Dienste sind feste `Manual`-Monitore ohne Sensor, starten
+   automatisch grün und werden nur gezielt (z.B. via Wartung/Incident) auf
+   einen anderen Status gesetzt.
+3. **Statusseite Standort Leipzig** - standortbezogene Facility-IT:
+   Internet, Netzwerk, WLAN, Drucker - inkl. geplanter Druckerwartung
+   (nutzerorientiert: was/wann/Alternative/Kontakt) und **abgeschlossen:**
+   "Wartung Netzwerk-Switches (Rechenzentrum Leipzig)".
+
+**Alle Termine werden bei jedem Lauf neu relativ zu "heute" berechnet**
+(Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen
+immer 6-10 Tage in der Vergangenheit, die Druckerwartung immer am
+kommenden Freitag, das Firewall-Fenster immer Mi–Fr der nächsten Woche),
+damit die Demo auch Wochen später noch aktuell aussieht.
+
+Auch die Incident-Meldung selbst ist deutsch: kippt ein Monitor, legt
+OneUptime automatisch einen Incident **"&lt;Name&gt; ist offline"** an, mit dem
+Text "Seit 5 Minuten ist kein Heartbeat für &lt;Name&gt; eingegangen. Die
+Überwachung meldet das Ziel als nicht erreichbar oder das TLS-Zertifikat
+als abgelaufen. Die IT arbeitet an der Behebung." Der Incident erscheint
+damit auch auf der öffentlichen Statusseite und wird nach der Erholung
+automatisch auf "Resolved" gesetzt. Die erzeugten Heartbeat-URLs werden
+nach `.env` zurückgeschrieben und `oneuptime-sync` neu gestartet.
+
+**Branding statt Icons pro Zeile:** Emoji im Anzeigenamen wirkten zu
+verspielt. OneUptime hat kein Icon-Feld pro Ressource/Gruppe, aber ein
+`logoFileId` pro Statusseite (`headerHTML`/`customCSS`/`footerHTML`
+funktionieren dagegen nur mit verifizierter Custom-Domain - auf der
+lokalen Demo-URL unsichtbar, deshalb ungenutzt). Jede der drei Seiten
+bekommt ein eigenes, schlichtes SVG-Logo (hochgeladen als `File`,
+`isPublic: true`) - blau/Schild für Zertifikate, grün/Chat für
+IT-Services, orange/Pin für Leipzig.
+
+**Admin-/Infrastruktur- und AI-Observability-Beispiel** (nicht auf einer
+öffentlichen Statusseite - `MonitorGroup`/`MonitorGroupResource`
+organisieren Monitore nur auf OneUptimes eigenem internen Dashboard):
+Gruppe "Infrastruktur-Monitoring (Admin)" (OpenShift-Cluster,
+MSSQL-Datenbanken, VMware-Umgebung, Server, Storage,
+Netzwerk-Backbone) und Gruppe "AI / LLM Observability
+(llm.pyur.com)" (Modell-Verfügbarkeit, Latenz & Durchsatz,
+GPU-Auslastung, Guardrails & Fehlerquote, Kosten & Nutzung) - beide rein
+statisch/beispielhaft, `Manual`-Monitore mit beschreibendem Text.
+
+Das Skript ist idempotent und konvergent - ein erneuter Lauf verwendet
+vorhandenen Account, Projekt, Monitore und Statuspage weiter (statt
+Duplikate anzulegen) und zieht sie zugleich auf die aktuellen Texte und
+Einstellungen nach. Objekte aus älteren Läufen mit englischen Namen
+werden dabei umbenannt, nicht doppelt angelegt. Separat aufrufbar mit `./seed-oneuptime.sh` (Optionen:
+`--email`, `--password`, `--project`, `--heartbeat-minutes`).
+Überspringen mit `./start-demo.sh --with-oneuptime --no-seed`.
+
+> Die in `.env` geschriebenen Heartbeat-URLs zeigen bewusst auf
+> `host.docker.internal`, nicht auf `localhost`: sie werden **aus dem
+> `oneuptime-sync`-Container heraus** aufgerufen, und dort wäre
+> `localhost` der Container selbst. OneUptime läuft in einem eigenen
+> Compose-Projekt, also nicht auf demselben Docker-Netzwerk.
+
+### Manuell
+
+Für Cloud-Trial (https://oneuptime.com) oder eigene Einrichtung:
 
 1. OneUptime-Konto anlegen: entweder Cloud-Trial unter https://oneuptime.com,
    oder selbst gehostet über [`oneuptime-selfhosted/`](oneuptime-selfhosted/)
@@ -117,6 +240,59 @@ vollständig). Für die volle Demo:
    Ping aus, markiert OneUptime den Monitor nach seiner eigenen
    Kulanzzeit als "down" - dort konfigurierbar.
 
+## DocuWare-Cluster: App-Owner-Tiefe + einfache Nutzeransicht
+
+Zeigt beide Zielgruppen eines Monitoring-Stacks am selben Beispiel: **tief
+technisch für App-Owner** (Grafana) und **einfach für Endnutzer**
+(OneUptime-Statuspage) - für dieselbe, fiktive Anwendung.
+
+**Aufbau** (`docker-compose.yml`, `scripts/docuware-metrics-exporter.py`):
+- `demo-docuware-site`: lokale Fixture (nginx, immer erreichbar), im
+  Blackbox-Job als `docuware.pyur.com` beschriftet - **keine echte
+  Netzwerkanfrage an eine reale pyur.com-Domain**, exakt dasselbe
+  Relabel-Muster wie bei `demo-broken-site`
+- `docuware-metrics-exporter`: synthetischer Prometheus-Exporter, liefert
+  plausible, leicht schwankende Metriken für WAF, IIS, MSSQL-Cluster
+  (inkl. Replikations-Lag und APM-Query-Dauer), VMware-Host und Hardware
+  (SAN/Strom/Kühlung) - keine echte Integration, nur Zahlen für ein
+  glaubwürdiges Dashboard
+
+**Grafana-Dashboard "DocuWare – Cluster-Status (App-Owner)"**
+(`grafana/dashboards/docuware-cluster-status.json`, automatisch
+provisioniert): Gesamtstatus-Stat oben, dann Website/WAF, IIS,
+MSSQL-Cluster, VMware, Hardware - alle Panel-Queries gegen die echten
+(synthetischen) Prometheus-Metriken.
+
+**OneUptime-Statuspage** (einfache Nutzeransicht): ein Eintrag "DocuWare
+(Dokumentenmanagement)" in eigener Gruppe auf der Statusseite
+**IT-Services (Mitarbeiter)**. Bewusst **kein** Heartbeat-Monitor wie
+`demo-broken-site`, sondern ein `Manual`-Monitor: der Witz dieses
+Beispiels ist "Seite erreichbar, Login kaputt" - eine Unterscheidung, die
+reines HTTP-Probing gar nicht treffen kann. Ein Heartbeat-Monitor würde
+beim nächsten erfolgreichen Ping automatisch wieder auf "Operational"
+springen (die Fixture IST erreichbar) und dem manuell gesetzten
+"Degraded" unten entgegenlaufen - und zusätzlich einen eigenen "kein
+Heartbeat"-Incident parallel zum handgeschriebenen Major Incident
+erzeugen. `Manual` hält die Geschichte eindeutig: der Incident selbst ist
+das Signal.
+
+**Beispiel Major Incident** (von `seed-oneuptime.sh` angelegt, nicht
+automatisch ausgelöst): **"DocuWare | Anmeldung in DocuWare nicht
+möglich"**, Schweregrad "Major Incident", Status **"In Behebung"** (eigener
+ITIL-v4-Remediation-Status, zwischen "Acknowledged" und "Resolved"
+angelegt, da OneUptime standardmäßig nur Identified/Acknowledged/Resolved
+seedet). Beschreibung erklärt die Auswirkung für Mitarbeitende und
+referenziert im Text den echten BMC-Vorfall `INC000000222127` als
+Markdown-Link. Bewusst nicht auto-aufgelöst und unabhängig vom
+Erreichbarkeits-Monitor (Login-Ausfall ≠ Site nicht erreichbar - wie bei
+echten Statuspages).
+
+**Live vorführen:** `./break-docuware.sh` lässt den Metrics-Exporter
+MSSQL-Knoten db2 ausfallen, WAF-Blocks hochschnellen und IIS/APM
+langsamer werden - sichtbar im Grafana-Dashboard binnen ~15-30s (nächster
+Prometheus-Scrape). `./fix-docuware.sh` macht es rückgängig. Unabhängig
+vom DocuWare-Erreichbarkeits-Heartbeat, der die ganze Zeit gesund bleibt.
+
 ## Test-Incident live durchspielen: "Zertifikat abgelaufen, IT arbeitet an Behebung"
 
 `demo-broken-site` startet **gesund** (gültiges Zertifikat,
@@ -142,10 +318,11 @@ Danach live mitverfolgen:
 | Prometheus (`/alerts`) | `CertificateExpiringCritical` geht auf "Pending" → "Firing" für `demo-broken-site (absichtlich abgelaufenes Zertifikat)` | ~15s Scrape + 1 min `for:` |
 | Grafana-Dashboard | Statustabelle + Zertifikats-Countdown-Panel zeigen die Zeile rot/negativ | ~30s Panel-Refresh |
 | `docker compose logs -f oneuptime-sync` | Meldet `reachable but cert expires in -2 days -> treating as unhealthy`, hört auf zu pingen | nächster `SYNC_INTERVAL_SECONDS`-Zyklus (Default 60s) |
-| OneUptime-Monitor / Statuspage | Monitor kippt auf "down", Status page zeigt den Service als beeinträchtigt | nach der konfigurierten "Not Received In Minutes"-Kulanzzeit |
+| OneUptime-Monitor / Statuspage | Monitor kippt auf "Offline", Status page zeigt den Service als beeinträchtigt | nach der "Not Recieved In Minutes"-Kulanzzeit (vom Seeding auf 5 min gesetzt) |
 
 Voraussetzung für die letzten beiden Zeilen: `ONEUPTIME_DEMO_HEARTBEAT_URL`
-in `.env` gesetzt (siehe unten) - sonst bleibt es beim Prometheus-/
+in `.env` gesetzt - das erledigt `./seed-oneuptime.sh` automatisch (bzw.
+`./start-demo.sh --with-oneuptime`). Ohne das bleibt es beim Prometheus-/
 Grafana-Teil, was für eine reine App-Owner-Demo oft schon reicht.
 
 ### 2. (Optional) Vorfall in OneUptime sichtbar machen
@@ -199,6 +376,24 @@ OneUptime bietet dafür auch eine REST-API (siehe
 https://oneuptime.com/reference), falls ihr das Anlegen/Auflösen von
 Incidents zusätzlich skripten wollt - die genauen Endpunkt-/Payload-
 Details dort prüfen, da sie sich zwischen Versionen ändern können.
+
+## Benachrichtigungs-Mockups (E-Mail, Teams, Mobil)
+
+`mockups/` enthält statische, in sich geschlossene HTML-Seiten, die
+zeigen, wie eine Statuspage-Benachrichtigung für Abonnenten in
+verschiedenen Kanälen aussehen würde - reine Anschauungs-Mockups für die
+Management-Demo, **keine echten Integrationen** (es wird nichts
+verschickt, kein SMTP/Teams-Webhook/SMS-Gateway angebunden). Jede Seite
+zeigt sowohl den DocuWare-Major-Incident als auch einen alltagsnahen
+Minor Incident ("E-Mail-Versand verzögert") - zwei Schweregrade, eine
+Mitarbeiterperspektive.
+
+**Einstieg:** `mockups/index.html` - Übersichtsseite mit anklickbaren
+Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
+
+- `mockups/benachrichtigung-email.html` - Posteingang-Ansicht (E-Mail-Client), zwischen mehreren Nachrichten klickbar
+- `mockups/benachrichtigung-teams.html` - Microsoft-Teams-Kanal mit Adaptive Cards
+- `mockups/benachrichtigung-mobil.html` - Smartphone-Sperrbildschirm (Push) + SMS-Verlauf
 
 ## Aufräumen
 

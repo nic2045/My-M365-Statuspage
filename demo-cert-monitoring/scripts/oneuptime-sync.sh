@@ -15,6 +15,12 @@
 # cert stops the heartbeat even though the site itself stays reachable
 # (insecure_skip_verify is used for that fixture - see blackbox.yml).
 #
+# demo-docuware-site is NOT synced here on purpose: its OneUptime-facing
+# status follows the seeded DocuWare major incident (login broken, site
+# still reachable), not plain reachability - see seed_oneuptime.py. Its
+# cluster-internal health (WAF/MSSQL/IIS/...) is a separate story, shown
+# only in Grafana and toggled by ../break-docuware.sh / ../fix-docuware.sh.
+#
 # This keeps Prometheus/Grafana as the single source of truth: OneUptime
 # never probes the targets itself, it just reflects what Prometheus saw.
 #
@@ -43,20 +49,27 @@ apk add --no-cache curl jq >/dev/null
 # Pings $heartbeat for $target only if it's reachable (probe_success==1)
 # and, when $require_cert_ok=1, its cert isn't within
 # CERT_CRITICAL_DAYS of expiry (or already expired).
+#
+# $4 is the Prometheus label selector and defaults to instance="$target".
+# The demo fixture needs an explicit one: prometheus.yml relabels its
+# instance to a human-readable string, so selecting it by its target URL
+# matches nothing and jq's "// 0" fallback would report a healthy fixture
+# as permanently down. Its demo_fixture="true" label is stable.
 ping_if_healthy() {
   target="$1"
   heartbeat="$2"
   require_cert_ok="$3"
+  selector="${4:-instance=\"$target\"}"
 
   success=$(curl -s --max-time 5 "$PROM_URL/api/v1/query" \
-    --data-urlencode "query=probe_success{instance=\"$target\"}" \
+    --data-urlencode "query=probe_success{$selector}" \
     | jq -r '.data.result[0].value[1] // "0"' 2>/dev/null || echo "0")
 
   healthy="$success"
 
   if [ "$require_cert_ok" = "1" ] && [ "$success" = "1" ]; then
     cert_days=$(curl -s --max-time 5 "$PROM_URL/api/v1/query" \
-      --data-urlencode "query=(probe_ssl_earliest_cert_expiry{instance=\"$target\"} - time()) / 86400" \
+      --data-urlencode "query=(probe_ssl_earliest_cert_expiry{$selector} - time()) / 86400" \
       | jq -r '.data.result[0].value[1] // "-999"' 2>/dev/null || echo "-999")
 
     if awk -v d="$cert_days" -v t="$CERT_CRITICAL_DAYS" 'BEGIN{exit !(d < t)}'; then
@@ -95,7 +108,7 @@ while true; do
   done
 
   if [ -n "$DEMO_HEARTBEAT" ]; then
-    ping_if_healthy "$DEMO_TARGET" "$DEMO_HEARTBEAT" "1"
+    ping_if_healthy "$DEMO_TARGET" "$DEMO_HEARTBEAT" "1" 'demo_fixture="true"'
   fi
 
   sleep "$INTERVAL"
