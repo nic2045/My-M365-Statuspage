@@ -544,10 +544,15 @@ for url, name in wanted:
 page_id = ensure_status_page(
     STATUS_PAGE_NAME, "Website- & Zertifikatsstatus",
     "Öffentlicher Status der überwachten Dienste.")
-ensure_page_logo("cert", page_id)
+PYUR_LOGO_PATH = "assets/pyur-monitoring-logo.svg"
+ensure_page_logo_from_file("cert", page_id, PYUR_LOGO_PATH, "image/svg+xml")
 
+# In a group (not flat) so it can be collapsed/expanded like every other
+# group on every page - see the isExpandedByDefault pass near the end of
+# this script.
+cert_group = ensure_group(page_id, "Überwachte Websites", 1)
 for order, (_url, name) in enumerate(wanted, start=1):
-    attach_resource(page_id, monitor_ids[name], name, order)
+    attach_resource(page_id, monitor_ids[name], name, order, group_id=cert_group)
 
 # Prune what no longer belongs here: a target dropped from
 # DEMO_TARGET_URLS (e.g. the original www.google.com/github.com/
@@ -564,9 +569,6 @@ for r in get_list("status-page-resource", query={"statusPageId": page_id},
         call(f"/api/status-page-resource/{r['_id']}", None, method="DELETE")
         call(f"/api/monitor/{mid}", None, method="DELETE")
         print(f"    removed stale target '{r.get('displayName')}' (no longer in DEMO_TARGET_URLS)")
-for g in get_list("status-page-group", query={"statusPageId": page_id}, select={"_id": True, "name": True}):
-    call(f"/api/status-page-group/{g['_id']}", None, method="DELETE")
-    print(f"    removed leftover group '{g.get('name')}' from the certificate page")
 
 # ── 2) IT-Services (Mitarbeiter): "Kann ich gerade arbeiten?" - Dienste mit
 # ihren Einschränkungen aus Mitarbeitersicht, eigene Statusseite. ───────────
@@ -574,15 +576,7 @@ it_service_page_id = ensure_status_page(
     IT_SERVICE_PAGE_NAME, "IT-Services für Mitarbeitende",
     "Aktueller Status der internen IT-Services - zeigt euch, ob ihr eure "
     "Arbeit uneingeschränkt erledigen könnt.")
-# Real DocuWare wordmark (CC BY-SA 4.0, DocuWare Corporation, via Wikimedia
-# Commons - see README credit) instead of the generic SVG mark: DocuWare is
-# the flagship example on this page, so its own logo reads better here than
-# an abstract chat-bubble icon.
-DOCUWARE_LOGO_PATH = "assets/docuware-logo.png"
-if os.path.exists(DOCUWARE_LOGO_PATH):
-    ensure_page_logo_from_file("itservice", it_service_page_id, DOCUWARE_LOGO_PATH, "image/png")
-else:
-    ensure_page_logo("itservice", it_service_page_id)
+ensure_page_logo_from_file("itservice", it_service_page_id, PYUR_LOGO_PATH, "image/svg+xml")
 
 jira_group = ensure_group(it_service_page_id, "Aufgabenverwaltung (Jira)", 10,
                           "Status der Ticket- und Aufgabenverwaltung.")
@@ -608,13 +602,24 @@ static_group = ensure_group(it_service_page_id, "Weitere interne Dienste", 30,
                             "Dienste ohne aktive Überwachung - Status wird manuell gepflegt.")
 STATIC_SERVICES = [
     ("VPN-Zugang", "Verbindungsqualität: sehr gut"),
-    ("Finanzapplikationen", "Antwortzeit: normal"),
-    ("Projektmanagement-Tools", "Antwortzeit: schnell"),
     ("Blueant", "Antwortzeit: normal"),
 ]
 for i, (name, sub) in enumerate(STATIC_SERVICES, start=1):
     mid = ensure_manual_monitor(name, "Statischer Diensteintrag ohne Sensor")
     attach_resource(it_service_page_id, mid, name, 40 + i, group_id=static_group, display_description=sub)
+
+# Dropped later - Finanzapplikationen/Projektmanagement-Tools didn't fit
+# the group anymore. Removing monitor+resource so re-running doesn't
+# leave them orphaned on the page.
+for stale_name in ("Finanzapplikationen", "Projektmanagement-Tools"):
+    stale = find_by_name("monitor", stale_name, select={"_id": True, "name": True}, legacy=[])
+    if stale:
+        for r in get_list("status-page-resource", query={"statusPageId": it_service_page_id},
+                          select={"_id": True, "monitorId": True}):
+            if _resource_monitor_id(r) == stale["_id"]:
+                call(f"/api/status-page-resource/{r['_id']}", None, method="DELETE")
+        call(f"/api/monitor/{stale['_id']}", None, method="DELETE")
+        print(f"    removed '{stale_name}' (no longer part of Weitere interne Dienste)")
 
 blueant_monitor_id = monitor_ids["Blueant"]
 
@@ -756,16 +761,18 @@ ensure_slo(
 leipzig_page_id = ensure_status_page(
     LEIPZIG_PAGE_NAME, "Standort Leipzig – Infrastrukturstatus",
     "Öffentlicher Status der lokalen Infrastruktur am Standort Leipzig.")
-ensure_page_logo("leipzig", leipzig_page_id)
+ensure_page_logo_from_file("leipzig", leipzig_page_id, PYUR_LOGO_PATH, "image/svg+xml")
 
+leipzig_group = ensure_group(leipzig_page_id, "Standortdienste", 1)
 LEIPZIG_SERVICES = ["Internet-Anbindung", "Netzwerk (LAN)", "WLAN"]
 for i, name in enumerate(LEIPZIG_SERVICES, start=1):
     mid = ensure_manual_monitor(name, "Statischer Diensteintrag ohne Sensor (Standort Leipzig)")
-    attach_resource(leipzig_page_id, mid, name, i, display_description="Alle Systeme normal")
+    attach_resource(leipzig_page_id, mid, name, i, group_id=leipzig_group, display_description="Alle Systeme normal")
 
 printer_name = "Drucker (Hauptgebäude)"
 printer_monitor_id = ensure_manual_monitor(printer_name, "Statischer Diensteintrag ohne Sensor (Standort Leipzig)")
-attach_resource(leipzig_page_id, printer_monitor_id, printer_name, 4, display_description="Alle Systeme normal")
+attach_resource(leipzig_page_id, printer_monitor_id, printer_name, 4, group_id=leipzig_group,
+                display_description="Alle Systeme normal")
 
 # ── 4) Geplante Wartungen + Ankündigung (dynamisch datiert) ──────────────────
 sm_states = get_list("scheduled-maintenance-state",
@@ -1007,6 +1014,33 @@ def ensure_subscriber(page_id, email):
 DEMO_SUBSCRIBER_EMAIL = "mitarbeiter@pyur-demo.local"
 ensure_subscriber(page_id, DEMO_SUBSCRIBER_EMAIL)
 ensure_subscriber(it_service_page_id, DEMO_SUBSCRIBER_EMAIL)
+
+# ── 8) Gruppen einklappen, außer sie enthalten gerade eine Störung ──────────
+# OneUptime has no "auto-expand a group with an active incident" behaviour
+# of its own - StatusPageGroup.isExpandedByDefault is a static flag the
+# frontend reads once (Overview.tsx: isInitiallyExpanded={group.isExpandedByDefault}).
+# So this is a snapshot taken at seed time, not a live subscription: a
+# group collapses/expands based on monitor status AS OF THIS RUN. Re-run
+# seed-oneuptime.sh after a break-*.sh/fix-*.sh cycle to refresh which
+# groups are shown open - the status *inside* an unopened group is still
+# reflected by its collapsed-row rollup colour either way, this only
+# controls whether it starts open or closed.
+all_monitor_status = {
+    m["_id"]: (m.get("currentMonitorStatus") or {}).get("isOperationalState", True)
+    for m in get_list("monitor", select={"_id": True, "currentMonitorStatus": {"isOperationalState": True}})
+}
+for pid in (page_id, it_service_page_id, leipzig_page_id):
+    for group in get_list("status-page-group", query={"statusPageId": pid},
+                          select={"_id": True, "name": True}):
+        member_monitor_ids = [
+            _resource_monitor_id(r) for r in get_list(
+                "status-page-resource", query={"statusPageGroupId": group["_id"]},
+                select={"_id": True, "monitorId": True})
+        ]
+        impaired = any(not all_monitor_status.get(mid, True) for mid in member_monitor_ids)
+        call(f"/api/status-page-group/{group['_id']}",
+             {"data": {"isExpandedByDefault": impaired}}, method="PUT")
+        print(f"    group '{group['name']}': {'aufgeklappt (Störung)' if impaired else 'eingeklappt (gesund)'}")
 
 # ── Write heartbeat URLs back into .env ─────────────────────────────────────
 ordered = ",".join(heartbeats[name] for _u, name in wanted if name != DEMO_MONITOR_NAME)

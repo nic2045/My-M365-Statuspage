@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Demo-Kontrollzentrum</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card-bg: #ffffff;
+    --border: #e2e4e8;
+    --text: #1c1c1e;
+    --muted: #6b6f76;
+    --ok: #1a7f45;
+    --ok-bg: #e6f4ea;
+    --bad: #c4314b;
+    --bad-bg: #fdf2f4;
+    --unknown: #8a8f98;
+    --unknown-bg: #eef0f2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 40px 24px 80px;
+  }
+  header { max-width: 1080px; margin: 0 auto 32px; }
+  header h1 { font-size: 26px; margin: 0 0 8px; }
+  header p { color: var(--muted); font-size: 14px; margin: 0; max-width: 720px; line-height: 1.6; }
+
+  .grid {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .card-head { display: flex; align-items: center; gap: 14px; }
+  .card-head svg { width: 48px; height: 48px; flex-shrink: 0; }
+  .card-head h2 { font-size: 16px; margin: 0; }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-top: 4px;
+  }
+  .status .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .status.healthy { background: var(--ok-bg); color: var(--ok); }
+  .status.healthy .dot { background: var(--ok); }
+  .status.unhealthy { background: var(--bad-bg); color: var(--bad); }
+  .status.unhealthy .dot { background: var(--bad); }
+  .status.unknown { background: var(--unknown-bg); color: var(--unknown); }
+  .status.unknown .dot { background: var(--unknown); }
+
+  .story { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
+
+  .links { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; }
+  .links a { color: #0f6cbd; text-decoration: none; }
+  .links a:hover { text-decoration: underline; }
+
+  .actions { display: flex; gap: 10px; margin-top: auto; }
+  .actions button {
+    flex: 1;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-break { background: var(--bad); color: #fff; }
+  .btn-break:hover { background: #a82a41; }
+  .btn-fix { background: #e2e2e5; color: var(--text); }
+  .btn-fix:hover { background: #d3d3d7; }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  .log-section {
+    max-width: 1080px;
+    margin: 32px auto 0;
+  }
+  .log-section h2 { font-size: 14px; color: var(--muted); margin: 0 0 8px; }
+  #log {
+    background: #14161a;
+    color: #d7dade;
+    border-radius: 10px;
+    padding: 16px 18px;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    max-height: 260px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+  #log .ok { color: #6fd394; }
+  #log .fail { color: #ff8a8a; }
+
+  .section-title {
+    max-width: 1080px;
+    margin: 0 auto 14px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .hub {
+    max-width: 1080px;
+    margin: 0 auto 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .hub-group { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 -2px; }
+  .hub-group:first-child { margin-top: 0; }
+  a.hub-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  a.hub-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.08); transform: translateY(-1px); }
+  a.hub-card .hub-icon {
+    width: 34px; height: 34px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 13px;
+    flex-shrink: 0;
+  }
+  a.hub-card .hub-text .t { font-size: 13px; font-weight: 600; }
+  a.hub-card .hub-text .d { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  a.hub-card.disabled { opacity: 0.45; pointer-events: none; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Demo-Kontrollzentrum</h1>
+    <p>
+      Startpunkt für die komplette Demo: alle Statusseiten, Dashboards und
+      Werkzeuge auf einen Blick, plus die drei Vorfall-Skripte live von
+      hier aus steuerbar - statt im Terminal. Status kommt live aus
+      Prometheus (der Wahrheitsquelle des Stacks). Läuft nur lokal
+      (127.0.0.1).
+    </p>
+  </header>
+
+  <div class="section-title">Alle Seiten</div>
+  <div class="hub" id="hub">
+    <div class="hub-group">Statusseiten (Mitarbeiter/Kunden)</div>
+    <a class="hub-card disabled" id="hub-cert" href="#" target="_blank">
+      <div class="hub-icon" style="background:#0f6cbd;">Z</div>
+      <div class="hub-text"><div class="t">Zertifikate</div><div class="d">Website-/Zertifikats-Showcase</div></div>
+    </a>
+    <a class="hub-card disabled" id="hub-itservice" href="#" target="_blank">
+      <div class="hub-icon" style="background:#0e7a4d;">I</div>
+      <div class="hub-text"><div class="t">IT-Services</div><div class="d">Für Mitarbeitende</div></div>
+    </a>
+    <a class="hub-card disabled" id="hub-leipzig" href="#" target="_blank">
+      <div class="hub-icon" style="background:#c25a00;">L</div>
+      <div class="hub-text"><div class="t">Standort Leipzig</div><div class="d">Facility-IT</div></div>
+    </a>
+
+    <div class="hub-group">Dashboards (App-Owner/Technical Owner)</div>
+    <a class="hub-card" href="http://localhost:3000/d/website-cert-monitoring" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">Website &amp; Zertifikate</div><div class="d">Grafana</div></div>
+    </a>
+    <a class="hub-card" href="http://localhost:3000/d/docuware-cluster-status" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">DocuWare-Cluster</div><div class="d">Grafana</div></div>
+    </a>
+    <a class="hub-card" href="http://localhost:3000/d/customer-care-overview" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">Customer Care</div><div class="d">Grafana</div></div>
+    </a>
+
+    <div class="hub-group">Werkzeuge</div>
+    <a class="hub-card" href="http://localhost" target="_blank">
+      <div class="hub-icon" style="background:#5b5fc7;">O</div>
+      <div class="hub-text"><div class="t">OneUptime</div><div class="d">Login demo@example.com</div></div>
+    </a>
+    <a class="hub-card" href="http://localhost:8025" target="_blank">
+      <div class="hub-icon" style="background:#8a8f98;">M</div>
+      <div class="hub-text"><div class="t">Mailpit</div><div class="d">Live-E-Mail-Postfach</div></div>
+    </a>
+    <a class="hub-card" href="/mockups/index.html" target="_blank">
+      <div class="hub-icon" style="background:#8a8f98;">B</div>
+      <div class="hub-text"><div class="t">Benachrichtigungs-Mockups</div><div class="d">E-Mail / Teams / Mobil / BMC</div></div>
+    </a>
+    <a class="hub-card" href="http://localhost:9090" target="_blank">
+      <div class="hub-icon" style="background:#8a8f98;">P</div>
+      <div class="hub-text"><div class="t">Prometheus</div><div class="d">Rohdaten &amp; Alerts</div></div>
+    </a>
+  </div>
+
+  <div class="section-title">Vorfall-Szenarien</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f6cbd"/>
+          <path d="M24 10 L36 14 V24 C36 32 30 39 24 42 C18 39 12 32 12 24 V14 Z" fill="none" stroke="#fff" stroke-width="2.5"/>
+          <circle cx="24" cy="24" r="4" fill="#fff"/>
+        </svg>
+        <div>
+          <h2>Zertifikats-Vorfall</h2>
+          <span class="status unknown" id="status-demo"><span class="dot"></span>wird geprüft…</span>
+        </div>
+      </div>
+      <p class="story">
+        Die Demo-Website läuft mit einem gültigen Zertifikat - bis ihr den
+        Vorfall auslöst. Dann zeigt Prometheus/Grafana das ablaufende
+        Zertifikat, OneUptime markiert den Dienst offline, ein echter
+        Incident entsteht, und binnen Minuten kommt eine echte
+        Abonnenten-E-Mail in Mailpit an. Guter Einstieg: die volle Kette
+        von der Erkennung bis zur Benachrichtigung.
+      </p>
+      <div class="links">
+        <a href="http://localhost:3000" target="_blank">Grafana</a>
+        <a href="http://localhost:9090/alerts" target="_blank">Prometheus-Alerts</a>
+        <a href="http://localhost:8025" target="_blank">Mailpit</a>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-demo', 'demo')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-demo', 'demo')">Beheben</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0e7a4d"/>
+          <rect x="13" y="12" width="16" height="20" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <rect x="19" y="18" width="16" height="20" rx="2" fill="#0e7a4d" stroke="#fff" stroke-width="2.2"/>
+          <line x1="23" y1="24" x2="31" y2="24" stroke="#fff" stroke-width="1.6"/>
+          <line x1="23" y1="28" x2="31" y2="28" stroke="#fff" stroke-width="1.6"/>
+        </svg>
+        <div>
+          <h2>DocuWare-Cluster-Vorfall</h2>
+          <span class="status unknown" id="status-docuware"><span class="dot"></span>wird geprüft…</span>
+        </div>
+      </div>
+      <p class="story">
+        Der DocuWare-Cluster läuft "geschäftig, aber gesund" - Kundenportal
+        und internes Backend sind getrennt sichtbar. Der Vorfall lässt den
+        zweiten MSSQL-Knoten ausfallen, WAF-Blocks hochschnellen und die
+        Antwortzeiten steigen - live im App-Owner-Dashboard. Das
+        Kundenportal bleibt bewusst unberührt: zeigt, dass ein
+        Infrastruktur-Vorfall nicht zwangsläufig Kunden betrifft.
+      </p>
+      <div class="links">
+        <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-docuware', 'docuware')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-docuware', 'docuware')">Beheben</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c25a00"/>
+          <path d="M24 10 C18 10 13 15 13 21 C13 30 24 38 24 38 C24 38 35 30 35 21 C35 15 30 10 24 10 Z" fill="#fff"/>
+          <circle cx="24" cy="21" r="5" fill="#c25a00"/>
+        </svg>
+        <div>
+          <h2>Customer-Care-Vorfall (Chemnitz)</h2>
+          <span class="status unknown" id="status-customer-care"><span class="dot"></span>wird geprüft…</span>
+        </div>
+      </div>
+      <p class="story">
+        Sechs Standorte hängen per Standleitung (S2S-VPN) am Rechenzentrum
+        Leipzig - alle grün, sichtbar auf der Deutschlandkarte. Der Vorfall
+        lässt die Verbindung nach Chemnitz hart einbrechen: Paketverlust,
+        schlechte Sprachqualität, Bandbreiten-Kollaps. Auf der Karte
+        springt der Chemnitz-Marker auf Rot, die Avaya-Warteschlange läuft
+        voll - ein Standort-Ausfall, live und geografisch verortet.
+      </p>
+      <div class="links">
+        <a href="http://localhost:3000/d/customer-care-overview" target="_blank">Grafana-Dashboard</a>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-customer-care', 'customer-care')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-customer-care', 'customer-care')">Beheben</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="log-section">
+    <h2>Letzte Aktion</h2>
+    <div id="log">Bereit. Ein Klick oben löst das jeweilige Skript aus.</div>
+  </div>
+
+  <script>
+    const logEl = document.getElementById("log");
+
+    function setLog(text, ok) {
+      const span = document.createElement("div");
+      span.className = ok ? "ok" : "fail";
+      span.textContent = text;
+      logEl.prepend(span);
+    }
+
+    async function run(action, statusKey) {
+      const buttons = document.querySelectorAll("button");
+      buttons.forEach((b) => (b.disabled = true));
+      setLog(`→ ${action} gestartet …`, true);
+      try {
+        const res = await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          setLog(`✓ ${data.label || action} abgeschlossen.`, true);
+        } else {
+          setLog(`✗ ${data.label || action} fehlgeschlagen: ${data.error || data.stderr || "unbekannter Fehler"}`, false);
+        }
+      } catch (e) {
+        setLog(`✗ ${action}: Verbindung zum Kontrollserver fehlgeschlagen (${e})`, false);
+      }
+      buttons.forEach((b) => (b.disabled = false));
+      refreshStatus();
+    }
+
+    async function refreshStatus() {
+      try {
+        const res = await fetch("/api/status");
+        const data = await res.json();
+        for (const key of ["demo", "docuware", "customer-care"]) {
+          const el = document.getElementById("status-" + key);
+          const state = data[key] || "unknown";
+          el.className = "status " + state;
+          el.innerHTML =
+            '<span class="dot"></span>' +
+            (state === "healthy" ? "gesund" : state === "unhealthy" ? "gestört" : "unbekannt");
+        }
+      } catch (e) {
+        // Kontrollserver kurz nicht erreichbar - beim nächsten Poll erneut versuchen.
+      }
+    }
+
+    async function loadLinks() {
+      try {
+        const res = await fetch("/api/links");
+        const data = await res.json();
+        const base = data.oneuptimeBase || "http://localhost";
+        const map = {
+          "hub-cert": data.statusPageId,
+          "hub-itservice": data.itServiceStatusPageId,
+          "hub-leipzig": data.leipzigStatusPageId,
+        };
+        for (const [elId, pageId] of Object.entries(map)) {
+          const a = document.getElementById(elId);
+          if (pageId) {
+            a.href = `${base}/status-page/${pageId}`;
+            a.classList.remove("disabled");
+          } else {
+            a.querySelector(".d").textContent = "noch nicht geseedet - ./seed-oneuptime.sh ausführen";
+          }
+        }
+      } catch (e) {
+        // Kontrollserver kurz nicht erreichbar - Karten bleiben deaktiviert, kein Absturz.
+      }
+    }
+
+    loadLinks();
+    refreshStatus();
+    setInterval(refreshStatus, 5000);
+  </script>
+</body>
+</html>

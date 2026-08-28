@@ -45,6 +45,19 @@ SITES = {
 LEIPZIG_HUB = ("Leipzig (RZ)", 51.3397, 12.3731)
 DEGRADED_SITE = "Chemnitz"  # the one break-customer-care.sh degrades
 
+# Fictional call-center operators per site (no real companies) - used only
+# as a human-readable label on the Germany map, each name spells out its
+# city so a single text label is enough orientation on its own.
+SITE_COMPANIES = {
+    "Berlin":         "NordCom Kundenkontakt Berlin",
+    "Dresden":        "Elbtal Servicecenter Dresden",
+    "Chemnitz":       "Sachsenring Contact Chemnitz",
+    "Halle (Saale)":  "Saalekontakt Halle",
+    "Rostock":        "Ostseecontact Rostock",
+    "Erfurt":         "Thüringen Direkt Erfurt",
+}
+HUB_COMPANY = "PYUR Rechenzentrum Leipzig"
+
 
 def is_unhealthy():
     try:
@@ -73,7 +86,7 @@ def render_metrics():
     lines += [
         "# HELP cc_site_info Static info row per Customer-Care site (value always 1) - used for the Germany map.",
         "# TYPE cc_site_info gauge",
-        f'cc_site_info{{site="{name}",lat="{lat}",lon="{lon}",role="hub"}} 1',
+        f'cc_site_info{{site="{name}",lat="{lat}",lon="{lon}",role="hub",company="{HUB_COMPANY}"}} 1',
     ]
 
     # ── Telefonie: Avaya ACD / SIP ────────────────────────────────────────
@@ -227,7 +240,7 @@ def render_metrics():
     ]
     for site, (lat, lon, capacity) in SITES.items():
         degraded_here = unhealthy and site == DEGRADED_SITE
-        labels = f'site="{site}",lat="{lat}",lon="{lon}"'
+        labels = f'site="{site}",lat="{lat}",lon="{lon}",company="{SITE_COMPANIES[site]}"'
         if degraded_here:
             vpn_up = 0
             used = capacity * random.uniform(0.05, 0.15)

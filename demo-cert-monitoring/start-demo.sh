@@ -233,3 +233,7 @@ else
 fi
 echo "        ./stop-demo.sh    tear the demo down"
 echo ""
+echo "  Start here: ./control-panel.sh -> http://localhost:7100"
+echo "  (runs in the foreground outside Docker, on purpose - Ctrl+C stops it;"
+echo "   it links every status page, dashboard and break/fix script above)"
+echo ""

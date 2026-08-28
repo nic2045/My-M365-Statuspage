@@ -144,9 +144,8 @@ getrennt statt eine Seite mit allem):
      "E-Mail & Kalender (Outlook)"): nutzerfreundliche Teilstatus ohne
      Technik-Begriffe ("Anmeldung & Ticket-Suche" statt "Tomcat", "E-Mail
      senden/empfangen" statt "DB")
-   - **Weitere interne Dienste** (VPN, Finanzapplikationen,
-     Projektmanagement-Tools, Blueant) mit `displayDescription` als
-     Performance-Einordnung in Alltagssprache ("Antwortzeit: normal")
+   - **Weitere interne Dienste** (VPN, Blueant) mit `displayDescription`
+     als Performance-Einordnung in Alltagssprache ("Antwortzeit: normal")
    - **DocuWare** (Dokumentenmanagement) - siehe eigener Abschnitt unten
    - Wartungen "Patchday Server Gruppe 3" (Status "Ongoing", Blueant
      betroffen und auf "Degraded" gesetzt), "Wartungsfenster VPN-Gateway"
@@ -181,14 +180,28 @@ nach `.env` zurückgeschrieben und `oneuptime-sync` neu gestartet.
 verspielt. OneUptime hat kein Icon-Feld pro Ressource/Gruppe, aber ein
 `logoFileId` pro Statusseite (`headerHTML`/`customCSS`/`footerHTML`
 funktionieren dagegen nur mit verifizierter Custom-Domain - auf der
-lokalen Demo-URL unsichtbar, deshalb ungenutzt). Zertifikate und Leipzig
-bekommen je ein schlichtes SVG-Logo (hochgeladen als `File`,
-`isPublic: true`) - blau/Schild bzw. orange/Pin. Die IT-Services-Seite
-zeigt stattdessen das echte DocuWare-Logo (`assets/docuware-logo.png`,
-© DocuWare Corporation, [CC BY-SA
+lokalen Demo-URL unsichtbar, deshalb ungenutzt) - dasselbe Bild erscheint
+auch im Kopf jeder Benachrichtigungs-E-Mail (bestätigt per Mailpit,
+siehe unten). Alle drei Statusseiten (Zertifikate, IT-Services, Leipzig)
+verwenden dasselbe generierte **PYUR-Monitoring-Wortmarke**
+(`assets/pyur-monitoring-logo.svg`) statt dreier unterschiedlicher
+Icons - konsistenter fürs Management-Publikum. Das reale DocuWare-Logo
+(`assets/docuware-logo.png`, © DocuWare Corporation, [CC BY-SA
 4.0](https://de.wikipedia.org/wiki/Datei:Docuware_logo_2018_bg_white_0.png)
-via Wikimedia Commons) - DocuWare ist die zentrale Anwendung auf dieser
-Seite.
+via Wikimedia Commons) bleibt im Repo, wird aber nicht mehr als
+Seiten-Logo eingebunden. `File`-Objekte sind in OneUptime unveränderlich
+(kein Update-Recht) - ein Logo-Wechsel legt daher immer eine neue Datei
+an; die lokalen `.oneuptime-logo-<seite>.id`-Marker müssen dafür gelöscht
+werden, sonst wird die alte, gecachte Datei-ID weiterverwendet.
+
+**Gruppen auf allen drei Statusseiten sind standardmäßig eingeklappt** -
+nur Gruppen, die gerade eine Beeinträchtigung enthalten, klappen sich
+automatisch auf (`StatusPageGroup.isExpandedByDefault`, am Ende von
+`seed_oneuptime.py` für jede Gruppe live anhand des aktuellen
+Monitor-Status neu gesetzt). Das ist eine statische Momentaufnahme beim
+Seed-Lauf, kein Live-Verhalten der Statusseite selbst - nach einem
+`break-*.sh`/`fix-*.sh` muss `./seed-oneuptime.sh` erneut laufen, damit
+sich der Auf-/Zuklapp-Zustand nachzieht.
 
 > **Stabile URLs?** Geprüft: echtes CNAME-Custom-Domain-Routing
 > (`StatusPageDomain`) verifiziert beim Setzen von `isVerified` aktiv per
@@ -276,18 +289,40 @@ automatisch provisioniert):
   Standorte mit VPN-Störung, Warteschlange, Wartezeit)
 - Telefonie/Avaya ACD, Citrix, Kundensupport-/Rechnungswesen-App,
   Cognigy/LLM, Infrastruktur - je eigene Zeile
+- **Agenten je Standort** (verfügbar / im Gespräch): gruppierter
+  vertikaler Balken-Chart statt Rohtabelle - zwei Prometheus-Queries per
+  `joinByField` (auf `site`) zusammengeführt, `organize`-Transformation
+  blendet `Time`/`__name__`/`instance`/`job`/`lat`/`lon`/`company` aus
+  und benennt `site` in "Standort" um; die beiden Serien heißen über
+  `byFrameRefID`-Overrides "Verfügbar"/"Im Gespräch" statt "Value #A"
+- **Bandbreitenauslastung (%), VoIP-Qualität (MOS-Score), Latenz zum RZ
+  Leipzig, gleichzeitige Anrufe** je Standort: ebenfalls Balken-Charts
+  statt Rohtabellen (gleiches Entrümpeln), zusätzlich mit Schwellenwert-
+  Einfärbung (z. B. MOS < 3.5 rot, 3.5-4.0 gelb, ≥ 4.0 grün)
 - **Deutschlandkarte** (Grafana-Geomap-Panel, echte Koordinaten der 6
-  Standorte) - Marker färben sich rot bei VPN-Ausfall. Technischer
-  Hinweis: Prometheus-Labels (`lat`/`lon`) kommen aus Grafanas
-  Query-Engine nur als Feld-Metadaten, nicht als eigene Spalten - das
-  Geomap-Panel braucht aber benannte Felder für `location.mode: coords`.
-  Deshalb hängt am Panel eine `labelsToFields`-Transformation
-  (Live-verifiziert: Grafana nimmt das Dashboard inkl. Geomap-Panel und
-  Transformation an; die tatsächliche Kartendarstellung selbst lässt
-  sich ohne Browser in dieser Umgebung nicht einsehen)
-- Dazu vier Tabellen je Standort: Bandbreitenauslastung (%),
-  VoIP-Qualität (MOS-Score), Latenz zum RZ Leipzig, gleichzeitige
-  Anrufe
+  Standorte + Leipzig als Hub): schlankere `carto`-Basiskarte statt
+  `osm-standard` (weniger Straßen-/POI-Rauschen, nur grobe Orientierung),
+  fester Kartenausschnitt auf Deutschland zugeschnitten
+  (`view: {lat: 51.15, lon: 10.85, zoom: 5.9}`). Jeder Standort trägt
+  einen frei erfundenen Call-Center-Firmennamen (`company`-Label im
+  Exporter, z. B. "NordCom Kundenkontakt Berlin") - als Text direkt am
+  Marker eingeblendet (`style.text`/`textConfig`, kein Tooltip-Zwang).
+  Marker- und Verbindungslinienfarbe kommt aus einer dreistufigen
+  Health-Formel (`(vpn_up*2) - (vpn_up*(auslastung>=85%))`): 0 = VPN down
+  (rot), 1 = VPN up aber Link überlastet ≥ 85 % (gelb), 2 = gesund
+  (grün) - je Standort live gegen Prometheus verifiziert. Die 6
+  Verbindungslinien Leipzig↔Standort sind bewusst 6 **getrennte**
+  2-Punkt-Queries (nicht eine verkettete Route über alle Punkte), damit
+  jede Linie unabhängig radial vom Hub ausgeht statt die Standorte
+  der Reihe nach zu verbinden. Technischer Hinweis: Prometheus-Labels
+  kommen aus Grafanas Query-Engine nur als Feld-Metadaten, nicht als
+  eigene Spalten - das Geomap-Panel braucht aber benannte Felder für
+  `location.mode: coords`, deshalb hängt am Panel eine
+  `labelsToFields`-Transformation. Alle 7 Kartenqueries (Gesamtansicht +
+  6 Hub-Standort-Paare) live gegen Prometheus auf die erwartete
+  Zeilenzahl geprüft; die tatsächliche Kartendarstellung selbst lässt
+  sich ohne Grafana-Image-Renderer-Plugin (nicht installiert) nicht als
+  Screenshot verifizieren - bitte einmal im Browser gegenprüfen.
 
 Alle 34 Panel-Queries live gegen Prometheus verifiziert. Baseline
 bewusst "geschäftig, aber gesund" (~45-75 % Auslastung mit sichtbarer
@@ -494,6 +529,40 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
   (`INC000000222127`, dieselbe Nummer wie im DocuWare-Major-Incident, für
   eine durchgängige Story) oben in eine Vorfalls-Warteschlange und wechselt
   kurz danach automatisch von "Neu" auf "Zugewiesen"
+
+## Demo-Kontrollzentrum
+
+`./control-panel.sh` startet eine kleine lokale Seite
+(**http://localhost:7100**) - der zentrale Startpunkt für die ganze
+Demo, nicht nur für die Vorfall-Skripte:
+
+- Drei Szenario-Karten (Zertifikat, DocuWare, Customer Care), je mit
+  kurzer Story, Illustration, Live-Status (direkt aus Prometheus
+  gelesen, kein separates Tracking) und Break-/Fix-Buttons statt
+  Terminal-Aufrufen
+- **Hub-Bereich** darunter, gruppiert in "Statusseiten
+  (Mitarbeiter/Kunden)" (alle drei OneUptime-Statusseiten, Links live
+  aus `.oneuptime-demo-summary` gelesen statt hartkodiert), "Dashboards
+  (App-Owner/Technical Owner)" (die drei Grafana-Dashboards) und
+  "Werkzeuge" (OneUptime, Mailpit, Benachrichtigungs-Mockups,
+  Prometheus)
+
+Sicherheit:
+- Bindet **ausschließlich an 127.0.0.1** - nie über das Netzwerk
+  erreichbar
+- Die Buttons führen ausschließlich die bereits im Repo geprüften
+  Skripte (`break-*.sh`/`fix-*.sh`) über eine feste Whitelist aus - keine
+  freie Eingabe, kein beliebiger Shell-Zugriff (live geprüft: ein
+  Testaufruf mit unbekannter Aktion wird mit HTTP 400 abgelehnt)
+- Live end-to-end verifiziert: Klick auf "Vorfall auslösen" hat den
+  echten DocuWare-Cluster-Vorfall ausgelöst, der Status-Indikator ist auf
+  "gestört" gesprungen, "Beheben" hat zurückgesetzt
+
+`scripts/control_panel_server.py` (reines Python-Stdlib, kein
+zusätzliches Paket) + `scripts/control-panel.html`. Läuft bewusst **im
+Vordergrund außerhalb von Docker** (Ctrl+C stoppt es) statt als weiterer
+`docker-compose.yml`-Service - `./start-demo.sh` weist am Ende auf
+diesen Befehl hin, startet ihn aber nicht automatisch mit.
 
 ## Aufräumen
 

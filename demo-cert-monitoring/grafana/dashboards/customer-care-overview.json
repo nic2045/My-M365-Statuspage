@@ -267,7 +267,7 @@
   },
   {
    "id": 7,
-   "type": "table",
+   "type": "barchart",
    "title": "Agenten je Standort (verfügbar / im Gespräch)",
    "gridPos": {
     "h": 7,
@@ -292,7 +292,108 @@
      "format": "table",
      "refId": "B"
     }
-   ]
+   ],
+   "transformations": [
+    {
+     "id": "joinByField",
+     "options": {
+      "byField": "site",
+      "mode": "outer"
+     }
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "instance": true,
+       "job": true,
+       "lat": true,
+       "lon": true,
+       "company": true,
+       "Time 2": true,
+       "__name__ 2": true,
+       "instance 2": true,
+       "job 2": true,
+       "lat 2": true,
+       "lon 2": true,
+       "company 2": true
+      },
+      "renameByName": {
+       "site": "Standort"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "axisLabel": "Agenten"
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byFrameRefID",
+       "options": "A"
+      },
+      "properties": [
+       {
+        "id": "displayName",
+        "value": "Verfügbar"
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byFrameRefID",
+       "options": "B"
+      },
+      "properties": [
+       {
+        "id": "displayName",
+        "value": "Im Gespräch"
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "blue"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "orientation": "vertical",
+    "xTickLabelRotation": 0,
+    "xTickLabelSpacing": 0,
+    "showValue": "always",
+    "stacking": "none",
+    "groupWidth": 0.7,
+    "barWidth": 0.85,
+    "barRadius": 0,
+    "fullHighlight": false,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "none"
+    }
+   }
   },
   {
    "id": 8,
@@ -608,7 +709,7 @@
   {
    "id": 17,
    "type": "geomap",
-   "title": "Deutschlandkarte – VPN-Status je Standort (Leipzig = RZ)",
+   "title": "Deutschlandkarte – Standorte & VPN-Status (Leipzig = RZ)",
    "gridPos": {
     "h": 14,
     "w": 14,
@@ -621,27 +722,70 @@
    },
    "targets": [
     {
-     "expr": "cc_site_vpn_up",
+     "expr": "(cc_site_vpn_up * 2) - (cc_site_vpn_up * (100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps >= bool 85)) or cc_site_info{role=\"hub\"} * 2",
      "instant": true,
      "format": "table",
      "refId": "A"
+    },
+    {
+     "expr": "(cc_site_vpn_up{site=\"Berlin\"} * 2) - (cc_site_vpn_up{site=\"Berlin\"} * (100 * cc_site_vpn_bandwidth_used_mbps{site=\"Berlin\"} / cc_site_vpn_bandwidth_capacity_mbps{site=\"Berlin\"} >= bool 85)) or cc_site_info{role=\"hub\"} * 2",
+     "instant": true,
+     "format": "table",
+     "refId": "B"
+    },
+    {
+     "expr": "(cc_site_vpn_up{site=\"Dresden\"} * 2) - (cc_site_vpn_up{site=\"Dresden\"} * (100 * cc_site_vpn_bandwidth_used_mbps{site=\"Dresden\"} / cc_site_vpn_bandwidth_capacity_mbps{site=\"Dresden\"} >= bool 85)) or cc_site_info{role=\"hub\"} * 2",
+     "instant": true,
+     "format": "table",
+     "refId": "C"
+    },
+    {
+     "expr": "(cc_site_vpn_up{site=\"Chemnitz\"} * 2) - (cc_site_vpn_up{site=\"Chemnitz\"} * (100 * cc_site_vpn_bandwidth_used_mbps{site=\"Chemnitz\"} / cc_site_vpn_bandwidth_capacity_mbps{site=\"Chemnitz\"} >= bool 85)) or cc_site_info{role=\"hub\"} * 2",
+     "instant": true,
+     "format": "table",
+     "refId": "D"
+    },
+    {
+     "expr": "(cc_site_vpn_up{site=\"Halle (Saale)\"} * 2) - (cc_site_vpn_up{site=\"Halle (Saale)\"} * (100 * cc_site_vpn_bandwidth_used_mbps{site=\"Halle (Saale)\"} / cc_site_vpn_bandwidth_capacity_mbps{site=\"Halle (Saale)\"} >= bool 85)) or cc_site_info{role=\"hub\"} * 2",
+     "instant": true,
+     "format": "table",
+     "refId": "E"
+    },
+    {
+     "expr": "(cc_site_vpn_up{site=\"Rostock\"} * 2) - (cc_site_vpn_up{site=\"Rostock\"} * (100 * cc_site_vpn_bandwidth_used_mbps{site=\"Rostock\"} / cc_site_vpn_bandwidth_capacity_mbps{site=\"Rostock\"} >= bool 85)) or cc_site_info{role=\"hub\"} * 2",
+     "instant": true,
+     "format": "table",
+     "refId": "F"
+    },
+    {
+     "expr": "(cc_site_vpn_up{site=\"Erfurt\"} * 2) - (cc_site_vpn_up{site=\"Erfurt\"} * (100 * cc_site_vpn_bandwidth_used_mbps{site=\"Erfurt\"} / cc_site_vpn_bandwidth_capacity_mbps{site=\"Erfurt\"} >= bool 85)) or cc_site_info{role=\"hub\"} * 2",
+     "instant": true,
+     "format": "table",
+     "refId": "G"
     }
    ],
    "options": {
     "view": {
-     "id": "fitData"
+     "id": "coords",
+     "lat": 51.15,
+     "lon": 10.85,
+     "zoom": 5.9
     },
     "controls": {
      "showZoom": true,
      "mouseWheelZoom": true,
-     "showAttribution": true,
+     "showAttribution": false,
      "showScale": false,
-     "showMeasure": false
+     "showMeasure": false,
+     "showDebug": false
     },
     "basemap": {
-     "type": "osm-standard",
+     "type": "carto",
      "name": "Basiskarte",
-     "config": {}
+     "config": {
+      "theme": "auto",
+      "showLabels": true
+     }
     },
     "layers": [
      {
@@ -650,21 +794,56 @@
       "config": {
        "style": {
         "size": {
-         "fixed": 14,
+         "fixed": 13,
          "min": 8,
          "max": 20
         },
         "color": {
-         "field": "Value",
-         "fixed": "dark-green"
+         "mode": "field",
+         "field": "Value"
         },
         "opacity": 0.9,
         "symbol": {
          "mode": "fixed",
          "fixed": "img/icons/marker/circle.svg"
+        },
+        "text": {
+         "mode": "field",
+         "field": "company"
+        },
+        "textConfig": {
+         "fontSize": 11,
+         "offsetX": 0,
+         "offsetY": -14,
+         "textAlign": "center",
+         "textBaseline": "bottom"
         }
        },
-       "showLegend": true
+       "showLegend": false
+      },
+      "location": {
+       "mode": "coords",
+       "latitude": "lat",
+       "longitude": "lon"
+      },
+      "tooltip": true
+     },
+     {
+      "type": "route",
+      "name": "VPN-Verbindungen (Leipzig ↔ Standort)",
+      "config": {
+       "style": {
+        "color": {
+         "mode": "field",
+         "field": "Value"
+        },
+        "opacity": 0.8,
+        "size": {
+         "fixed": 3
+        },
+        "lineWidth": 3
+       },
+       "arrow": 0
       },
       "location": {
        "mode": "coords",
@@ -688,8 +867,12 @@
         "value": null
        },
        {
+        "color": "yellow",
+        "value": 1
+       },
+       {
         "color": "green",
-        "value": 0.5
+        "value": 2
        }
       ]
      }
@@ -705,7 +888,7 @@
   },
   {
    "id": 18,
-   "type": "table",
+   "type": "barchart",
    "title": "Bandbreitenauslastung je Standort (%)",
    "gridPos": {
     "h": 7,
@@ -724,11 +907,81 @@
      "format": "table",
      "refId": "A"
     }
-   ]
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "instance": true,
+       "job": true,
+       "lat": true,
+       "lon": true,
+       "company": true
+      },
+      "renameByName": {
+       "site": "Standort",
+       "Value": "Auslastung %"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "yellow",
+        "value": 70
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     },
+     "custom": {
+      "axisLabel": "",
+      "axisPlacement": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "vertical",
+    "xTickLabelRotation": 0,
+    "xTickLabelSpacing": 0,
+    "showValue": "always",
+    "stacking": "none",
+    "groupWidth": 0.7,
+    "barWidth": 0.85,
+    "barRadius": 0,
+    "fullHighlight": false,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": false
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "none"
+    }
+   }
   },
   {
    "id": 19,
-   "type": "table",
+   "type": "barchart",
    "title": "VoIP-Qualität je Standort (MOS-Score)",
    "gridPos": {
     "h": 7,
@@ -747,11 +1000,82 @@
      "format": "table",
      "refId": "A"
     }
-   ]
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "instance": true,
+       "job": true,
+       "lat": true,
+       "lon": true,
+       "company": true
+      },
+      "renameByName": {
+       "site": "Standort",
+       "Value": "MOS-Score"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "yellow",
+        "value": 3.5
+       },
+       {
+        "color": "green",
+        "value": 4.0
+       }
+      ]
+     },
+     "custom": {
+      "axisLabel": "",
+      "axisPlacement": "auto"
+     },
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "vertical",
+    "xTickLabelRotation": 0,
+    "xTickLabelSpacing": 0,
+    "showValue": "always",
+    "stacking": "none",
+    "groupWidth": 0.7,
+    "barWidth": 0.85,
+    "barRadius": 0,
+    "fullHighlight": false,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": false
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "none"
+    }
+   }
   },
   {
    "id": 20,
-   "type": "table",
+   "type": "barchart",
    "title": "Latenz zum RZ Leipzig je Standort (ms)",
    "gridPos": {
     "h": 7,
@@ -770,11 +1094,81 @@
      "format": "table",
      "refId": "A"
     }
-   ]
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "instance": true,
+       "job": true,
+       "lat": true,
+       "lon": true,
+       "company": true
+      },
+      "renameByName": {
+       "site": "Standort",
+       "Value": "Latenz (ms)"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "yellow",
+        "value": 30
+       },
+       {
+        "color": "red",
+        "value": 100
+       }
+      ]
+     },
+     "custom": {
+      "axisLabel": "",
+      "axisPlacement": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "vertical",
+    "xTickLabelRotation": 0,
+    "xTickLabelSpacing": 0,
+    "showValue": "always",
+    "stacking": "none",
+    "groupWidth": 0.7,
+    "barWidth": 0.85,
+    "barRadius": 0,
+    "fullHighlight": false,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": false
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "none"
+    }
+   }
   },
   {
    "id": 21,
-   "type": "table",
+   "type": "barchart",
    "title": "Gleichzeitige Anrufe je Standort",
    "gridPos": {
     "h": 7,
@@ -793,7 +1187,77 @@
      "format": "table",
      "refId": "A"
     }
-   ]
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "instance": true,
+       "job": true,
+       "lat": true,
+       "lon": true,
+       "company": true
+      },
+      "renameByName": {
+       "site": "Standort",
+       "Value": "Anrufe"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "yellow",
+        "value": 8
+       },
+       {
+        "color": "red",
+        "value": 12
+       }
+      ]
+     },
+     "custom": {
+      "axisLabel": "",
+      "axisPlacement": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "vertical",
+    "xTickLabelRotation": 0,
+    "xTickLabelSpacing": 0,
+    "showValue": "always",
+    "stacking": "none",
+    "groupWidth": 0.7,
+    "barWidth": 0.85,
+    "barRadius": 0,
+    "fullHighlight": false,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": false
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "none"
+    }
+   }
   }
  ]
 }
