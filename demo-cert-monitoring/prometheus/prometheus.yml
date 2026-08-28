@@ -29,6 +29,16 @@ scrape_configs:
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
+      # outlook.office.com genuinely is up but returns HTTP 417 to a plain
+      # synthetic GET (confirmed with a real browser User-Agent too - a
+      # Microsoft edge/WAF quirk, not an outage) - override just this one
+      # target to the module that also accepts 417, so the demo doesn't
+      # show a real, working service as down. Everything else keeps the
+      # strict default module set via `params.module` above.
+      - source_labels: [__param_target]
+        regex: '.*outlook\.office\.com.*'
+        target_label: __param_module
+        replacement: http_2xx_or_ms_417
       - target_label: __address__
         replacement: blackbox_exporter:9115
 

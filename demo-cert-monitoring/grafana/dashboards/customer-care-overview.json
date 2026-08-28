@@ -778,11 +778,11 @@
      "showDebug": false
     },
     "basemap": {
-     "type": "carto",
+     "type": "xyz",
      "name": "Basiskarte",
      "config": {
-      "theme": "light",
-      "showLabels": false
+      "url": "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      "attribution": "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ"
      }
     },
     "layers": [
@@ -1271,6 +1271,94 @@
     "tooltip": {
      "mode": "multi",
      "sort": "none"
+    }
+   }
+  },
+  {
+   "id": 22,
+   "type": "nodeGraph",
+   "title": "Netzwerk-Topologie – Leipzig-Hub ↔ Standorte",
+   "description": "Schematische Sicht auf dieselbe VPN-Topologie wie die Deutschlandkarte oben - gleiche Health-Formel, ohne geografischen Kontext.",
+   "gridPos": {
+    "h": 10,
+    "w": 24,
+    "x": 0,
+    "y": 76
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "(cc_site_vpn_up * 2) - (cc_site_vpn_up * (100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps >= bool 85)) or cc_site_info{role=\"hub\"} * 2",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    },
+    {
+     "expr": "label_replace(label_replace((cc_site_vpn_up * 2) - (cc_site_vpn_up * (100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps >= bool 85)), \"source\", \"Leipzig (RZ)\", \"\", \"\"), \"target\", \"$1\", \"site\", \"(.*)\")",
+     "instant": true,
+     "format": "table",
+     "refId": "B"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "labelsToFields",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "instance": true,
+       "job": true,
+       "lat": true,
+       "lon": true,
+       "photo": true
+      },
+      "renameByName": {
+       "site": "id",
+       "company": "title",
+       "Value": "mainStat"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "yellow",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 2
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "nodes": {
+     "mainStatUnit": "none"
+    },
+    "edges": {
+     "mainStatUnit": "none"
     }
    }
   }

@@ -152,6 +152,8 @@
   }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr.static { color: var(--muted); }
+  tbody tr.row-clickable { cursor: pointer; }
+  tbody tr.row-clickable:hover td { background: #f6f7f8; }
   .badge {
     display: inline-block;
     font-size: 11px;
@@ -188,6 +190,106 @@
     0% { background: #fff4ce; }
     100% { background: transparent; }
   }
+
+  /* Ticket detail modal - same overlay+scale-in pattern as the other
+     mockups' animations, adapted for a dialog instead of a row. */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(11, 20, 20, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal-overlay.show { opacity: 1; }
+  .modal {
+    width: 100%;
+    max-width: 640px;
+    max-height: 84vh;
+    overflow-y: auto;
+    background: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    transform: translateY(-16px) scale(0.97);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(.34,1.56,.64,1), opacity 0.25s ease;
+  }
+  .modal-overlay.show .modal { transform: translateY(0) scale(1); opacity: 1; }
+  .modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-header .title { font-size: 15px; font-weight: 700; }
+  .modal-header .subtitle { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .modal-close {
+    border: none;
+    background: #eef0f2;
+    color: var(--text);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: #dfe2e6; }
+  .modal-body { padding: 20px 22px; }
+  .modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 20px;
+    margin-bottom: 18px;
+    font-size: 13px;
+  }
+  .modal-grid .field-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
+  .modal-section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 18px 0 8px; }
+  .modal-section-label:first-child { margin-top: 0; }
+  .modal-description { font-size: 13px; line-height: 1.55; }
+  .worklog { list-style: none; margin: 0; padding: 0; }
+  .worklog li {
+    font-size: 13px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .worklog li:last-child { border-bottom: none; }
+  .worklog .who { font-weight: 600; }
+  .worklog .when { color: var(--muted); font-size: 11px; float: right; }
+  .bmc-ref {
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: #eef8f7;
+    border: 1px solid #cdeae7;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #0b6b62;
+  }
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    background: #fafafb;
+  }
+  .btn-secondary { background: #eef0f2; color: var(--text); }
+  .btn-secondary:hover { background: #dfe2e6; }
+  .modal-footer button {
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .modal-footer button:disabled { cursor: not-allowed; opacity: 0.6; }
 </style>
 </head>
 <body>
@@ -242,7 +344,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr id="new-row">
+          <tr id="new-row" class="row-clickable" onclick="openTicket('INC000000222127')">
             <td>INC000000222127</td>
             <td>DocuWare | Anmeldung in DocuWare nicht möglich</td>
             <td class="priority-1">1 – Kritisch</td>
@@ -250,7 +352,7 @@
             <td id="new-row-group">–</td>
             <td>soeben</td>
           </tr>
-          <tr class="static">
+          <tr class="static row-clickable" onclick="openTicket('INC000000222014')">
             <td>INC000000222014</td>
             <td>Passwort-Reset Self-Service liefert Fehlermeldung</td>
             <td>2 – Mittel</td>
@@ -258,7 +360,7 @@
             <td>Service Desk</td>
             <td>vor 3 Stunden</td>
           </tr>
-          <tr class="static">
+          <tr class="static row-clickable" onclick="openTicket('INC000000221980')">
             <td>INC000000221980</td>
             <td>Netzwerk-Switch-Austausch Serverraum 2 abgeschlossen</td>
             <td>3 – Niedrig</td>
@@ -272,7 +374,154 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modal-overlay" onclick="if (event.target === this) closeTicket()">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="title" id="modal-title">–</div>
+          <div class="subtitle" id="modal-subtitle">–</div>
+        </div>
+        <button class="modal-close" onclick="closeTicket()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-grid">
+          <div><div class="field-label">Priorität</div><div id="modal-priority">–</div></div>
+          <div><div class="field-label">Status</div><div id="modal-status">–</div></div>
+          <div><div class="field-label">Zugewiesene Gruppe</div><div id="modal-group">–</div></div>
+          <div><div class="field-label">Kategorie</div><div id="modal-category">–</div></div>
+          <div><div class="field-label">Betroffene CI</div><div id="modal-ci">–</div></div>
+          <div><div class="field-label">Melder</div><div id="modal-reporter">–</div></div>
+          <div><div class="field-label">Erstellt</div><div id="modal-created">–</div></div>
+          <div><div class="field-label">SLA-Ziel</div><div id="modal-sla">–</div></div>
+        </div>
+
+        <div class="modal-section-label">Beschreibung</div>
+        <div class="modal-description" id="modal-description">–</div>
+
+        <div class="modal-section-label">Verlauf</div>
+        <ul class="worklog" id="modal-worklog"></ul>
+
+        <div class="bmc-ref" id="modal-bmc-ref"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeTicket()">Schließen</button>
+        <button class="btn-reset" disabled title="Mockup – keine echte BMC-Anbindung">In BMC Helix öffnen ↗</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // Static per-ticket detail data. Status/Gruppe for INC000000222127 are
+    // deliberately NOT here - openTicket() reads those live from the row's
+    // own cells so the modal always matches whatever playBmc()/resetBmc()
+    // last set on screen, instead of drifting out of sync with a copy.
+    var TICKETS = {
+      "INC000000222127": {
+        subtitle: "DocuWare | Anmeldung in DocuWare nicht möglich",
+        priority: "1 – Kritisch",
+        category: "Anwendung › DocuWare › Anmeldung",
+        ci: "DocuWare-Cluster (Backend) – Login-Service",
+        reporter: "Automatisch (OneUptime-Integration)",
+        sla: "Reaktion 15 Min. / Wiederherstellung 4 Std.",
+        description: "Mitarbeitende können sich nicht mehr in DocuWare anmelden. " +
+          "Betroffen ist ausschließlich das interne Backend (Sachbearbeitung) – " +
+          "das Kundenportal für den Rechnungsabruf läuft unverändert weiter. " +
+          "Automatisch aus OneUptime übernommen (Monitor „DocuWare (Dokumentenmanagement)“, " +
+          "ITIL-v4-Phase „Behebung“).",
+        worklog: [
+          { who: "OneUptime-Integration", when: "soeben", text: "Ticket automatisch angelegt aus Major Incident „DocuWare | Anmeldung in DocuWare nicht möglich“." },
+          { who: "System", when: "soeben", text: "Zugewiesen an Anwendungsbetrieb DocuWare." },
+          { who: "Anwendungsbetrieb DocuWare", when: "soeben", text: "Erste Analyse gestartet: Login-Service des Backends antwortet nicht, DB-Cluster wird geprüft." },
+        ],
+        bmcRef: "Verknüpfter OneUptime-Incident: „DocuWare | Anmeldung in DocuWare nicht möglich“ · Referenz für dieses Demo-Szenario: INC000000222127",
+      },
+      "INC000000222014": {
+        subtitle: "Passwort-Reset Self-Service liefert Fehlermeldung",
+        priority: "2 – Mittel",
+        status: "In Bearbeitung",
+        group: "Service Desk",
+        created: "vor 3 Stunden",
+        category: "Anwendung › Self-Service-Portal › Authentifizierung",
+        ci: "Identity-Self-Service-Portal",
+        reporter: "M. Bergmann (Fachbereich Personal)",
+        sla: "Reaktion 1 Std. / Wiederherstellung 8 Std.",
+        description: "Der Self-Service-Passwort-Reset liefert bei der Bestätigungs-E-Mail einen " +
+          "Fehler 500. Betroffen sind vereinzelte Nutzer:innen, kein flächendeckender Ausfall.",
+        worklog: [
+          { who: "Service Desk", when: "vor 3 Std.", text: "Ticket aus Nutzermeldung angelegt, Fehler nachgestellt." },
+          { who: "Service Desk", when: "vor 2 Std.", text: "An Identity-Team weitergeleitet, Mailversand-Log angefordert." },
+        ],
+        bmcRef: "",
+      },
+      "INC000000221980": {
+        subtitle: "Netzwerk-Switch-Austausch Serverraum 2 abgeschlossen",
+        priority: "3 – Niedrig",
+        status: "Geschlossen",
+        group: "Netzwerk-Team",
+        created: "gestern",
+        category: "Infrastruktur › Netzwerk › Hardware",
+        ci: "Serverraum 2 – Switch-Stack",
+        reporter: "Netzwerk-Team (geplante Instandhaltung)",
+        sla: "–",
+        description: "Geplanter Austausch eines auffälligen Netzwerk-Switches in Serverraum 2 im " +
+          "Rahmen der vorbeugenden Instandhaltung. Kein Nutzereinfluss, da die redundante " +
+          "Anbindung während des Tauschs aktiv war.",
+        worklog: [
+          { who: "Netzwerk-Team", when: "gestern", text: "Wartungsfenster gestartet, redundanter Pfad übernommen." },
+          { who: "Netzwerk-Team", when: "gestern", text: "Switch getauscht, Redundanz zurückgeschaltet, Ticket geschlossen." },
+        ],
+        bmcRef: "",
+      },
+    };
+
+    function openTicket(id) {
+      var t = TICKETS[id];
+      if (!t) return;
+      var row = document.getElementById(id === "INC000000222127" ? "new-row" : null);
+      var liveStatus = row ? row.querySelector(".badge").textContent : t.status;
+      var liveGroup = row ? document.getElementById("new-row-group").textContent : t.group;
+
+      document.getElementById("modal-title").textContent = id;
+      document.getElementById("modal-subtitle").textContent = t.subtitle;
+      document.getElementById("modal-priority").textContent = t.priority;
+      document.getElementById("modal-status").textContent = liveStatus;
+      document.getElementById("modal-group").textContent = liveGroup;
+      document.getElementById("modal-category").textContent = t.category;
+      document.getElementById("modal-ci").textContent = t.ci;
+      document.getElementById("modal-reporter").textContent = t.reporter;
+      document.getElementById("modal-created").textContent = row ? row.children[5].textContent : t.created;
+      document.getElementById("modal-sla").textContent = t.sla;
+      document.getElementById("modal-description").textContent = t.description;
+
+      var list = document.getElementById("modal-worklog");
+      list.innerHTML = "";
+      t.worklog.forEach(function (entry) {
+        var li = document.createElement("li");
+        li.innerHTML = '<span class="when">' + entry.when + '</span>' +
+          '<span class="who">' + entry.who + '</span><br>' + entry.text;
+        list.appendChild(li);
+      });
+
+      var bmcRef = document.getElementById("modal-bmc-ref");
+      if (t.bmcRef) {
+        bmcRef.textContent = t.bmcRef;
+        bmcRef.style.display = "block";
+      } else {
+        bmcRef.style.display = "none";
+      }
+
+      var overlay = document.getElementById("modal-overlay");
+      overlay.classList.add("visible");
+      void overlay.offsetWidth;
+      requestAnimationFrame(function () { overlay.classList.add("show"); });
+    }
+
+    function closeTicket() {
+      var overlay = document.getElementById("modal-overlay");
+      overlay.classList.remove("show");
+      setTimeout(function () { overlay.classList.remove("visible"); }, 250);
+    }
+
     function playBmc() {
       var steps = ["flow-1", "flow-line-1", "flow-2", "flow-line-2", "flow-3"];
       steps.forEach(function (id, i) {

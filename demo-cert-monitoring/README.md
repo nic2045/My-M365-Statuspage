@@ -47,6 +47,22 @@ selbstsigniertem Zertifikat) neben euren echten `DEMO_TARGET_URLS` - sie
 startet **gesund** und lässt sich live per `./break-demo.sh` /
 `./fix-demo.sh` "kaputt machen" bzw. reparieren, siehe unten.
 
+> **Bug gefunden & behoben: `outlook.office.com` zeigte fälschlich
+> "offline".** Live nachvollzogen (`blackbox_exporter`-Debug-Probe): der
+> Dienst ist real erreichbar, antwortet auf einen einfachen synthetischen
+> GET aber mit HTTP 417 statt 2xx - bestätigt mit einem echten
+> Chrome-User-Agent (gleiches Ergebnis), liegt also nicht an fehlenden
+> Headern, sondern an Microsofts Edge/WAF-Verhalten gegenüber
+> automatisierten Clients, nicht an einer echten Störung. Fix: ein
+> zusätzliches Blackbox-Modul `http_2xx_or_ms_417`
+> (`blackbox/blackbox.yml`), das 417 zusätzlich akzeptiert, per
+> Prometheus-Relabeling **nur für dieses eine Ziel** aktiviert
+> (`prometheus.yml`, `__param_module`-Override auf
+> `outlook.office.com`-Match) - alle anderen Ziele bleiben beim strengen
+> reinen 2xx-Check. Live durchgetestet: `probe_success` sprang auf 1,
+> `oneuptime-sync` pingt den Heartbeat wieder, der OneUptime-Monitor
+> erholt sich.
+
 ## Setup
 
 ### Schnellstart (empfohlen)
@@ -212,6 +228,23 @@ sich der Auf-/Zuklapp-Zustand nachzieht.
 > `/status-page/<id>`-URLs bleiben über Neustarts hinweg stabil (in dieser
 > Session über zahlreiche Läufe hinweg bestätigt).
 
+> **Bug gefunden & behoben: Ankündigung erschien nicht auf der Statuspage.**
+> `iso()` (der Helfer, der alle dynamischen Daten in dieses Skript
+> formatiert) nahm lokale Wall-Clock-Zeit (`datetime.now()`, auf diesem
+> Rechner Europe/Berlin) und hängte unkonvertiert ein `Z` (UTC) an -
+> während der Sommerzeit lag jedes dynamische Datum dadurch ~2h in der
+> Zukunft gegenüber der echten UTC-Uhr des OneUptime-Servers. Betraf
+> **alle** dynamischen Termine (Ankündigung, Wartungen, Incident-Updates),
+> sichtbar wurde es zuerst bei der Ankündigung: OneUptimes eigene
+> Overview-API filtert Ankündigungen auf `showAnnouncementAt < jetzt(UTC)`
+> - die noch nicht "gestartete" Ankündigung blieb unsichtbar, obwohl alle
+> Felder (inkl. `showAnnouncementsOnStatusPage`) korrekt gesetzt waren.
+> Live per `/status-page-api/overview/<id>` nachvollzogen
+> (`activeAnnouncements: []` trotz korrekt aussehender Daten), Fix
+> (`iso()` konvertiert jetzt über die lokale Zeitzone nach UTC) live
+> verifiziert (`activeAnnouncements` zeigt die Ankündigung sofort nach
+> dem Fix).
+
 **Admin-/Infrastruktur- und AI-Observability-Beispiel** (nicht auf einer
 öffentlichen Statusseite - `MonitorGroup`/`MonitorGroupResource`
 organisieren Monitore nur auf OneUptimes eigenem internen Dashboard):
@@ -283,7 +316,7 @@ angebunden sind: Berlin, Dresden, Chemnitz, Halle (Saale), Rostock,
 Erfurt.
 
 **Grafana-Dashboard "Customer Care – Standortübersicht (Technical
-Owner)"** (`grafana/dashboards/customer-care-overview.json`, 21 Panels,
+Owner)"** (`grafana/dashboards/customer-care-overview.json`, 22 Panels,
 automatisch provisioniert):
 - Gesamtstatus-Stats oben (Störungserkennung auf einen Blick: Anzahl
   Standorte mit VPN-Störung, Warteschlange, Wartezeit)
@@ -301,11 +334,17 @@ automatisch provisioniert):
   Einfärbung (z. B. MOS < 3.5 rot, 3.5-4.0 gelb, ≥ 4.0 grün)
 - **Deutschlandkarte** (Grafana-Geomap-Panel, echte Koordinaten der 6
   Standorte + Leipzig als Hub, drei Layer):
-  - **Basiskarte**: `carto`-Basemap statt `osm-standard`, Theme "light",
-    `showLabels: false` - zeigt nur Länder-/Bundesländergrenzen in
-    zurückhaltenden Farben, keine Straßen/POIs/Ortsnamen aus der
-    Kartenquelle selbst (die einzigen sichtbaren Texte sind unsere
-    eigenen, siehe Beschriftungs-Layer unten). Kartenausschnitt per
+  - **Basiskarte**: Esri "World Light Gray Canvas" als generischer
+    XYZ-Tile-Layer (`services.arcgisonline.com`) statt `osm-standard` oder
+    Grafanas eingebautem `carto`-Basemap-Typ - Letzterer verlangt
+    inzwischen einen CARTO-API-Key (live bestätigt: die
+    `basemaps.cartocdn.com`-Kacheln tragen mittlerweile ein
+    "API KEY REQUIRED"-Wasserzeichen). Die Esri-Kacheln sind weiterhin
+    kostenlos ohne Anmeldung nutzbar (derselbe Anbieter, den Grafanas
+    eigener XYZ-Layer-Standardwert bereits verwendet, gleiches
+    URL-Schema, live per Kachel-Abruf bestätigt) und genauso
+    minimalistisch (helles Grau, nur Landesgrenzen, keine
+    Straßen/POI-Details). Kartenausschnitt per
     `view: {id: "fitData", padding: 32}` automatisch auf die 7 Punkte
     zugeschnitten statt eines festen Zoom-Levels.
   - **Standorte (Photos-Layer)**: statt schlichter Farbpunkte zeigt jeder
@@ -341,6 +380,22 @@ automatisch provisioniert):
   geprüft; die tatsächliche Kartendarstellung selbst lässt sich ohne
   Grafana-Image-Renderer-Plugin (nicht installiert) nicht als Screenshot
   verifizieren - bitte einmal im Browser gegenprüfen.
+- **Netzwerk-Topologie** (Grafana-Node-Graph-Panel, Panel 22): dieselbe
+  Hub-Spoke-Struktur wie die Karte, aber schematisch statt geografisch -
+  ein Standort-Ausfall ist hier auf einen Blick als roter/gelber Knoten
+  bzw. rote/gelbe Kante erkennbar, unabhängig von der Position auf der
+  Landkarte. Zwei Queries pro Node-Graph-Konvention: **Nodes**
+  (`site`→`id`, `company`→`title`, Health-Wert→`mainStat`, plus Leipzig
+  als eigener Knoten) und **Edges** (eine Zeile je Standort, `source`/
+  `target`-Felder per verkettetem PromQL-`label_replace()` erzeugt - der
+  erste Aufruf stempelt jeder Zeile das feste Label `source="Leipzig
+  (RZ)"` auf, der zweite kopiert das vorhandene `site`-Label nach
+  `target`, sodass keine Grafana-seitigen Konstanten-Transformationen
+  nötig sind). Gleiche dreistufige Health-Formel/Farbcodierung wie Karte
+  und Balken-Charts. Beide Queries live gegen Prometheus auf die
+  erwartete Zeilenzahl (7 Nodes, 6 Edges) und die Felder `id`/`title`/
+  `mainStat`/`source`/`target` geprüft; auch hier keine visuelle
+  Bestätigung ohne Image-Renderer-Plugin möglich.
 
 Alle 34 Panel-Queries live gegen Prometheus verifiziert. Baseline
 bewusst "geschäftig, aber gesund" (~45-75 % Auslastung mit sichtbarer
@@ -397,6 +452,20 @@ referenziert im Text den echten BMC-Vorfall `INC000000222127` als
 Markdown-Link. Bewusst nicht auto-aufgelöst und unabhängig vom
 Erreichbarkeits-Monitor (Login-Ausfall ≠ Site nicht erreichbar - wie bei
 echten Statuspages).
+
+**Vorfallsbericht mit echten Mitarbeiter-Updates:** zusätzlich zur
+statischen Erstbeschreibung drei zeitlich gestaffelte
+`IncidentPublicNote`-Einträge (`/api/incident-public-note`, dieselbe
+Statuspage-Timeline, die auch bei echten Vorfällen Updates zeigt) -
+"Problem bestätigt" → "Ursache eingegrenzt, Neustart läuft" →
+"Neustart durchgeführt, wird noch beobachtet". Bewusst **kein**
+"Behoben"-Update, der Incident bleibt ja absichtlich offen ("In
+Behebung"). Zeitstempel relativ zu "jetzt" beim Seed-Lauf (25/14/4 Minuten
+zurück), idempotent über exakten Notiztext (kein Duplizieren bei
+erneutem Lauf). `shouldStatusPageSubscribersBeNotifiedOnNoteCreated:
+true` - beim ersten Anlegen bekommt der Demo-Abonnent
+(`mitarbeiter@pyur-demo.local`) diese Updates auch tatsächlich per Mail
+über Mailpit zugestellt, genau wie beim Live-E-Mail-Demo unten.
 
 **Live vorführen:** `./break-docuware.sh` lässt den Metrics-Exporter
 MSSQL-Knoten db2 ausfallen, WAF-Blocks hochschnellen und IIS/APM
@@ -546,7 +615,13 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
   ITSM → Ticket angelegt), danach poppt das neue Ticket
   (`INC000000222127`, dieselbe Nummer wie im DocuWare-Major-Incident, für
   eine durchgängige Story) oben in eine Vorfalls-Warteschlange und wechselt
-  kurz danach automatisch von "Neu" auf "Zugewiesen"
+  kurz danach automatisch von "Neu" auf "Zugewiesen". **Jede Zeile in der
+  Warteschlange ist klickbar** und öffnet ein Ticket-Detail-Modal
+  (Priorität, Status, Gruppe, Kategorie, betroffene CI, Melder, SLA-Ziel,
+  Beschreibung, Verlauf/Worklog) - für das laufende DocuWare-Ticket liest
+  das Modal Status/Gruppe live aus der Zeile aus, damit es nach
+  "Vorfall auslösen" immer den aktuellen Stand zeigt statt einer
+  eingefrorenen Kopie.
 
 ## Demo-Kontrollzentrum
 

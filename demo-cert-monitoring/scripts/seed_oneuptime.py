@@ -22,7 +22,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 BASE = os.environ["OU_BASE"]
 SYNC_BASE = os.environ["OU_SYNC_BASE"]
@@ -195,7 +195,21 @@ def iso(dt):
     # (needed for other typed fields elsewhere in this script) makes the
     # object literal reach Postgres unparsed: "invalid input syntax for
     # type timestamp with time zone" (confirmed via oneuptime-app-1 logs).
-    return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    #
+    # Every `dt` this script builds (via datetime.now()/next_weekday_at()/
+    # next_week_monday()) is a NAIVE datetime in the machine's local
+    # timezone - but this function used to slap a "Z" (UTC) suffix on it
+    # unconverted. During CEST (UTC+2) that silently stamped every dynamic
+    # date ~2h into the future from the server's real UTC clock - e.g. a
+    # StatusPageAnnouncement's showAnnouncementAt looked like it hadn't
+    # started yet (OneUptime's own overview API filters on
+    # showAnnouncementAt < now(UTC)), so the announcement never appeared
+    # on the status page despite everything else being configured
+    # correctly. Converting through the local tzinfo before formatting
+    # fixes this for every caller, without having to touch each call site.
+    if dt.tzinfo is None:
+        dt = dt.astimezone()
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 # ── Account ─────────────────────────────────────────────────────────────────
@@ -710,11 +724,51 @@ incident_payload = {
 }
 if existing_incident:
     call(f"/api/incident/{existing_incident['_id']}", {"data": incident_payload}, method="PUT")
+    docuware_incident_id = existing_incident["_id"]
     print(f"==> Updated incident '{DOCUWARE_INCIDENT_TITLE}'")
 else:
     incident_payload["projectId"] = project_id
-    call("/api/incident", {"data": incident_payload})
+    docuware_incident_id = call("/api/incident", {"data": incident_payload})["_id"]
     print(f"==> Created incident '{DOCUWARE_INCIDENT_TITLE}' (In Behebung)")
+
+# Public, status-page-visible updates on the incident timeline - the same
+# kind of "we're on it" communication a real employee-facing Statuspage
+# needs, not just the one static initial description above. Idempotent on
+# exact note text (scoped to this incident), so a re-run doesn't repost
+# the same updates. Timestamps are relative to "now" like every other
+# dynamic date in this script, oldest first, ending a few minutes ago -
+# the incident stays open ("In Behebung"), so deliberately no "resolved"
+# update here, only real progress.
+_note_now = datetime.now()
+DOCUWARE_INCIDENT_UPDATES = [
+    (_note_now - timedelta(minutes=25),
+     "**Update:** Wir haben das Problem bestätigt - die Anmeldung am "
+     "DocuWare-Backend schlägt aktuell für alle Mitarbeitenden fehl. Das "
+     "Team ist informiert und untersucht die Ursache. Der Rechnungsabruf "
+     "für Kundinnen und Kunden ist **nicht** betroffen."),
+    (_note_now - timedelta(minutes=14),
+     "**Update:** Ursache eingegrenzt - der Login-Service im Backend "
+     "reagiert nicht mehr. Ein kontrollierter Neustart des Dienstes läuft "
+     "gerade. Wir melden uns, sobald die Anmeldung wieder funktioniert."),
+    (_note_now - timedelta(minutes=4),
+     "**Update:** Der Login-Service ist neu gestartet, erste interne Tests "
+     "sehen positiv aus. Wir beobachten die Umgebung noch, bevor wir den "
+     "Vorfall als behoben markieren - bitte versucht die Anmeldung in ein "
+     "paar Minuten erneut."),
+]
+for posted_at, note_text in DOCUWARE_INCIDENT_UPDATES:
+    existing_notes = get_list("incident-public-note", query={"incidentId": docuware_incident_id},
+                              select={"_id": True, "note": True})
+    if any(n.get("note") == note_text for n in existing_notes):
+        continue
+    call("/api/incident-public-note", {"data": {
+        "projectId": project_id,
+        "incidentId": docuware_incident_id,
+        "note": note_text,
+        "postedAt": iso(posted_at),
+        "shouldStatusPageSubscribersBeNotifiedOnNoteCreated": True,
+    }})
+    print(f"    added incident update ({posted_at.strftime('%H:%M')})")
 
 # A "major incident: login broken" story next to a green monitor reads as
 # contradictory - reflect it on the status page too. "Degraded" (not

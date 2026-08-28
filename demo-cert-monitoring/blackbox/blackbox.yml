@@ -10,6 +10,27 @@ modules:
       tls_config:
         insecure_skip_verify: false
 
+  # outlook.office.com ist real online, antwortet auf einen einfachen
+  # synthetischen GET (kein Browser, keine Cookies/JS) aber mit HTTP 417
+  # statt 2xx (bestätigt: gleiches Verhalten mit echtem Chrome-User-Agent,
+  # liegt also nicht an fehlenden Headern, sondern an Microsofts
+  # Edge/WAF-Verhalten gegenüber automatisierten Clients) - mit dem
+  # normalen http_2xx-Modul sähe die Demo einen echten Dienst fälschlich
+  # als gestört. Eigenes Modul nur für dieses eine Ziel (siehe
+  # prometheus.yml-Relabeling), das 417 zusätzlich als gültig akzeptiert -
+  # andere Ziele bleiben beim strengen 2xx-Check.
+  http_2xx_or_ms_417:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 201, 202, 203, 204, 205, 206, 300, 301, 302, 303, 304, 307, 308, 417]
+      method: GET
+      preferred_ip_protocol: "ip4"
+      follow_redirects: true
+      tls_config:
+        insecure_skip_verify: false
+
   # Nur für die feste demo-broken-site-Fixture: TLS-Verifikation wird
   # übersprungen (selbstsigniertes Zertifikat), damit
   # probe_ssl_earliest_cert_expiry auch bei bereits abgelaufenem
