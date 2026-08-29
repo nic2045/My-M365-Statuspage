@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>CheckMK-Vergleichsansicht (Mockup)</title>
+<style>
+  :root {
+    --bg: #eef1f0;
+    --panel: #ffffff;
+    --topbar: #1a3c34;
+    --topbar-accent: #15d089;
+    --border: #d7dcda;
+    --text: #1c1c1e;
+    --muted: #62706b;
+    --ok: #13d389;
+    --ok-bg: #e3faf1;
+    --warn: #f2a900;
+    --warn-bg: #fef3dc;
+    --crit: #e0342a;
+    --crit-bg: #fce6e4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .topbar {
+    background: var(--topbar);
+    color: #fff;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar .brand {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .topbar .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--topbar-accent); }
+  .topbar .crumb { font-size: 13px; color: #b9c9c4; }
+  .intro {
+    max-width: 1080px;
+    margin: 22px auto 0;
+    padding: 0 28px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .intro strong { color: var(--text); }
+  .wrap { max-width: 1080px; margin: 18px auto 48px; padding: 0 28px; }
+  .tactical {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .tactical .cell {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .tactical .cell .num { font-size: 24px; font-weight: 700; }
+  .tactical .cell .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+  .tactical .cell.ok .num { color: var(--ok); }
+  .tactical .cell.warn .num { color: var(--warn); }
+  .tactical .cell.crit .num { color: var(--crit); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  thead th {
+    text-align: left;
+    background: #f4f6f5;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.group-head td {
+    background: #f8faf9;
+    font-weight: 700;
+    color: var(--text);
+    padding-top: 14px;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+  }
+  .pill.ok { background: var(--ok-bg); color: #0a8f61; }
+  .pill.warn { background: var(--warn-bg); color: #9c6f00; }
+  .pill.crit { background: var(--crit-bg); color: #a8231c; }
+  .plugin { color: var(--muted); }
+  .duration { color: var(--muted); white-space: nowrap; }
+
+  .controls {
+    margin-top: 22px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .controls p { margin: 0; font-size: 13px; color: var(--muted); max-width: 560px; line-height: 1.5; }
+  .controls .buttons { display: flex; gap: 10px; flex-shrink: 0; }
+  button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-break { background: var(--crit); color: #fff; }
+  .btn-fix { background: var(--ok); color: #063; }
+
+  .notif-log {
+    margin-top: 18px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+  }
+  .notif-log h3 { font-size: 13px; margin: 0 0 10px; color: var(--text); }
+  .notif-log .entry {
+    font-size: 12.5px;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border);
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+  }
+  .notif-log .entry:last-child { border-bottom: none; }
+  .notif-log .entry .t { color: #9aa5a1; white-space: nowrap; }
+  .notif-log .entry.crit-line { color: #a8231c; }
+  .notif-log .entry.ok-line { color: #0a8f61; }
+  .notif-log .empty { color: #9aa5a1; font-style: italic; }
+
+  footer { max-width: 1080px; margin: 24px auto 0; padding: 0 28px 20px; font-size: 12px; color: var(--muted); }
+  a.back { color: var(--muted); text-decoration: none; font-size: 13px; }
+  a.back:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span>Check_MK-Vergleichsansicht</div>
+    <div class="crumb">Monitoring &rsaquo; Host- &amp; Service-Probleme &rsaquo; DocuWare-Cluster</div>
+  </div>
+
+  <div class="intro">
+    <p>
+      <strong>Vergleichsansicht, kein echtes CheckMK.</strong> Zeigt denselben
+      DocuWare-Stack (Server, Datenbank, Loadbalancer, Webseite) wie das
+      Grafana-Dashboard „DocuWare – Cluster-Status", hier aus der Optik eines
+      klassischen, agentenbasierten Monitoring-Tools - als Vergleichsbeispiel,
+      wie unterschiedliche Werkzeuge dieselbe Infrastruktur abbilden. Rein
+      statisches HTML-Mockup, keine echte CheckMK-Instanz, keine echten
+      Checks/Agenten.
+    </p>
+  </div>
+
+  <div class="wrap">
+    <div class="tactical">
+      <div class="cell"><div class="num" id="stat-hosts">4</div><div class="label">Hosts</div></div>
+      <div class="cell ok"><div class="num" id="stat-ok">10</div><div class="label">OK</div></div>
+      <div class="cell warn"><div class="num" id="stat-warn">0</div><div class="label">Warn</div></div>
+      <div class="cell crit"><div class="num" id="stat-crit">0</div><div class="label">Kritisch</div></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th style="width:22%">Host</th><th style="width:18%">Service</th><th style="width:10%">Status</th><th>Plugin-Ausgabe</th><th style="width:12%">Dauer</th></tr>
+      </thead>
+      <tbody id="service-rows">
+        <tr class="group-head"><td colspan="5">docuware-app01 &middot; Server</td></tr>
+        <tr><td></td><td>CPU-Auslastung</td><td><span class="pill ok">OK</span></td><td class="plugin">CPU load 0.8, 0.6, 0.5 - im Normalbereich</td><td class="duration">14d 3h</td></tr>
+        <tr><td></td><td>Arbeitsspeicher</td><td><span class="pill ok">OK</span></td><td class="plugin">RAM 41% belegt, Swap 2% - kein Alert-Limit erreicht</td><td class="duration">14d 3h</td></tr>
+
+        <tr class="group-head"><td colspan="5">docuware-db01 &middot; Datenbank</td></tr>
+        <tr><td></td><td>MSSQL-Cluster</td><td><span class="pill ok">OK</span></td><td class="plugin">Beide Knoten (db1/db2) aktiv, Failover bereit</td><td class="duration">14d 3h</td></tr>
+        <tr data-svc="disk"><td></td><td>Datenträger Dokumentenspeicher</td><td class="status-cell"><span class="pill ok">OK</span></td><td class="plugin plugin-cell">Auslastung 61% - unterhalb der Warnschwelle (80%)</td><td class="duration">14d 3h</td></tr>
+        <tr><td></td><td>Replikations-Lag</td><td><span class="pill ok">OK</span></td><td class="plugin">1.2s hinter primärem Knoten - im Toleranzbereich</td><td class="duration">14d 3h</td></tr>
+
+        <tr class="group-head"><td colspan="5">docuware-lb01 &middot; Loadbalancer</td></tr>
+        <tr><td></td><td>BIG-IP F5</td><td><span class="pill ok">OK</span></td><td class="plugin">3 Pool-Member aktiv, Health-Checks grün</td><td class="duration">14d 3h</td></tr>
+        <tr><td></td><td>Durchsatz</td><td><span class="pill ok">OK</span></td><td class="plugin">340 Mbit/s - deutlich unter Kapazitätsgrenze</td><td class="duration">14d 3h</td></tr>
+
+        <tr class="group-head"><td colspan="5">docuware.pyur.com &middot; Webseite</td></tr>
+        <tr><td></td><td>HTTP(S)-Erreichbarkeit</td><td><span class="pill ok">OK</span></td><td class="plugin">HTTP 200, 118ms Antwortzeit</td><td class="duration">14d 3h</td></tr>
+        <tr><td></td><td>Zertifikat</td><td><span class="pill ok">OK</span></td><td class="plugin">Gültig, läuft in 74 Tagen ab</td><td class="duration">14d 3h</td></tr>
+      </tbody>
+    </table>
+
+    <div class="controls">
+      <p>
+        Simuliert dieselbe „Festplatte läuft voll"-Störung wie im
+        Grafana-Dashboard/Kontrollzentrum - hier als CheckMK-Service-Check
+        „Datenträger Dokumentenspeicher", inkl. Alarmierungs-Log unten.
+      </p>
+      <div class="buttons">
+        <button class="btn-break" onclick="breakScenario()">Störung auslösen</button>
+        <button class="btn-fix" onclick="fixScenario()">Beheben</button>
+      </div>
+    </div>
+
+    <div class="notif-log">
+      <h3>Alarmierung (Notification-Log)</h3>
+      <div id="log-entries"><div class="empty">Noch keine Alarmierung ausgelöst.</div></div>
+    </div>
+  </div>
+
+  <footer><a class="back" href="index.html">&larr; Zurück zur Mockup-Übersicht</a></footer>
+
+<script>
+function nowStr() {
+  const d = new Date();
+  return d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function addLogEntry(text, cls) {
+  const log = document.getElementById("log-entries");
+  const empty = log.querySelector(".empty");
+  if (empty) empty.remove();
+  const row = document.createElement("div");
+  row.className = "entry" + (cls ? " " + cls : "");
+  row.innerHTML = '<span class="t">' + nowStr() + "</span><span>" + text + "</span>";
+  log.prepend(row);
+}
+
+function updateTactical() {
+  const pills = document.querySelectorAll(".status-cell .pill, tbody td .pill");
+  let ok = 0, warn = 0, crit = 0;
+  document.querySelectorAll("#service-rows .pill").forEach(function (p) {
+    if (p.classList.contains("crit")) crit++;
+    else if (p.classList.contains("warn")) warn++;
+    else ok++;
+  });
+  document.getElementById("stat-ok").textContent = ok;
+  document.getElementById("stat-warn").textContent = warn;
+  document.getElementById("stat-crit").textContent = crit;
+}
+
+function breakScenario() {
+  const row = document.querySelector('tr[data-svc="disk"]');
+  const pillCell = row.querySelector(".status-cell");
+  const pluginCell = row.querySelector(".plugin-cell");
+  if (pillCell.querySelector(".pill.crit")) return;
+  pillCell.innerHTML = '<span class="pill crit">CRIT</span>';
+  pluginCell.textContent = "Auslastung 96% - kritische Schwelle (90%) überschritten";
+  updateTactical();
+  addLogEntry("CRIT: docuware-db01 / Datenträger Dokumentenspeicher - Auslastung 96% → Benachrichtigung an it-betrieb@pyur-demo.local gesendet", "crit-line");
+}
+
+function fixScenario() {
+  const row = document.querySelector('tr[data-svc="disk"]');
+  const pillCell = row.querySelector(".status-cell");
+  const pluginCell = row.querySelector(".plugin-cell");
+  if (pillCell.querySelector(".pill.ok")) return;
+  pillCell.innerHTML = '<span class="pill ok">OK</span>';
+  pluginCell.textContent = "Auslastung 58% - wieder unterhalb der Warnschwelle (80%)";
+  updateTactical();
+  addLogEntry("OK: docuware-db01 / Datenträger Dokumentenspeicher - Auslastung wieder normal → Recovery-Benachrichtigung gesendet", "ok-line");
+}
+</script>
+</body>
+</html>

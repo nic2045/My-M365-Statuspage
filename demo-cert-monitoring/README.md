@@ -983,6 +983,16 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
   das Modal Status/Gruppe live aus der Zeile aus, damit es nach
   "Vorfall auslösen" immer den aktuellen Stand zeigt statt einer
   eingefrorenen Kopie.
+- `mockups/monitoring-checkmk.html` - **Werkzeug-Vergleich**: derselbe
+  DocuWare-Stack (Server/DB/Loadbalancer/Webseite), hier aus Sicht eines
+  klassischen, agentenbasierten Monitoring-Tools (CheckMK-Optik) statt
+  Grafana - Host-/Service-Tabelle mit Tactical-Overview-Kacheln
+  (Hosts/OK/Warn/Kritisch). "Störung auslösen" schlägt denselben
+  Datenträger-voll-Fall wie im Grafana-Dashboard/Kontrollzentrum auf einen
+  Service-Check nieder und schreibt einen Eintrag ins Alarmierungs-Log;
+  "Beheben" macht es rückgängig. Rein statisches Mockup (kein echter
+  CheckMK-Container, keine Agenten/Checks) - Zweck ist der visuelle
+  Werkzeug-Vergleich, nicht eine funktionierende zweite Monitoring-Instanz.
 
 ## Demo-Kontrollzentrum
 
