@@ -81,7 +81,7 @@ def is_unhealthy():
 def wave(period_s, low, high, phase=0.0):
     t = time.time() - START
     frac = (math.sin(2 * math.pi * (t / period_s) + phase) + 1) / 2
-    jitter = random.uniform(-0.03, 0.03) * (high - low)
+    jitter = random.uniform(-0.01, 0.01) * (high - low)
     return max(low, min(high, low + frac * (high - low) + jitter))
 
 
@@ -131,14 +131,47 @@ def render_metrics():
         "cc_avaya_sip_registration_status 1",
     ]
 
+    # Call-center KPIs matching the classic Avaya/BCMS operator view
+    # (Calls Waiting, Oldest Call Waiting, ACHT, Service Level - see
+    # https://blog.upinget.com/2021/02/07/using-grafana-to-monitor-avaya-call-center/):
+    # distinct from the queue-wait/trunk-utilization figures above, these
+    # are the numbers a call-center *manager* watches for staffing/SLA
+    # decisions rather than pure infrastructure health.
+    oldest_call_waiting = wave(50, 20, 90, phase=0.3) if not unhealthy else wave(20, 150, 320)
+    service_level = wave(60, 78, 92, phase=0.4) if not unhealthy else wave(20, 35, 65)
+    acht_seconds = wave(70, 240, 360, phase=0.2) if not unhealthy else wave(30, 300, 430)
+    TRUNK_MEMBERS_TOTAL = 30
+    trunk_in_use = round(TRUNK_MEMBERS_TOTAL * (trunk_util / 100) * 0.95)
+    trunk_unknown = 1 if not unhealthy else 2
+    trunk_idle = max(0, TRUNK_MEMBERS_TOTAL - trunk_in_use - trunk_unknown)
+    lines += [
+        "# HELP cc_avaya_oldest_call_waiting_seconds Age of the longest-waiting call currently in queue.",
+        "# TYPE cc_avaya_oldest_call_waiting_seconds gauge",
+        f"cc_avaya_oldest_call_waiting_seconds {oldest_call_waiting:.0f}",
+        "# HELP cc_avaya_service_level_percent Share of calls answered within the target threshold (industry-standard 80/20 SLA).",
+        "# TYPE cc_avaya_service_level_percent gauge",
+        f"cc_avaya_service_level_percent {service_level:.1f}",
+        "# HELP cc_avaya_acht_seconds Average Call Handling Time (talk time + after-call wrap-up).",
+        "# TYPE cc_avaya_acht_seconds gauge",
+        f"cc_avaya_acht_seconds {acht_seconds:.0f}",
+        "# HELP cc_avaya_trunk_members SIP trunk members by current status.",
+        "# TYPE cc_avaya_trunk_members gauge",
+        f'cc_avaya_trunk_members{{status="idle"}} {trunk_idle}',
+        f'cc_avaya_trunk_members{{status="in_use"}} {trunk_in_use}',
+        f'cc_avaya_trunk_members{{status="unknown"}} {trunk_unknown}',
+    ]
+
     total_agents = 0
     agents_available_lines = []
     agents_busy_lines = []
+    agents_not_ready_lines = []
     for site, (lat, lon, _cap) in SITES.items():
         agent_base = {"Berlin": 40, "Dresden": 22, "Chemnitz": 18, "Halle (Saale)": 20, "Rostock": 12, "Erfurt": 14}[site]
         degraded_here = unhealthy and site == DEGRADED_SITE
         available = 0 if degraded_here else round(wave(45, agent_base * 0.5, agent_base * 0.85, phase=hash(site) % 10))
         busy = 0 if degraded_here else round(wave(45, agent_base * 0.15, agent_base * 0.4, phase=hash(site) % 7))
+        not_ready = 0 if degraded_here else round(wave(65, agent_base * 0.05, agent_base * 0.15, phase=hash(site) % 5))
+        agents_not_ready_lines.append(f'cc_avaya_agents_not_ready{{site="{site}"}} {not_ready}')
         total_agents += available + busy
         agents_available_lines.append(f'cc_avaya_agents_available{{site="{site}"}} {available}')
         agents_busy_lines.append(f'cc_avaya_agents_busy{{site="{site}"}} {busy}')
@@ -147,6 +180,8 @@ def render_metrics():
          "# TYPE cc_avaya_agents_available gauge"] + agents_available_lines
         + ["# HELP cc_avaya_agents_busy Agents logged in and on a call, per site.",
            "# TYPE cc_avaya_agents_busy gauge"] + agents_busy_lines
+        + ["# HELP cc_avaya_agents_not_ready Agents logged in but in after-call-work/aux (not taking calls), per site.",
+           "# TYPE cc_avaya_agents_not_ready gauge"] + agents_not_ready_lines
     )
 
     # ── Citrix (agent desktops) ──────────────────────────────────────────

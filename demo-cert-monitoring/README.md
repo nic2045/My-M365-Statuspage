@@ -532,11 +532,51 @@ Erfurt.
 > mehreren verschieden geformten Abfragen zusätzlich `joinByField` zum
 > Verknüpfen. Für die Verbindungslinien der Deutschlandkarte (siehe
 > unten) musste `merge` sogar **pro Ziel-Query gescoped** laufen
-> (`filter: {id: "byFrameRefID", options: "<refId>"}`), sonst wären alle
+> (`filter: {id: "byRefId", options: "<refId>"}`), sonst wären alle
 > 6 Standort-Linien wieder zu einer einzigen verketteten Route
 > zusammengefasst worden. Dieselbe Ursache betraf auch die
 > Zertifikats-Tabelle im Website-Dashboard (siehe unten) - vermutlich
 > seit deren ursprünglicher Erstellung unbemerkt leer/falsch.
+
+> **Nachtrag, echter Root-Cause-Bug: der gescopte `merge` griff nie.**
+> Live vom Nutzer gemeldet ("Agenten-Status je Standort - keine Anzeige",
+> dasselbe bei der Leipzig-Topologie/-Tabelle) - **nach** dem oben
+> beschriebenen Feldnamen-Fix. Ursache im Grafana-Bundle nachvollzogen
+> (nicht geraten): der `filter`, der einen Transformationsschritt auf
+> die Frames EINER Ziel-Query beschränkt, braucht einen **Frame**-Matcher
+> aus der `FrameMatcherID`-Registry (`byRefId`) - `byFrameRefID` (mit
+> dem alle betroffenen Panels ursprünglich gebaut waren) existiert nur in
+> der komplett anderen `FieldMatcherID`-Registry, dort für
+> `fieldConfig.overrides`-Matcher gedacht. Eine unbekannte Matcher-ID im
+> `filter` eines Transformationsschritts lässt das ganze Panel leer
+> bleiben, statt einen sichtbaren Fehler zu zeigen. Betraf **alle** neu
+> gebauten Panels mit gescoptem `merge`: Customer-Care-Panel 7 (Agenten)
+> und 17 (Kartenlinien, 6× gescoped) und 22 (Topologie), Leipzig-Panel 5
+> (Node-Graph) und 6 (Geräte-Tabelle), Avaya-Panel 21 (Agenten-Status) -
+> insgesamt 18 `filter`-Objekte in 3 Dashboard-Dateien korrigiert, live
+> per API bestätigt (`byRefId` jetzt überall gespeichert, keine
+> `byFrameRefID`-Reste mehr).
+
+> **Dritter Nachtrag: Legende zeigte "Value #A"/"Value #B"/"Value #C"
+> statt echter Namen.** Nach dem `byRefId`-Fix flossen die Daten (live
+> vom Nutzer bestätigt), aber `merge` + `joinByField` benennen die
+> zusammengeführte Werte-Spalte offenbar generisch `Value` um, egal wie
+> die Rohmetrik hieß - Grafana disambiguiert mehrere gleichnamige
+> `Value`-Felder dann selbst über ihre ursprüngliche Abfrage-RefId
+> ("Value #A" usw.). Die `organize`-Umbenennung auf den (falsch
+> angenommenen) Rohmetrik-Namen griff dadurch ins Leere. Robuster Fix:
+> statt zu raten, wie das Feld nach dem Join heißt, ein
+> `fieldConfig.overrides`-Eintrag pro Abfrage mit dem **Feld**-Matcher
+> `byFrameRefID` (hier - anders als im `filter` einer Transformation -
+> korrekt, da `fieldConfig.overrides` tatsächlich die
+> `FieldMatcherID`-Registry braucht) plus `displayName`/Farbe/Einheit/
+> Schwellenwert direkt auf der jeweiligen RefId, unabhängig vom
+> tatsächlichen Zwischennamen. Betraf alle vier Panels mit
+> `joinByField`: Customer-Care-Panel 7, Leipzig-Panel 6, Avaya-Panel 21,
+> und vorsorglich auch die Zertifikats-Statustabelle (Website-Dashboard
+> Panel 4, war dort nicht gemeldet, aber dieselbe Konstruktion - jetzt
+> überall dieselbe robuste Methode statt zwei verschiedener,
+> fehleranfälliger Ansätze).
 
 **Grafana-Dashboard "Customer Care – Standortübersicht (Technical
 Owner)"** (`grafana/dashboards/customer-care-overview.json`, 22 Panels,
@@ -623,7 +663,7 @@ automatisch provisioniert):
   nötig sind). Gleiche dreistufige Health-Formel/Farbcodierung wie Karte
   und Balken-Charts. War zunächst leer (siehe Bug-Hinweis oben) - Fix:
   `labelsToFields` + je einen `merge`-Schritt gescoped auf Query A bzw. B
-  (`filter: {id: "byFrameRefID", options: "A"|"B"}`), damit die 7
+  (`filter: {id: "byRefId", options: "A"|"B"}`), damit die 7
   Nodes-Frames und 6 Edges-Frames getrennt zu genau den zwei Tabellen
   zusammengeführt werden, die das Node-Graph-Panel erwartet, statt sich
   gegenseitig zu vermischen. Beide Queries live gegen Prometheus auf die
@@ -640,6 +680,37 @@ MOS-Score, Bandbreiten-Kollaps) und die Avaya-Warteschlange
 volllaufen; `./fix-customer-care.sh` macht es rückgängig. Live
 verifiziert: Chemnitz-VPN ging auf 0, "Standorte mit VPN-Störung"
 sprang auf 1, die Warteschlange auf 39 Anrufe.
+
+## Avaya Call Center – Betriebsansicht (Grafana, Callcenter-Optimierung)
+
+`grafana/dashboards/avaya-callcenter-operations.json` - fokussierte
+Zusatzansicht für Callcenter-Manager, inspiriert vom klassischen
+Avaya/BCMS-Operator-Dashboard-Layout aus [diesem
+Blogpost](https://blog.upinget.com/2021/02/07/using-grafana-to-monitor-avaya-call-center/)
+(Trunk-/VDN-/Queue-/Agenten-/KPI-Panels über die BCMS- und
+CallAnalytics-APIs). Ergänzt die breitere Customer-Care-Dashboard oben
+um die Kennzahlen, an denen ein Callcenter-Manager tatsächlich Personal-
+und SLA-Entscheidungen festmacht - teils neue Metriken im Exporter
+(`scripts/customer-care-metrics-exporter.py`):
+
+- **KPIs**: Anrufe in Warteschlange, ältester wartender Anruf,
+  **Service Level** (Anteil der Anrufe innerhalb der SLA-Zielzeit
+  beantwortet, branchenüblich 80/20), **ACHT** (Average Call Handling
+  Time - Gesprächs- plus Nachbearbeitungszeit, neue Metrik
+  `cc_avaya_acht_seconds`, bewusst getrennt von der reinen
+  Warteschlangen-Wartezeit)
+- **Trunk & Warteschlange**: SIP-Trunk-Mitglieder nach Status
+  (idle/in_use/unknown, neue Metrik `cc_avaya_trunk_members`) sowie der
+  Warteschlangen-Verlauf über Zeit
+- **Agenten**: Agenten-Status je Standort (verfügbar / im Gespräch /
+  Nachbearbeitung-Pause) als gestapelter Balken-Chart - dritter
+  Agenten-Status `cc_avaya_agents_not_ready` neu ergänzt, für eine
+  vollständigere ACD-Statusverteilung als im Hauptdashboard oben
+
+Von Anfang an mit der korrekten `labelsToFields`+gescopetem-`merge`
+(`byRefId`, nicht `byFrameRefID` - siehe Bug-Hinweis oben)
++`joinByField`-Transformation gebaut. Alle neuen Metriken live gegen
+Prometheus verifiziert.
 
 ## DocuWare-Cluster: App-Owner-Tiefe + einfache Nutzeransicht
 
@@ -901,6 +972,26 @@ zusätzliches Paket) + `scripts/control-panel.html`. Läuft bewusst **im
 Vordergrund außerhalb von Docker** (Ctrl+C stoppt es) statt als weiterer
 `docker-compose.yml`-Service - `./start-demo.sh` weist am Ende auf
 diesen Befehl hin, startet ihn aber nicht automatisch mit.
+
+## Ruhigere Zeitreihen-Graphen
+
+Die Zeitreihen-Panels wirkten zu "spikig" für eine Management-Demo (alle
+15s ein neuer, unabhängig ausgewürfelter Messwert). Zwei Stellschrauben,
+beide angewendet:
+
+- **Weniger Jitter an der Quelle**: die `wave()`-Hilfsfunktion in allen
+  drei synthetischen Exportern (`scripts/*-metrics-exporter.py`) erzeugt
+  jetzt ±1 % Rauschen statt ±3 % um die eigentliche Sinuskurve - die
+  sichtbare Bewegung bleibt (kein flacher Strich), die Kurve wirkt aber
+  deutlich ruhiger.
+- **Weiche Linien-Interpolation in Grafana**: alle 23 Zeitreihen-Panels
+  über alle vier Dashboards (`fieldConfig.defaults.custom.lineInterpolation:
+  "smooth"`) - rein optisch, ändert nichts an den Daten selbst, rundet
+  nur die Verbindungslinie zwischen den Punkten.
+
+Scrape-Intervall (15s) bewusst unverändert gelassen - die überall in
+dieser README dokumentierten "~15-30s"-Reaktionszeiten der Break-/
+Fix-Skripte hängen daran.
 
 ## Bei Code-Änderungen: was lädt automatisch, was braucht einen Neustart
 

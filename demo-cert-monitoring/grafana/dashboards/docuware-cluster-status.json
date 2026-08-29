@@ -208,7 +208,15 @@
      "legendFormat": "Aktive Sitzungen",
      "refId": "A"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 6,
@@ -235,7 +243,15 @@
      "legendFormat": "Rechnungen abgerufen",
      "refId": "B"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 7,
@@ -285,7 +301,10 @@
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "decmbytes"
+     "unit": "decmbytes",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
     },
     "overrides": []
    }
@@ -323,7 +342,10 @@
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "percent"
+     "unit": "percent",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
     },
     "overrides": []
    }
@@ -366,7 +388,10 @@
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "percent"
+     "unit": "percent",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
     },
     "overrides": []
    }
@@ -409,7 +434,10 @@
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "percent"
+     "unit": "percent",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
     },
     "overrides": []
    }
@@ -439,7 +467,15 @@
      "legendFormat": "APM Query-Dauer (ms)",
      "refId": "B"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 12,
@@ -494,7 +530,15 @@
      "legendFormat": "Aktive Verbindungen",
      "refId": "C"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 14,
@@ -524,7 +568,10 @@
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "percent"
+     "unit": "percent",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
     },
     "overrides": []
    }
@@ -554,7 +601,15 @@
      "legendFormat": "Aktive Anfragen",
      "refId": "B"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 16,
@@ -581,7 +636,15 @@
      "legendFormat": "Blockiert",
      "refId": "B"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 17,

@@ -1,6 +1,7 @@
 {
- "title": "Standort Leipzig – Netzwerk-Topologie (Facility-IT)",
- "uid": "leipzig-network-topology",
+ "title": "Avaya Call Center – Betriebsansicht (Callcenter-Optimierung)",
+ "uid": "avaya-callcenter-operations",
+ "description": "Fokussierte Betriebssicht für Callcenter-Manager - inspiriert vom klassischen Avaya/BCMS-Operator-Layout (https://blog.upinget.com/2021/02/07/using-grafana-to-monitor-avaya-call-center/): Warteschlangen-KPIs, Trunk-Status, Agenten-Auslastung. Ergänzt die breitere Customer-Care-Dashboard oben um die Kennzahlen, an denen ein Callcenter-Manager tatsächlich Personal-/SLA-Entscheidungen festmacht.",
  "timezone": "browser",
  "editable": true,
  "refresh": "30s",
@@ -12,43 +13,26 @@
  "panels": [
   {
    "id": 1,
-   "type": "stat",
-   "title": "Geräte insgesamt",
+   "type": "row",
+   "title": "KPIs",
    "gridPos": {
-    "h": 6,
-    "w": 6,
+    "h": 1,
+    "w": 24,
     "x": 0,
     "y": 0
    },
-   "datasource": {
-    "type": "prometheus",
-    "uid": "prometheus"
-   },
-   "targets": [
-    {
-     "expr": "count(net_device_up)",
-     "instant": true,
-     "refId": "A"
-    }
-   ],
-   "options": {
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ]
-    },
-    "textMode": "value_and_name"
-   }
+   "collapsed": false,
+   "panels": []
   },
   {
    "id": 2,
    "type": "stat",
-   "title": "Geräte offline",
+   "title": "Anrufe in Warteschlange",
    "gridPos": {
     "h": 6,
     "w": 6,
-    "x": 6,
-    "y": 0
+    "x": 0,
+    "y": 1
    },
    "datasource": {
     "type": "prometheus",
@@ -56,7 +40,7 @@
    },
    "targets": [
     {
-     "expr": "sum(net_device_up < bool 1)",
+     "expr": "cc_avaya_calls_queued",
      "instant": true,
      "refId": "A"
     }
@@ -71,8 +55,12 @@
         "value": null
        },
        {
+        "color": "orange",
+        "value": 15
+       },
+       {
         "color": "red",
-        "value": 1
+        "value": 30
        }
       ]
      }
@@ -91,12 +79,12 @@
   {
    "id": 3,
    "type": "stat",
-   "title": "Ø CPU-Auslastung",
+   "title": "Ältester wartender Anruf",
    "gridPos": {
     "h": 6,
     "w": 6,
-    "x": 12,
-    "y": 0
+    "x": 6,
+    "y": 1
    },
    "datasource": {
     "type": "prometheus",
@@ -104,14 +92,14 @@
    },
    "targets": [
     {
-     "expr": "avg(net_device_cpu_percent)",
+     "expr": "cc_avaya_oldest_call_waiting_seconds",
      "instant": true,
      "refId": "A"
     }
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "percent",
+     "unit": "s",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -120,12 +108,12 @@
         "value": null
        },
        {
-        "color": "yellow",
-        "value": 70
+        "color": "orange",
+        "value": 90
        },
        {
         "color": "red",
-        "value": 90
+        "value": 180
        }
       ]
      }
@@ -144,12 +132,13 @@
   {
    "id": 4,
    "type": "stat",
-   "title": "Max. Temperatur",
+   "title": "Service Level",
+   "description": "Anteil der Anrufe, die innerhalb der SLA-Zielzeit angenommen wurden (branchenüblich 80/20).",
    "gridPos": {
     "h": 6,
     "w": 6,
-    "x": 18,
-    "y": 0
+    "x": 12,
+    "y": 1
    },
    "datasource": {
     "type": "prometheus",
@@ -157,28 +146,28 @@
    },
    "targets": [
     {
-     "expr": "max(net_device_temperature_celsius)",
+     "expr": "cc_avaya_service_level_percent",
      "instant": true,
      "refId": "A"
     }
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "celsius",
+     "unit": "percent",
      "thresholds": {
       "mode": "absolute",
       "steps": [
        {
-        "color": "green",
+        "color": "red",
         "value": null
        },
        {
-        "color": "yellow",
-        "value": 50
+        "color": "orange",
+        "value": 65
        },
        {
-        "color": "red",
-        "value": 60
+        "color": "green",
+        "value": 80
        }
       ]
      }
@@ -196,14 +185,14 @@
   },
   {
    "id": 5,
-   "type": "nodeGraph",
-   "title": "Netzwerk-Topologie: Internet-Router → Core (Keller) → Access-Switches",
-   "description": "Ein Internet-Router, ein Core-Switch im Keller, 10 Access-Switches über 4 Bereiche auf einer Etage.",
+   "type": "stat",
+   "title": "ACHT (Ø Bearbeitungszeit)",
+   "description": "Average Call Handling Time: Gesprächszeit + Nachbearbeitung.",
    "gridPos": {
-    "h": 14,
-    "w": 24,
-    "x": 0,
-    "y": 6
+    "h": 6,
+    "w": 6,
+    "x": 18,
+    "y": 1
    },
    "datasource": {
     "type": "prometheus",
@@ -211,16 +200,76 @@
    },
    "targets": [
     {
-     "expr": "net_device_up",
+     "expr": "cc_avaya_acht_seconds",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 360
+       },
+       {
+        "color": "red",
+        "value": 420
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name"
+   }
+  },
+  {
+   "id": 10,
+   "type": "row",
+   "title": "Trunk & Warteschlange",
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 7
+   },
+   "collapsed": false,
+   "panels": []
+  },
+  {
+   "id": 11,
+   "type": "barchart",
+   "title": "SIP-Trunk-Mitglieder nach Status",
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_avaya_trunk_members",
      "instant": true,
      "format": "table",
      "refId": "A"
-    },
-    {
-     "expr": "label_replace(label_replace(net_uplink_up, \"source\", \"Core-Switch (Keller)\", \"\", \"\"), \"target\", \"$1\", \"device\", \"(.*)\") or label_replace(label_replace(net_device_up{device=\"Core-Switch (Keller)\"}, \"source\", \"Internet-Router\", \"\", \"\"), \"target\", \"Core-Switch (Keller)\", \"\", \"\")",
-     "instant": true,
-     "format": "table",
-     "refId": "B"
     }
    ],
    "transformations": [
@@ -230,19 +279,7 @@
     },
     {
      "id": "merge",
-     "options": {},
-     "filter": {
-      "id": "byRefId",
-      "options": "A"
-     }
-    },
-    {
-     "id": "merge",
-     "options": {},
-     "filter": {
-      "id": "byRefId",
-      "options": "B"
-     }
+     "options": {}
     },
     {
      "id": "organize",
@@ -251,57 +288,44 @@
        "Time": true,
        "__name__": true,
        "instance": true,
-       "job": true,
-       "role": true
+       "job": true
       },
       "renameByName": {
-       "device": "id",
-       "area": "subTitle",
-       "net_device_up": "mainStat",
-       "net_uplink_up": "mainStat"
+       "status": "Status",
+       "cc_avaya_trunk_members": "Anzahl"
       }
      }
     }
    ],
    "fieldConfig": {
     "defaults": {
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "mode": "absolute",
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "green",
-        "value": 1
-       }
-      ]
-     }
+     "unit": "short"
     },
     "overrides": []
    },
    "options": {
-    "nodes": {
-     "mainStatUnit": "none"
+    "orientation": "vertical",
+    "xTickLabelRotation": 0,
+    "showValue": "always",
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": false
     },
-    "edges": {
-     "mainStatUnit": "none"
+    "tooltip": {
+     "mode": "single"
     }
    }
   },
   {
-   "id": 6,
-   "type": "table",
-   "title": "Geräte im Detail",
+   "id": 12,
+   "type": "timeseries",
+   "title": "Warteschlange & Wartezeit (Verlauf)",
    "gridPos": {
     "h": 8,
-    "w": 24,
-    "x": 0,
-    "y": 20
+    "w": 16,
+    "x": 8,
+    "y": 8
    },
    "datasource": {
     "type": "prometheus",
@@ -309,19 +333,72 @@
    },
    "targets": [
     {
-     "expr": "net_device_up",
+     "expr": "cc_avaya_calls_queued",
+     "legendFormat": "Anrufe in Warteschlange",
+     "refId": "A"
+    },
+    {
+     "expr": "cc_avaya_avg_wait_seconds",
+     "legendFormat": "Ø Wartezeit (s)",
+     "refId": "B"
+    },
+    {
+     "expr": "cc_avaya_oldest_call_waiting_seconds",
+     "legendFormat": "Ältester wartender Anruf (s)",
+     "refId": "C"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 20,
+   "type": "row",
+   "title": "Agenten",
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 16
+   },
+   "collapsed": false,
+   "panels": []
+  },
+  {
+   "id": 21,
+   "type": "barchart",
+   "title": "Agenten-Status je Standort",
+   "gridPos": {
+    "h": 9,
+    "w": 24,
+    "x": 0,
+    "y": 17
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "cc_avaya_agents_available",
      "instant": true,
      "format": "table",
      "refId": "A"
     },
     {
-     "expr": "net_device_cpu_percent",
+     "expr": "cc_avaya_agents_busy",
      "instant": true,
      "format": "table",
      "refId": "B"
     },
     {
-     "expr": "net_device_temperature_celsius",
+     "expr": "cc_avaya_agents_not_ready",
      "instant": true,
      "format": "table",
      "refId": "C"
@@ -359,7 +436,7 @@
     {
      "id": "joinByField",
      "options": {
-      "byField": "device",
+      "byField": "site",
       "mode": "outer"
      }
     },
@@ -381,15 +458,18 @@
        "job 3": true
       },
       "renameByName": {
-       "device": "Gerät",
-       "role": "Rolle",
-       "area": "Bereich"
+       "site": "Standort"
       }
      }
     }
    ],
    "fieldConfig": {
-    "defaults": {},
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "axisLabel": "Agenten"
+     }
+    },
     "overrides": [
      {
       "matcher": {
@@ -399,28 +479,13 @@
       "properties": [
        {
         "id": "displayName",
-        "value": "Online"
+        "value": "Verfügbar"
        },
        {
-        "id": "custom.cellOptions",
+        "id": "color",
         "value": {
-         "type": "color-background"
-        }
-       },
-       {
-        "id": "thresholds",
-        "value": {
-         "mode": "absolute",
-         "steps": [
-          {
-           "color": "red",
-           "value": null
-          },
-          {
-           "color": "green",
-           "value": 1
-          }
-         ]
+         "mode": "fixed",
+         "fixedColor": "green"
         }
        }
       ]
@@ -433,11 +498,14 @@
       "properties": [
        {
         "id": "displayName",
-        "value": "CPU %"
+        "value": "Im Gespräch"
        },
        {
-        "id": "unit",
-        "value": "percent"
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "blue"
+        }
        }
       ]
      },
@@ -449,15 +517,32 @@
       "properties": [
        {
         "id": "displayName",
-        "value": "Temperatur °C"
+        "value": "Nachbearbeitung/Pause"
        },
        {
-        "id": "unit",
-        "value": "celsius"
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "orange"
+        }
        }
       ]
      }
     ]
+   },
+   "options": {
+    "orientation": "vertical",
+    "xTickLabelRotation": 0,
+    "showValue": "auto",
+    "stacking": "normal",
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
    }
   }
  ]

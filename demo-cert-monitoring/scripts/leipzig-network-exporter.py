@@ -55,7 +55,7 @@ def is_unhealthy():
 def wave(period_s, low, high, phase=0.0):
     t = time.time() - START
     frac = (math.sin(2 * math.pi * (t / period_s) + phase) + 1) / 2
-    jitter = random.uniform(-0.03, 0.03) * (high - low)
+    jitter = random.uniform(-0.01, 0.01) * (high - low)
     return max(low, min(high, low + frac * (high - low) + jitter))
 
 

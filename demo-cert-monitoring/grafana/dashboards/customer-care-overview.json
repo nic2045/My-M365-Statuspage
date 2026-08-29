@@ -236,7 +236,15 @@
      "legendFormat": "Ø Wartezeit (s)",
      "refId": "B"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 6,
@@ -263,7 +271,15 @@
      "legendFormat": "Abgebrochen/Min",
      "refId": "B"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 7,
@@ -302,7 +318,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "A"
      }
     },
@@ -310,7 +326,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "B"
      }
     },
@@ -335,9 +351,7 @@
        "job 2": true
       },
       "renameByName": {
-       "site": "Standort",
-       "cc_avaya_agents_available": "Verfügbar",
-       "cc_avaya_agents_busy": "Im Gespräch"
+       "site": "Standort"
       }
      }
     }
@@ -352,10 +366,14 @@
     "overrides": [
      {
       "matcher": {
-       "id": "byName",
-       "options": "Verfügbar"
+       "id": "byFrameRefID",
+       "options": "A"
       },
       "properties": [
+       {
+        "id": "displayName",
+        "value": "Verfügbar"
+       },
        {
         "id": "color",
         "value": {
@@ -367,10 +385,14 @@
      },
      {
       "matcher": {
-       "id": "byName",
-       "options": "Im Gespräch"
+       "id": "byFrameRefID",
+       "options": "B"
       },
       "properties": [
+       {
+        "id": "displayName",
+        "value": "Im Gespräch"
+       },
        {
         "id": "color",
         "value": {
@@ -423,7 +445,15 @@
      "legendFormat": "{{site}}",
      "refId": "A"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 9,
@@ -448,7 +478,10 @@
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "ms"
+     "unit": "ms",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
     },
     "overrides": []
    }
@@ -491,7 +524,10 @@
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "percent"
+     "unit": "percent",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
     },
     "overrides": []
    }
@@ -521,7 +557,15 @@
      "legendFormat": "Fehlerquote %",
      "refId": "B"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 12,
@@ -546,7 +590,10 @@
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "ms"
+     "unit": "ms",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
     },
     "overrides": []
    }
@@ -576,7 +623,15 @@
      "legendFormat": "Aktive Bot-Sessions",
      "refId": "B"
     }
-   ]
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   },
   {
    "id": 14,
@@ -709,7 +764,10 @@
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "percent"
+     "unit": "percent",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
     },
     "overrides": []
    }
@@ -911,7 +969,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "B"
      }
     },
@@ -919,7 +977,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "C"
      }
     },
@@ -927,7 +985,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "D"
      }
     },
@@ -935,7 +993,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "E"
      }
     },
@@ -943,7 +1001,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "F"
      }
     },
@@ -951,7 +1009,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "G"
      }
     }
@@ -1400,7 +1458,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "A"
      }
     },
@@ -1408,7 +1466,7 @@
      "id": "merge",
      "options": {},
      "filter": {
-      "id": "byFrameRefID",
+      "id": "byRefId",
       "options": "B"
      }
     },
