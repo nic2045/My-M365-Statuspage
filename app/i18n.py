@@ -351,6 +351,21 @@ LABELS_DE: dict[str, str] = {
     "duration.month_one":             "1 Monat",
     "duration.month_many":            "{n} Monate",
     "datetime.today":                 "heute",
+    # OpenBao secret-access request form
+    "openbao_request.title":            "OpenBao-Zugriff anfordern",
+    "openbao_request.intro":            "Fordert einen OpenBao-verwalteten Secret-Zugriff für eine App an - ein Cloud Operator richtet Policy und Token über infra/openbao (OpenTofu) ein und meldet sich mit dem Ergebnis. Kein GitHub-Account nötig.",
+    "openbao_request.app_name_label":   "App-Name",
+    "openbao_request.app_name_hint":    "Kurz, eindeutig, klein geschrieben mit Bindestrichen - wird Policy-Name und Teil des Secret-Pfads.",
+    "openbao_request.secret_name_label": "Secret-Name",
+    "openbao_request.secret_name_hint": "Genau ein Secret pro Anfrage - für ein weiteres, unabhängiges Secret bitte separat anfragen.",
+    "openbao_request.requested_by_label": "Angefordert von (Team oder Person)",
+    "openbao_request.justification_label": "Warum wird der Zugriff benötigt?",
+    "openbao_request.token_period_label": "Token-Renewal-Zeitraum (optional)",
+    "openbao_request.token_period_hint": "In Sekunden. Leer lassen für den Standard (30 Tage).",
+    "openbao_request.submit":           "Anfrage einreichen",
+    "openbao_request.success_title":    "Anfrage eingereicht",
+    "openbao_request.success_body":     "Ein Cloud Operator prüft die Anfrage und meldet sich mit dem Ergebnis. Verfolgen kannst du sie hier:",
+    "openbao_request.error_not_configured": "Automatische Einreichung ist nicht konfiguriert (OPENBAO_REQUEST_GITHUB_TOKEN fehlt) - bitte den Cloud Operator direkt kontaktieren.",
 }
 
 
@@ -679,6 +694,21 @@ LABELS_EN: dict[str, str] = {
     "duration.month_one":             "1 month",
     "duration.month_many":            "{n} months",
     "datetime.today":                 "today",
+    # OpenBao secret-access request form
+    "openbao_request.title":            "Request OpenBao access",
+    "openbao_request.intro":            "Request an OpenBao-managed secret for an app - a Cloud Operator sets up the policy and token via infra/openbao (OpenTofu) and follows up with the result. No GitHub account needed.",
+    "openbao_request.app_name_label":   "App name",
+    "openbao_request.app_name_hint":    "Short, unique, lowercase-with-dashes - becomes the policy name and part of the secret path.",
+    "openbao_request.secret_name_label": "Secret name",
+    "openbao_request.secret_name_hint": "Exactly one secret per request - open a separate request for a second, unrelated secret.",
+    "openbao_request.requested_by_label": "Requested by (team or person)",
+    "openbao_request.justification_label": "Why is this access needed?",
+    "openbao_request.token_period_label": "Token renewal period (optional)",
+    "openbao_request.token_period_hint": "In seconds. Leave blank for the default (30 days).",
+    "openbao_request.submit":           "Submit request",
+    "openbao_request.success_title":    "Request submitted",
+    "openbao_request.success_body":     "A Cloud Operator will review it and follow up with the result. Track it here:",
+    "openbao_request.error_not_configured": "Automatic submission isn't configured (OPENBAO_REQUEST_GITHUB_TOKEN missing) - please contact the Cloud Operator directly.",
 }
 
 

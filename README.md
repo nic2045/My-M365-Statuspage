@@ -124,6 +124,14 @@ App-Registrierung – mehr, als die App im Alltag benötigt (`ServiceHealth.Read
 enger berechtigte Credential hinterlegen, statt der Haupt-App-Registrierung diese zusätzliche
 Berechtigung dauerhaft zu geben.
 
+**OpenBao-Zugriff für eine (neue) App anfordern:** `infra/openbao/` (OpenTofu) automatisiert
+die Cloud-Operator-Seite (Policy + Token) – Anforderer reichen ihre Anfrage entweder über das
+GitHub-Issue-Formular (`.github/ISSUE_TEMPLATE/openbao-secret-request.yml`) oder, ohne eigenen
+GitHub-Account, über **`/openbao-request`** in dieser App ein (jeder eingeloggte Tenant-Nutzer,
+siehe Navigationsleiste) – legt automatisch das gleiche Issue an. Setup dafür:
+`OPENBAO_REQUEST_GITHUB_TOKEN`/`OPENBAO_REQUEST_GITHUB_REPO` (siehe Konfigurationsreferenz
+unten); ohne gesetzten Token zeigt die Seite nur einen Hinweis statt automatisch einzureichen.
+
 ---
 
 ## Admin-Berechtigung (App-Rolle)
@@ -166,6 +174,8 @@ Alternativ oder ergänzend kannst du eine E-Mail-Allowlist setzen (`ADMIN_EMAILS
 | `OPENBAO_TOKEN` | OpenBao-Token mit Lese-/Schreibrecht auf obigem Pfad | *(leer)* |
 | `OPENBAO_RENEWAL_THRESHOLD_DAYS` | Rotieren, wenn das gespeicherte Secret innerhalb dieser Tage abläuft | `30` |
 | `OPENBAO_NEW_SECRET_LIFETIME_DAYS` | Gültigkeitsdauer eines neu erstellten Secrets | `180` |
+| `OPENBAO_REQUEST_GITHUB_TOKEN` | Fine-grained PAT (`Issues: Read and write`) für `/openbao-request` – leer = Seite zeigt nur einen Hinweis | *(leer)* |
+| `OPENBAO_REQUEST_GITHUB_REPO` | Ziel-Repo (`owner/name`) für die dort angelegten Issues | `nic2045/My-M365-Statuspage` |
 
 **Unterstützte `MONITORED_SERVICES`-Werte** (Graph API-Namen exakt einhalten):
 

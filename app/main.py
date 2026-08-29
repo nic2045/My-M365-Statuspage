@@ -16,7 +16,7 @@ from app.i18n import (
     resolve_language,
     set_current_language,
 )
-from app.routers import admin, api, auth_router, embed, status
+from app.routers import admin, api, auth_router, embed, openbao_request, status
 from app.routers.subscribers import router as subscribers_router
 from app.scheduler import start_scheduler, stop_scheduler
 
@@ -201,3 +201,4 @@ app.include_router(embed.router)
 app.include_router(api.router)
 app.include_router(admin.router)
 app.include_router(subscribers_router)
+app.include_router(openbao_request.router)
