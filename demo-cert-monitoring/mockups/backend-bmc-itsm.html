@@ -174,14 +174,14 @@
      browsers, so this toggles display:none -> table-row first (JS forces
      a reflow before adding .show, since a display change itself can't be
      transitioned) and animates the cell contents instead. */
-  #new-row { display: none; }
-  #new-row.visible { display: table-row; }
-  #new-row td {
+  #new-row, #new-row-disk { display: none; }
+  #new-row.visible, #new-row-disk.visible { display: table-row; }
+  #new-row td, #new-row-disk td {
     opacity: 0;
     transform: translateY(-8px);
     transition: opacity 0.35s ease, transform 0.4s cubic-bezier(.34,1.56,.64,1);
   }
-  #new-row.show td {
+  #new-row.show td, #new-row-disk.show td {
     opacity: 1;
     transform: translateY(0);
     animation: flash 1.2s ease;
@@ -327,7 +327,8 @@
       <div class="queue-header">
         <h1>Vorfalls-Warteschlange</h1>
         <div class="controls">
-          <button class="btn-trigger" onclick="playBmc()">Vorfall auslösen</button>
+          <button class="btn-trigger" onclick="playBmc('login')">Login-Vorfall auslösen</button>
+          <button class="btn-trigger" onclick="playBmc('disk')">Speicherplatz-Vorfall auslösen</button>
           <button class="btn-reset" onclick="resetBmc()">Zurücksetzen</button>
         </div>
       </div>
@@ -350,6 +351,14 @@
             <td class="priority-1">1 – Kritisch</td>
             <td><span class="badge badge-new" id="new-row-badge">Neu</span></td>
             <td id="new-row-group">–</td>
+            <td>soeben</td>
+          </tr>
+          <tr id="new-row-disk" class="row-clickable" onclick="openTicket('INC000000222190')">
+            <td>INC000000222190</td>
+            <td>DocuWare | Speicherplatz kritisch (Dokumentenspeicher)</td>
+            <td class="priority-1">1 – Kritisch</td>
+            <td><span class="badge badge-new" id="new-row-disk-badge">Neu</span></td>
+            <td id="new-row-disk-group">–</td>
             <td>soeben</td>
           </tr>
           <tr class="static row-clickable" onclick="openTicket('INC000000222014')">
@@ -435,6 +444,24 @@
         ],
         bmcRef: "Verknüpfter OneUptime-Incident: „DocuWare | Anmeldung in DocuWare nicht möglich“ · Referenz für dieses Demo-Szenario: INC000000222127",
       },
+      "INC000000222190": {
+        subtitle: "DocuWare | Speicherplatz kritisch (Dokumentenspeicher)",
+        priority: "1 – Kritisch",
+        category: "Infrastruktur › Storage › SAN",
+        ci: "DocuWare-Cluster (SAN) – Dokumentenspeicher-Volume",
+        reporter: "Automatisch (OneUptime-Integration)",
+        sla: "Reaktion 15 Min. / Wiederherstellung 4 Std.",
+        description: "Das SAN-Volume „Dokumentenspeicher“ des DocuWare-Clusters ist auf über " +
+          "90% Auslastung gestiegen. Ohne Eingriff drohen fehlgeschlagene Uploads und " +
+          "Scan-Vorgänge. Datenbank- und Log-Volume sind nicht betroffen und laufen normal " +
+          "weiter. Automatisch aus OneUptime übernommen (Monitor „DocuWare (Dokumentenmanagement)“).",
+        worklog: [
+          { who: "OneUptime-Integration", when: "soeben", text: "Ticket automatisch angelegt aus Incident „DocuWare | Speicherplatz kritisch (Dokumentenspeicher)“." },
+          { who: "System", when: "soeben", text: "On-Call-Richtlinie „IT-Betrieb On-Call“ ausgelöst - Eskalation nach 5 Min. ohne Reaktion." },
+          { who: "Anwendungsbetrieb DocuWare", when: "soeben", text: "Bereinigung nicht mehr benötigter Archivdateien gestartet, zusätzlicher Speicherplatz wird zugewiesen." },
+        ],
+        bmcRef: "Verknüpfter OneUptime-Incident: „DocuWare | Speicherplatz kritisch (Dokumentenspeicher)“ · On-Call-Richtlinie: „IT-Betrieb On-Call“ · Referenz für dieses Demo-Szenario: INC000000222190",
+      },
       "INC000000222014": {
         subtitle: "Passwort-Reset Self-Service liefert Fehlermeldung",
         priority: "2 – Mittel",
@@ -474,12 +501,23 @@
       },
     };
 
+    // scenario key -> row/badge/group element ids + assigned-group text,
+    // shared by playBmc()/resetBmc()/openTicket() so both live tickets
+    // (login, disk) go through the same animation/lookup code.
+    var SCENARIOS = {
+      login: { ticketId: "INC000000222127", rowId: "new-row", badgeId: "new-row-badge", groupId: "new-row-group", assignedGroup: "Anwendungsbetrieb DocuWare" },
+      disk: { ticketId: "INC000000222190", rowId: "new-row-disk", badgeId: "new-row-disk-badge", groupId: "new-row-disk-group", assignedGroup: "Anwendungsbetrieb DocuWare (Storage)" },
+    };
+    var TICKET_ID_TO_SCENARIO = {};
+    Object.keys(SCENARIOS).forEach(function (key) { TICKET_ID_TO_SCENARIO[SCENARIOS[key].ticketId] = key; });
+
     function openTicket(id) {
       var t = TICKETS[id];
       if (!t) return;
-      var row = document.getElementById(id === "INC000000222127" ? "new-row" : null);
+      var scenario = TICKET_ID_TO_SCENARIO[id] ? SCENARIOS[TICKET_ID_TO_SCENARIO[id]] : null;
+      var row = scenario ? document.getElementById(scenario.rowId) : null;
       var liveStatus = row ? row.querySelector(".badge").textContent : t.status;
-      var liveGroup = row ? document.getElementById("new-row-group").textContent : t.group;
+      var liveGroup = row ? document.getElementById(scenario.groupId).textContent : t.group;
 
       document.getElementById("modal-title").textContent = id;
       document.getElementById("modal-subtitle").textContent = t.subtitle;
@@ -522,7 +560,9 @@
       setTimeout(function () { overlay.classList.remove("visible"); }, 250);
     }
 
-    function playBmc() {
+    function playBmc(scenarioKey) {
+      var scenario = SCENARIOS[scenarioKey];
+      if (!scenario) return;
       var steps = ["flow-1", "flow-line-1", "flow-2", "flow-line-2", "flow-3"];
       steps.forEach(function (id, i) {
         setTimeout(function () {
@@ -530,27 +570,30 @@
         }, i * 500);
       });
       setTimeout(function () {
-        var row = document.getElementById("new-row");
+        var row = document.getElementById(scenario.rowId);
         row.classList.add("visible");
         void row.offsetWidth; // force reflow so display:none -> table-row is committed before transitioning
         requestAnimationFrame(function () { row.classList.add("show"); });
       }, steps.length * 500);
       setTimeout(function () {
-        var badge = document.getElementById("new-row-badge");
+        var badge = document.getElementById(scenario.badgeId);
         badge.textContent = "Zugewiesen";
         badge.className = "badge badge-assigned";
-        document.getElementById("new-row-group").textContent = "Anwendungsbetrieb DocuWare";
+        document.getElementById(scenario.groupId).textContent = scenario.assignedGroup;
       }, steps.length * 500 + 1200);
     }
     function resetBmc() {
       ["flow-1", "flow-line-1", "flow-2", "flow-line-2", "flow-3"].forEach(function (id) {
         document.getElementById(id).classList.remove("done");
       });
-      document.getElementById("new-row").classList.remove("show", "visible");
-      var badge = document.getElementById("new-row-badge");
-      badge.textContent = "Neu";
-      badge.className = "badge badge-new";
-      document.getElementById("new-row-group").textContent = "–";
+      Object.keys(SCENARIOS).forEach(function (key) {
+        var scenario = SCENARIOS[key];
+        document.getElementById(scenario.rowId).classList.remove("show", "visible");
+        var badge = document.getElementById(scenario.badgeId);
+        badge.textContent = "Neu";
+        badge.className = "badge badge-new";
+        document.getElementById(scenario.groupId).textContent = "–";
+      });
     }
   </script>
 </body>

@@ -295,13 +295,14 @@
       </div>
       <p class="story">
         <strong>Passiert:</strong> SAN-Volume "Dokumentenspeicher" füllt
-        sich auf 90-98% (App-Owner-Dashboard) - DB- und Log-Volume
-        unverändert.<br>
+        sich auf 90-98% (App-Owner-Dashboard), echter OneUptime-Incident +
+        On-Call-Eskalation + Mitarbeiter-Benachrichtigung.<br>
         <strong>Zeigt:</strong> Kapazitätsvorfall bleibt isoliert auf eine
-        Ressource, statt den ganzen Cluster mitzureißen.
+        Ressource - von Grafana über OneUptime bis zum BMC-Ticket.
       </p>
       <div class="links">
         <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+        <a href="/mockups/backend-bmc-itsm.html" target="_blank">BMC-Ticket-Mockup</a>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-docuware-disk', 'docuware-disk')">Vorfall auslösen</button>

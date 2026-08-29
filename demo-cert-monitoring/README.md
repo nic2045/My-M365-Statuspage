@@ -872,6 +872,32 @@ rückgängig. Nutzt einen eigenen State-File
 `break-docuware.sh`, damit beide Szenarien einzeln oder zusammen
 vorgeführt werden können.
 
+Anders als das MSSQL/WAF-Szenario (nur Prometheus/Grafana) spielt dieses
+Szenario **komplett durch** - Grafana ist hier nur der Anfang:
+- **OneUptime, live**: `break-docuware-disk.sh` legt zusätzlich einen
+  echten Incident an ("DocuWare | Speicherplatz kritisch
+  (Dokumentenspeicher)", `scripts/docuware_disk_incident.py`, gleiches
+  Break/Fix-Muster wie `security_incident.py`, inkl. desselben
+  Delete-und-Neuanlegen-Fixes für ein erneutes Auslösen aus dem
+  Resolved-Zustand). Verknüpft mit dem bestehenden DocuWare-Monitor (der
+  auf Degraded wechselt) und der bestehenden On-Call-Richtlinie
+  "IT-Betrieb On-Call" - dieselbe Richtlinie wie beim
+  DocuWare-Login-Incident, kein Duplikat.
+- **Mitarbeiter-Benachrichtigung**: läuft automatisch über denselben,
+  bereits verifizierten Weg wie bei den anderen echten Incidents in
+  dieser Demo (OneUptime-Statuspage-Update + Abonnenten-E-Mail via
+  Mailpit) - keine zusätzliche Mock-Benachrichtigung nötig.
+  Übersprungen, falls OneUptime nicht läuft (`./start-demo.sh` ohne
+  `--with-oneuptime`) - der Prometheus/Grafana-Teil funktioniert dann
+  trotzdem unverändert.
+- **BMC-ITSM-Ticket fürs Bearbeiter-Team**: `mockups/backend-bmc-itsm.html`
+  hat jetzt zwei unabhängig auslösbare Szenarien in derselben
+  Vorfalls-Warteschlange (Buttons "Login-Vorfall auslösen" /
+  "Speicherplatz-Vorfall auslösen") - das neue Ticket
+  (`INC000000222190`) referenziert im Detail-Modal die On-Call-Richtlinie
+  und den verknüpften OneUptime-Incident, genau wie das bestehende
+  Login-Ticket.
+
 ## Test-Incident live durchspielen: "Zertifikat abgelaufen, IT arbeitet an Behebung"
 
 `demo-broken-site` startet **gesund** (gültiges Zertifikat,
