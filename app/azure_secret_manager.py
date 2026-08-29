@@ -60,6 +60,25 @@ class _NewSecret:
     expires_on: str
 
 
+@dataclass
+class _StoredSecret:
+    """Typed view of the OpenBao KV v2 record - converted from the raw dict right after
+    fetching, so metadata fields (expires_on, key_id) are ordinary dataclass attributes
+    instead of subscripts on the same dict object that also holds client_secret."""
+
+    client_secret: str
+    key_id: str | None
+    expires_on: str | None
+
+
+def _parse_stored_secret(raw: dict | None) -> _StoredSecret | None:
+    if raw is None:
+        return None
+    return _StoredSecret(
+        client_secret=raw["client_secret"], key_id=raw.get("key_id"), expires_on=raw.get("expires_on")
+    )
+
+
 async def get_or_rotate_client_secret(
     db: AsyncSession,
     *,
@@ -84,28 +103,28 @@ async def get_or_rotate_client_secret(
 
     path = settings.OPENBAO_SECRET_PATH
     try:
-        stored = await get_secret(address, settings.OPENBAO_TOKEN, path)
+        stored = _parse_stored_secret(await get_secret(address, settings.OPENBAO_TOKEN, path))
     except OpenBaoUnreachableError as exc:
         raise AzureSecretSyncError(str(exc)) from exc
 
-    needs_rotation = force or not stored or not stored.get("expires_on")
+    needs_rotation = force or not stored or not stored.expires_on
     if not needs_rotation:
-        expires_on = datetime.fromisoformat(stored["expires_on"])
+        expires_on = datetime.fromisoformat(stored.expires_on)
         needs_rotation = expires_on < datetime.now(UTC) + timedelta(
             days=settings.OPENBAO_RENEWAL_THRESHOLD_DAYS
         )
 
     if not needs_rotation:
-        logger.info("Using cached OpenBao secret (valid until %s).", stored["expires_on"])
+        logger.info("Using cached OpenBao secret (valid until %s).", stored.expires_on)
         await save_azure_settings(
-            db, tenant_id=tenant_id, client_id=client_id, client_secret=stored["client_secret"]
+            db, tenant_id=tenant_id, client_id=client_id, client_secret=stored.client_secret
         )
         return SecretSyncResult(
-            client_secret=stored["client_secret"], rotated=False, expires_on=stored["expires_on"]
+            client_secret=stored.client_secret, rotated=False, expires_on=stored.expires_on
         )
 
     new_secret = await _rotate_client_secret(
-        client_id=client_id, previous_key_id=(stored or {}).get("key_id")
+        client_id=client_id, previous_key_id=stored.key_id if stored else None
     )
     try:
         await set_secret(
