@@ -1,0 +1,49 @@
+# Scrape-config snippets for the exporters behind the dashboards in this
+# directory - copy the relevant job(s) into your real prometheus.yml under
+# scrape_configs:, and swap the placeholder targets for your actual hosts.
+# See README.md for exporter install/setup details per role.
+
+# ── Systemadmins: Node Exporter Full ────────────────────────────────────────
+# node_exporter on every Linux/Unix host to monitor (default port 9100).
+- job_name: "node_exporter"
+  static_configs:
+    - targets:
+        - "server01.example.internal:9100"
+        - "server02.example.internal:9100"
+      labels:
+        role: "systemadmin"
+
+# ── Webserver-Admins: Apache2 ────────────────────────────────────────────────
+# apache_exporter (Lusitaniae/apache_exporter, default port 9117). Needs
+# Apache's mod_status enabled and reachable from wherever the exporter runs
+# (usually localhost on the same host, via a loopback-only vhost) at
+# /server-status?auto.
+- job_name: "apache_exporter"
+  static_configs:
+    - targets:
+        - "webserver01.example.internal:9117"
+      labels:
+        role: "webserver-admin"
+
+# ── DB-Admins: MS SQL Server ─────────────────────────────────────────────────
+# sql_exporter (burningalchemist/sql_exporter, default port 9399), driven by
+# a collector config with your own T-SQL queries (wait stats, buffer cache
+# hit ratio, page life expectancy, blocking, deadlocks, log/data file usage).
+- job_name: "mssql_exporter"
+  static_configs:
+    - targets:
+        - "dbserver01.example.internal:9399"
+      labels:
+        role: "db-admin"
+
+# ── Systemadmins: VMware host (ESXi/vCenter) ─────────────────────────────────
+# vmware_exporter (pryorda/vmware_exporter or an actively maintained fork,
+# default port 9272). Talks to the vSphere API directly - runs once per
+# vCenter/ESXi, not per guest VM. Configure its own read-only vSphere
+# service account in the exporter's config.yml, not here.
+- job_name: "vmware_exporter"
+  static_configs:
+    - targets:
+        - "vmware-exporter.example.internal:9272"
+      labels:
+        role: "systemadmin"

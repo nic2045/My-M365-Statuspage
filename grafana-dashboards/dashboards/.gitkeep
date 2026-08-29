@@ -1,0 +1,2 @@
+Dashboard JSON files fetched by ../fetch-community-dashboards.sh (or downloaded manually
+from grafana.com) land here and should be committed once present - see ../README.md.

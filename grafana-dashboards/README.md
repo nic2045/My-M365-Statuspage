@@ -1,0 +1,96 @@
+# IT-Infra-Ops-Dashboards (Grafana)
+
+Rollenbasierte Grafana-Dashboards für die reale IT-Infrastruktur - **kein Bestandteil der
+`demo-cert-monitoring/`-Verkaufsdemo** (die nutzt bewusst synthetische Fake-Metriken für
+eine Vorführung; das hier sind Standard-Community-Dashboards für echte Exporter gegen
+echte Server/Datenbanken/Webserver).
+
+| Rolle | Dashboard | Ziel-Tool | Exporter |
+|---|---|---|---|
+| DB-Admins | MS SQL Server – Best Practices | Microsoft SQL Server | `sql_exporter` |
+| Webserver-Admins | Apache2 | Apache HTTP Server | `apache_exporter` |
+| Systemadmins | Node Exporter Full | Linux/Unix-Hosts (Server + VMs) | `node_exporter` |
+| Systemadmins | VMware vSphere Host | ESXi/vCenter | `vmware_exporter` |
+
+## Setup in drei Schritten
+
+1. **Exporter auf den Zielsystemen installieren** (siehe Tabelle unten je Rolle) und in
+   Prometheus eintragen - fertige Scrape-Config-Snippets liegen in
+   [`prometheus-scrape-configs.yml`](prometheus-scrape-configs.yml), einfach in eure
+   bestehende `prometheus.yml` unter `scrape_configs:` einfügen.
+2. **Dashboard-JSONs holen** – `grafana.com` ist aus dieser (Claude-Code-)Sandbox heraus per
+   Egress-Policy blockiert, deshalb liegen hier keine fertigen JSON-Dateien bei. Von einer
+   Maschine mit normalem Internetzugang einmalig:
+   ```bash
+   cd grafana-dashboards
+   ./fetch-community-dashboards.sh
+   ```
+   Das lädt die JSONs nach `dashboards/` (danach committen, damit sie mit ins Repo
+   wandern) – **oder** einfach manuell über Grafana → Dashboards → New → Import → ID/URL
+   eingeben, ganz ohne dieses Repo.
+3. **In Grafana laden** – entweder über das Import-Feld (Schritt 2, Alternative), oder
+   file-basiert automatisch via [`provisioning/`](provisioning/) (siehe unten).
+
+## Je Rolle im Detail
+
+### DB-Admins – MS SQL Server
+
+- **Dashboard:** "MS SQL Server Performance Dashboard" – auf grafana.com unter Data Source
+  "Prometheus" + Suchbegriff "MSSQL"/"SQL Server" suchen und die aktuell bestbewertete
+  Variante nehmen. In `fetch-community-dashboards.sh` ist **ID 9159** hinterlegt (zum
+  Zeitpunkt der Erstellung dieser Datei ein verbreitetes SQL-Server-Dashboard für
+  `sql_exporter`) – **vor dem ersten Einsatz auf grafana.com verifizieren**, dass die ID noch
+  aktuell/nicht durch eine neuere Version abgelöst ist.
+- **Exporter:** [`sql_exporter`](https://github.com/burningalchemist/sql_exporter) (aktiv
+  gepflegter Fork) – generischer SQL-Exporter, der eure eigenen T-SQL-Queries ausführt.
+  Braucht eine Collector-Config (YAML) mit den Queries für die "Best Practices"-Kennzahlen
+  (Wait Stats, Buffer Cache Hit Ratio, Page Life Expectancy, Blocking, Deadlocks,
+  Log-/Datendatei-Auslastung, ...) – Beispiel-Collector-Configs liegen im Exporter-Repo
+  selbst (`examples/`). Port: `9399` (Standard).
+  Least-Privilege-SQL-Login mit `VIEW SERVER STATE` reicht für die meisten Standard-Queries.
+
+### Webserver-Admins – Apache2
+
+- **Dashboard:** "Apache" – Suche auf grafana.com nach "Apache" + Data-Source Prometheus.
+  In `fetch-community-dashboards.sh` ist **ID 3894** hinterlegt – ebenfalls vor Erstnutzung
+  verifizieren.
+- **Exporter:** [`apache_exporter`](https://github.com/Lusitaniae/apache_exporter) – liest
+  Apaches eigenes `mod_status`-Modul (`/server-status?auto`, muss aktiviert und für den
+  Exporter erreichbar sein, i. d. R. nur lokal/intern). Port: `9117` (Standard). Metriken
+  u. a. `apache_up`, `apache_workers`, `apache_scoreboard`, `apache_accesses_total`,
+  `apache_cpuload`.
+
+### Systemadmins – Node Exporter Full (Server/VMs)
+
+- **Dashboard:** ["Node Exporter Full"](https://grafana.com/grafana/dashboards/1860) von
+  rfmoz – **ID 1860**, eines der bekanntesten und am meisten genutzten Community-Dashboards
+  überhaupt, seit Jahren stabil unter dieser ID.
+- **Exporter:** [`node_exporter`](https://github.com/prometheus/node_exporter) – offizieller
+  Prometheus-Exporter, auf jedem zu überwachenden Linux/Unix-Host installiert (Standard-Port
+  `9100`). Deckt CPU, Memory, Disk-I/O, Filesystem, Netzwerk, Load, systemd-Units u. v. m. ab.
+
+### Systemadmins – VMware Host (ESXi/vCenter)
+
+- **Dashboard:** Suche auf grafana.com nach "VMware vSphere" + Data-Source Prometheus - hier
+  bewusst **keine ID fest hinterlegt**, da mehrere aktiv gepflegte Varianten kursieren und
+  eine veraltete/falsche ID mehr schaden als eine kurze manuelle Suche.
+- **Exporter:** z. B. [`vmware_exporter`](https://github.com/pryorda/vmware_exporter) (oder
+  ein aktiv gepflegter Fork) – spricht die vSphere-API von ESXi/vCenter direkt an (eigener
+  Read-Only-Service-Account, kein Agent auf den Gäste-VMs nötig). Standard-Port `9272`.
+  Deckt Host-CPU/Memory/Storage/Netzwerk auf Hypervisor-Ebene ab - ergänzt Node Exporter
+  Full (Gast-OS-Sicht) um die Host-Sicht.
+
+## Provisioning (optional, file-basiert wie in `demo-cert-monitoring/`)
+
+[`provisioning/dashboards/dashboards.yml`](provisioning/dashboards/dashboards.yml) +
+[`provisioning/datasources/datasource.yml`](provisioning/datasources/datasource.yml) folgen
+demselben Muster wie die Demo - in einer eigenen Grafana-Instanz einbinden:
+
+```yaml
+volumes:
+  - ./grafana-dashboards/provisioning:/etc/grafana/provisioning:ro
+  - ./grafana-dashboards/dashboards:/var/lib/grafana/dashboards:ro
+```
+
+`datasource.yml` zeigt auf `http://prometheus:9090` - Namen/URL an eure echte
+Prometheus-Instanz anpassen, falls sie anders heißt/erreichbar ist.
