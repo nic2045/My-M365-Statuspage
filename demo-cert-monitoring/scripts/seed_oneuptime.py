@@ -910,6 +910,57 @@ if owners_team:
         }})
         print(f"    attached Team 'Owners' to escalation rule '{ESCALATION_RULE_NAME}'")
 
+# ── Incident-Response-Team (echte, neue OneUptime-User) ────────────────────
+# Fünf eigene Demo-Personen statt des einen demo@example.com-Accounts für
+# alles - realistischer für die Vorfallsrollen (Incident Commander/
+# Communications Lead/Responder/Observer) auf dem DocuWare-Festplatte-
+# Incident (scripts/docuware_disk_incident.py). isEmailVerified wird beim
+# Self-Hosted-Signup automatisch gesetzt (keine Billing-Instanz -> kein
+# Bestätigungs-Mail-Umweg nötig), und da unser Login-Account
+# (demo@example.com) selbst Master Admin ist, kann er TeamMember-Zeilen
+# direkt mit hasAcceptedInvitation=true anlegen (siehe
+# TeamMemberService.onBeforeCreate) - kein zweiter Login/Einladungs-Flow
+# nötig.
+TEAM_MEMBERS = [
+    ("Jonas Weidner", "jonas.weidner@pyur-demo.local"),
+    ("Lena Hoffmann", "lena.hoffmann@pyur-demo.local"),
+    ("Tobias Krüger", "tobias.krueger@pyur-demo.local"),
+    ("Kristin Albrecht", "kristin.albrecht@pyur-demo.local"),
+    ("Paul Neumann", "paul.neumann@pyur-demo.local"),
+]
+DEMO_USER_PASSWORD = "DemoDemo123!"
+
+
+def find_user_by_email(email):
+    matches = get_list("user", query={"email": typed("Email", email)},
+                       select={"_id": True, "name": True})
+    return matches[0] if matches else None
+
+
+members_team = find_by_name("team", "Members")
+new_users = {}
+for full_name, email in TEAM_MEMBERS:
+    user = find_user_by_email(email)
+    if not user:
+        user = call("/api/identity/signup", {"data": {
+            "email": typed("Email", email),
+            "password": typed("HashedString", DEMO_USER_PASSWORD),
+            "name": full_name,
+        }})
+        print(f"    created demo user '{full_name}' <{email}>")
+    new_users[email] = user["_id"]
+
+    if members_team:
+        existing_membership = get_list(
+            "team-member", query={"userId": user["_id"], "teamId": members_team["_id"]},
+            select={"_id": True})
+        if not existing_membership:
+            call("/api/team-member", {"data": {
+                "projectId": project_id, "teamId": members_team["_id"],
+                "userId": user["_id"], "hasAcceptedInvitation": True,
+            }})
+            print(f"    added '{full_name}' to team 'Members'")
+
 # ── Service Catalog ───────────────────────────────────────────────────────
 # NOTE: this OneUptime version dropped ServiceMonitor/ServiceDependency
 # (see schema migrations 1779739410559/1779277271302) - a Service can no

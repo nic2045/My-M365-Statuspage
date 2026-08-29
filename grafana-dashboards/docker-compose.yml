@@ -1,13 +1,11 @@
 # Self-contained sample-data stack for grafana-dashboards/ - separate from
 # demo-cert-monitoring/'s docker-compose.yml (unrelated demo, different
-# purpose). Two exporters here are REAL software against REAL local
-# targets (node_exporter about this stack's own containers; apache2 +
-# apache_exporter against a real, if traffic-light, Apache instance).
-# The other two (MSSQL, VMware) have no real backend available in a
-# throwaway compose stack, so those two are synthetic sample-data
-# exporters instead - see mock-exporters/*.py for exactly what's faked
-# and why, and how to swap in the real thing later without touching the
-# dashboards.
+# purpose). It's a demo, so all four exporters here are synthetic sample
+# data (mock-exporters/*.py) - no real Apache/SQL Server/node/vCenter
+# needed to see the dashboards populated. Each mock uses the same metric
+# names as the real exporter it mimics, so swapping in the real thing
+# later needs no dashboard changes - see the docstring at the top of each
+# mock-exporters/*.py file for exactly what's faked and why.
 #
 # Start with: docker compose -f grafana-dashboards/docker-compose.yml up -d
 # Then: run fetch-community-dashboards.sh (see README.md) before first
@@ -20,8 +18,8 @@ services:
     container_name: itops-dashboards-prometheus
     restart: unless-stopped
     depends_on:
-      - node-exporter
-      - apache-exporter
+      - node-mock-exporter
+      - apache-mock-exporter
       - mssql-mock-exporter
       - vmware-mock-exporter
     volumes:
@@ -47,66 +45,27 @@ services:
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
 
-  # ── Systemadmins: Node Exporter Full - REAL exporter, real data ────────────
-  node-exporter:
-    image: prom/node-exporter:v1.12.1
-    container_name: itops-dashboards-node-exporter
+  # ── Systemadmins: Node Exporter Full - synthetic sample data ────────────────
+  node-mock-exporter:
+    image: python:3.12-alpine
+    container_name: itops-dashboards-node-mock
     restart: unless-stopped
-    # Read-only host mounts so it reports this host's real metrics rather
-    # than just the container's own tiny cgroup - standard node_exporter
-    # docker setup, same three mounts used everywhere it's containerized.
-    # Deliberately NOT network_mode/pid: host - stays a normal, portable
-    # container; the one fidelity tradeoff is the network-interface panels
-    # showing this container's own virtual interface rather than the host's
-    # physical NICs. Everything CPU/memory/filesystem-related is unaffected.
     volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - "--path.procfs=/host/proc"
-      - "--path.sysfs=/host/sys"
-      - "--path.rootfs=/rootfs"
-      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      - ./mock-exporters/node_mock_exporter.py:/node_mock_exporter.py:ro
+    entrypoint: ["python3", "/node_mock_exporter.py"]
+    ports:
+      - "${NODE_MOCK_PORT:-9100}:9100"
 
-  # ── Webserver-Admins: Apache2 - REAL Apache + REAL apache_exporter ─────────
-  apache2:
-    image: httpd:2.4.68-alpine
-    container_name: itops-dashboards-apache2
+  # ── Webserver-Admins: Apache2 - synthetic sample data ───────────────────────
+  apache-mock-exporter:
+    image: python:3.12-alpine
+    container_name: itops-dashboards-apache-mock
     restart: unless-stopped
-    # Appends mod_status to the stock httpd.conf rather than replacing it
-    # wholesale - keeps everything else at the image's own tested default.
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        cat >> /usr/local/apache2/conf/httpd.conf <<'EOF'
-        LoadModule status_module modules/mod_status.so
-        ExtendedStatus On
-        <Location "/server-status">
-            SetHandler server-status
-            Require all granted
-        </Location>
-        EOF
-        httpd-foreground
-
-  apache-exporter:
-    image: lusotycoon/apache-exporter:v1.1.1
-    container_name: itops-dashboards-apache-exporter
-    restart: unless-stopped
-    depends_on:
-      - apache2
-    command:
-      - "--scrape_uri=http://apache2:80/server-status/?auto"
-
-  apache-traffic-generator:
-    # Keeps apache_accesses_total/apache_cpuload visibly non-flat -
-    # nothing else would ever hit this Apache instance.
-    image: curlimages/curl:8.21.0
-    container_name: itops-dashboards-apache-traffic
-    restart: unless-stopped
-    depends_on:
-      - apache2
-    entrypoint: ["sh", "-c", "while true; do curl -s -o /dev/null http://apache2:80/ || true; sleep 2; done"]
+    volumes:
+      - ./mock-exporters/apache_mock_exporter.py:/apache_mock_exporter.py:ro
+    entrypoint: ["python3", "/apache_mock_exporter.py"]
+    ports:
+      - "${APACHE_MOCK_PORT:-9117}:9117"
 
   # ── DB-Admins: MS SQL Server - synthetic sample data ────────────────────────
   mssql-mock-exporter:

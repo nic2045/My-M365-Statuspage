@@ -211,13 +211,13 @@
    },
    "targets": [
     {
-     "expr": "net_device_up",
+     "expr": "label_replace(label_replace(label_replace(net_device_up, \"id\", \"$1\", \"device\", \"(.*)\"), \"title\", \"$1\", \"device\", \"(.*)\"), \"subTitle\", \"$1\", \"area\", \"(.*)\")",
      "instant": true,
      "format": "table",
      "refId": "A"
     },
     {
-     "expr": "label_replace(label_replace(net_uplink_up, \"source\", \"Core-Switch (Keller)\", \"\", \"\"), \"target\", \"$1\", \"device\", \"(.*)\") or label_replace(label_replace(net_device_up{device=\"Core-Switch (Keller)\"}, \"source\", \"Internet-Router\", \"\", \"\"), \"target\", \"Core-Switch (Keller)\", \"\", \"\")",
+     "expr": "label_replace((label_replace(label_replace(net_uplink_up, \"source\", \"Core-Switch (Keller)\", \"\", \"\"), \"target\", \"$1\", \"device\", \"(.*)\") or label_replace(label_replace(net_device_up{device=\"Core-Switch (Keller)\"}, \"source\", \"Internet-Router\", \"\", \"\"), \"target\", \"Core-Switch (Keller)\", \"\", \"\")), \"id\", \"edge-$1\", \"target\", \"(.*)\")",
      "instant": true,
      "format": "table",
      "refId": "B"
@@ -245,6 +245,36 @@
      }
     },
     {
+     "id": "calculateField",
+     "options": {
+      "mode": "reduceRow",
+      "reduce": {
+       "reducer": "sum",
+       "include": ["Value #A"]
+      },
+      "alias": "mainStat"
+     },
+     "filter": {
+      "id": "byRefId",
+      "options": "A"
+     }
+    },
+    {
+     "id": "calculateField",
+     "options": {
+      "mode": "reduceRow",
+      "reduce": {
+       "reducer": "sum",
+       "include": ["Value #B"]
+      },
+      "alias": "mainStat"
+     },
+     "filter": {
+      "id": "byRefId",
+      "options": "B"
+     }
+    },
+    {
      "id": "organize",
      "options": {
       "excludeByName": {
@@ -252,14 +282,13 @@
        "__name__": true,
        "instance": true,
        "job": true,
-       "role": true
+       "role": true,
+       "device": true,
+       "area": true,
+       "Value #A": true,
+       "Value #B": true
       },
-      "renameByName": {
-       "device": "id",
-       "area": "subTitle",
-       "net_device_up": "mainStat",
-       "net_uplink_up": "mainStat"
-      }
+      "renameByName": {}
      }
     }
    ],

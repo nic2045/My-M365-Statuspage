@@ -1437,13 +1437,13 @@
    },
    "targets": [
     {
-     "expr": "(cc_site_vpn_up * 2) - (cc_site_vpn_up * (100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps >= bool 85)) or cc_site_info{role=\"hub\"} * 2",
+     "expr": "label_replace(label_replace((cc_site_vpn_up * 2) - (cc_site_vpn_up * (100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps >= bool 85)) or cc_site_info{role=\"hub\"} * 2, \"id\", \"$1\", \"site\", \"(.*)\"), \"title\", \"$1\", \"company\", \"(.*)\")",
      "instant": true,
      "format": "table",
      "refId": "A"
     },
     {
-     "expr": "label_replace(label_replace((cc_site_vpn_up * 2) - (cc_site_vpn_up * (100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps >= bool 85)), \"source\", \"Leipzig (RZ)\", \"\", \"\"), \"target\", \"$1\", \"site\", \"(.*)\")",
+     "expr": "label_replace(label_replace(label_replace((cc_site_vpn_up * 2) - (cc_site_vpn_up * (100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps >= bool 85)), \"source\", \"Leipzig (RZ)\", \"\", \"\"), \"target\", \"$1\", \"site\", \"(.*)\"), \"id\", \"edge-$1\", \"site\", \"(.*)\")",
      "instant": true,
      "format": "table",
      "refId": "B"
@@ -1471,6 +1471,36 @@
      }
     },
     {
+     "id": "calculateField",
+     "options": {
+      "mode": "reduceRow",
+      "reduce": {
+       "reducer": "sum",
+       "include": ["Value #A"]
+      },
+      "alias": "mainStat"
+     },
+     "filter": {
+      "id": "byRefId",
+      "options": "A"
+     }
+    },
+    {
+     "id": "calculateField",
+     "options": {
+      "mode": "reduceRow",
+      "reduce": {
+       "reducer": "sum",
+       "include": ["Value #B"]
+      },
+      "alias": "mainStat"
+     },
+     "filter": {
+      "id": "byRefId",
+      "options": "B"
+     }
+    },
+    {
      "id": "organize",
      "options": {
       "excludeByName": {
@@ -1480,13 +1510,14 @@
        "job": true,
        "lat": true,
        "lon": true,
-       "photo": true
+       "photo": true,
+       "role": true,
+       "site": true,
+       "company": true,
+       "Value #A": true,
+       "Value #B": true
       },
-      "renameByName": {
-       "site": "id",
-       "company": "title",
-       "Value": "mainStat"
-      }
+      "renameByName": {}
      }
     }
    ],

@@ -618,6 +618,48 @@ Erfurt.
 > überall dieselbe robuste Methode statt zwei verschiedener,
 > fehleranfälliger Ansätze).
 
+> **Vierter Nachtrag: die beiden Node-Graph-Panels zeigten weiterhin
+> "No data" - trotz zwischenzeitlich "bestätigt" (siehe Historie oben).**
+> Live vom Nutzer gemeldet ("Netzwerk-Topologie – Leipzig-Hub ↔ Standorte
+> zeigt no data"). Diesmal per Playwright/Chromium tatsächlich im Browser
+> nachgeprüft statt nur strukturell/per API - und dabei festgestellt,
+> dass **auch das als "funktionierend" dokumentierte Leipzig-Netzwerk-
+> Node-Graph-Panel nie wirklich lief**, nur nie jemand mit echtem
+> Browser-Zugriff nachgeschaut hatte. Zwei zusammenwirkende, per
+> Panel-Inspector (`Inspect → JSON → Panel data`) am tatsächlichen
+> Datenframe verifizierte Root-Causes, beide nicht offensichtlich aus der
+> Dashboard-JSON ablesbar:
+> 1. `organize`s `renameByName` setzt **nur** `field.config.displayName`,
+>    nicht den echten `field.name` - bestätigt am Datenframe (`"name":
+>    "company", "config": {"displayName": "title"}`, der Rohname bleibt
+>    unverändert). Node-Graph verlangt aber den **echten** Feldnamen
+>    (`id`/`title`/`mainStat`/`source`/`target`) - eine nur umbenannte
+>    Anzeige reicht nicht.
+> 2. Der gescopte `merge`-Schritt benennt die einzige numerische Spalte
+>    grundsätzlich zu `Value #<refId>` um, komplett unabhängig vom
+>    ursprünglichen Metrik- oder Abfragenamen (auch mit einem via
+>    `label_replace(..., "__name__", ...)` erzwungenen eindeutigen Namen
+>    reproduziert) - vermutlich ein Nebeneffekt von `merge`s internem
+>    `outerJoinDataFrames` beim Fehlen eines gemeinsamen Join-Schlüssels.
+>
+> Robuster Fix (kein Rätselraten über Zwischennamen mehr nötig): für
+> String-Felder (`id`/`title`/`subTitle`/`source`/`target`) direkt in der
+> PromQL per `label_replace` ein Label mit dem **exakt** benötigten Namen
+> erzeugen, damit `labelsToFields` das Feld von Anfang an korrekt nennt.
+> Für die numerische `mainStat`-Spalte, die `merge` ohnehin umbenennt,
+> einen gescopten `calculateField`-Transformationsschritt (`mode:
+> "reduceRow"`, `reduce.include: ["Value #<refId>"]`, `alias: "mainStat"`)
+> **nach** `merge` einfügen - der erzeugt ein neues Feld mit echtem
+> `field.name`, statt ein bestehendes umzubenennen. Betraf beide
+> Node-Graph-Panels im Stack (Leipzig-Panel 5, Customer-Care-Panel 22) -
+> beide jetzt per Screenshot (nicht nur API) bestätigt korrekt gerendert.
+>
+> Lehre für künftige Node-Graph-Panels in diesem Stack: **API-/JSON-
+> Verifikation reicht bei diesem Panel-Typ nicht aus** - `renameByName`
+> wirkt dort nie wie erwartet, ein echter Browser-Check (z. B. via
+> Playwright, `npx playwright install chromium`) ist die einzige
+> verlässliche Probe.
+
 **Grafana-Dashboard "Customer Care – Standortübersicht (Technical
 Owner)"** (`grafana/dashboards/customer-care-overview.json`, 22 Panels,
 automatisch provisioniert):
@@ -819,6 +861,61 @@ langsamer werden - sichtbar im Grafana-Dashboard binnen ~15-30s (nächster
 Prometheus-Scrape). `./fix-docuware.sh` macht es rückgängig. Unabhängig
 vom DocuWare-Erreichbarkeits-Heartbeat, der die ganze Zeit gesund bleibt.
 
+**Zweites, unabhängiges Vorfall-Szenario - Festplatte läuft voll:**
+`./break-docuware-disk.sh` lässt das SAN-Volume "Dokumentenspeicher" auf
+92-98% Auslastung klettern (Panel "Speicherplatz-Auslastung
+(SAN-Volumes)", rot ab 90%) - Datenbank- und Log-Volume bleiben
+unverändert im Normalbereich, gleiche isolierte Blast-Radius-Erzählung
+wie beim MSSQL/WAF-Szenario oben. `./fix-docuware-disk.sh` macht es
+rückgängig. Nutzt einen eigenen State-File
+(`/tmp/docuware-disk-state` im Container) unabhängig von
+`break-docuware.sh`, damit beide Szenarien einzeln oder zusammen
+vorgeführt werden können.
+
+Anders als das MSSQL/WAF-Szenario (nur Prometheus/Grafana) spielt dieses
+Szenario **komplett durch** - Grafana ist hier nur der Anfang:
+- **OneUptime, live**: `break-docuware-disk.sh` legt zusätzlich einen
+  echten Incident an ("DocuWare | Speicherplatz kritisch
+  (Dokumentenspeicher)", `scripts/docuware_disk_incident.py`, gleiches
+  Break/Fix-Muster wie `security_incident.py`, inkl. desselben
+  Delete-und-Neuanlegen-Fixes für ein erneutes Auslösen aus dem
+  Resolved-Zustand). Verknüpft mit dem bestehenden DocuWare-Monitor (der
+  auf Degraded wechselt) und der bestehenden On-Call-Richtlinie
+  "IT-Betrieb On-Call" - dieselbe Richtlinie wie beim
+  DocuWare-Login-Incident, kein Duplikat.
+- **Mitarbeiter-Benachrichtigung**: läuft automatisch über denselben,
+  bereits verifizierten Weg wie bei den anderen echten Incidents in
+  dieser Demo (OneUptime-Statuspage-Update + Abonnenten-E-Mail via
+  Mailpit) - keine zusätzliche Mock-Benachrichtigung nötig.
+  Übersprungen, falls OneUptime nicht läuft (`./start-demo.sh` ohne
+  `--with-oneuptime`) - der Prometheus/Grafana-Teil funktioniert dann
+  trotzdem unverändert.
+- **BMC-ITSM-Ticket fürs Bearbeiter-Team**: `mockups/backend-bmc-itsm.html`
+  hat jetzt zwei unabhängig auslösbare Szenarien in derselben
+  Vorfalls-Warteschlange (Buttons "Login-Vorfall auslösen" /
+  "Speicherplatz-Vorfall auslösen") - das neue Ticket
+  (`INC000000222190`) referenziert im Detail-Modal die On-Call-Richtlinie
+  und den verknüpften OneUptime-Incident, genau wie das bestehende
+  Login-Ticket.
+- **Vorfallsrollen (OneUptime, echtes Produkt-Feature)**: fünf eigene,
+  echte OneUptime-User (nicht der eine `demo@example.com`-Account) -
+  Jonas Weidner, Lena Hoffmann, Tobias Krüger, Kristin Albrecht, Paul
+  Neumann - angelegt in `seed_oneuptime.py` per `/api/identity/signup`
+  (self-hosted verifiziert E-Mails automatisch, kein Bestätigungs-Mail-
+  Umweg) und der Team "Members" hinzugefügt. `break-docuware-disk.sh`
+  weist sie den vier Standard-Vorfallsrollen zu: Incident Commander
+  (Jonas), Communications Lead (Lena), Responder (Tobias), Observer -
+  **zwei** Personen (Kristin + Paul), um die "Multiple"-Fähigkeit dieser
+  einen Rolle zu zeigen. Idempotent (prüft bestehende
+  incident-member-Zuweisungen vor dem Anlegen, da OneUptime eine doppelte
+  Zuweisung ablehnt). Die Karte im Kontrollzentrum bekommt nach
+  "Vorfall auslösen" automatisch einen Link "Vorfallsrollen (OneUptime)"
+  direkt zum Rollen-Tab des gerade aktiven Incidents - geschrieben von
+  `docuware_disk_incident.py` in `.docuware-disk-incident.json`
+  (gitignored), weil die Incident-ID bei jedem Neu-Auslösen wechselt
+  (Delete-und-Neuanlegen aus dem Resolved-Zustand) und ein fest
+  verdrahteter Link sonst sofort veralten würde.
+
 ## Test-Incident live durchspielen: "Zertifikat abgelaufen, IT arbeitet an Behebung"
 
 `demo-broken-site` startet **gesund** (gültiges Zertifikat,
@@ -958,11 +1055,23 @@ Default), per `?oneuptime=<url>` in der Adresszeile der Übersichtsseite
   klickbar** (Karten und die einfache Wartungs-Textnachricht) und öffnet
   ein Detail-Modal (Status, betroffenes System, Beschreibung, bei den
   beiden Incidents zusätzlich ein Verlauf) - gleiches Muster wie das
-  BMC-ITSM-Mockup, nur im Teams-Farbschema
+  BMC-ITSM-Mockup, nur im Teams-Farbschema. Eine vierte Nachricht zeigt
+  die **Vorfallsrollen-Zuweisung** für den DocuWare-Festplatte-Incident
+  (Incident Commander/Communications Lead/Responder/2× Observer,
+  @-erwähnt) - derselbe Klick-ins-Detail-Modal-Trick, hier mit den fünf
+  echten Demo-Usern aus `seed_oneuptime.py`. Der Chat-Bereich hat eine
+  feste Höhe mit internem Scroll (wie echtes Teams) - `playTeams()`
+  scrollt automatisch zur neuesten Nachricht mit, sonst würde die vierte
+  Nachricht unterhalb des sichtbaren Bereichs verschwinden (live beim
+  Testen mit Playwright/Chromium aufgefallen, nicht auf den ersten Blick
+  aus der HTML/JS ersichtlich).
 - `mockups/benachrichtigung-mobil.html` - Smartphone-Sperrbildschirm (Push) + SMS-Verlauf,
   per "Vorfall auslösen"-Knopf **animiert** (reines CSS/JS, kein Backend) -
   Benachrichtigungen federn wie echte Push-Meldungen von oben ein,
-  SMS-Bubbles poppen nacheinander auf; "Zurücksetzen" spielt es erneut ab
+  SMS-Bubbles poppen nacheinander auf; "Zurücksetzen" spielt es erneut ab.
+  Vierte Push-Meldung: persönliche On-Call-Benachrichtigung "Rolle
+  zugewiesen: Incident Commander" - dieselbe Vorfallsrollen-Story wie im
+  Teams-Mockup, aus der Perspektive des benachrichtigten Handys.
 - `mockups/backend-bmc-itsm.html` - **Backend-Sicht statt Mitarbeiter-Sicht**:
   zeigt, wie OneUptime im Hintergrund einen BMC-ITSM-Vorfall meldet und ein
   Ticket eröffnet. "Vorfall auslösen" spielt eine dreistufige
@@ -977,6 +1086,27 @@ Default), per `?oneuptime=<url>` in der Adresszeile der Übersichtsseite
   das Modal Status/Gruppe live aus der Zeile aus, damit es nach
   "Vorfall auslösen" immer den aktuellen Stand zeigt statt einer
   eingefrorenen Kopie.
+- `mockups/monitoring-checkmk.html` - **Werkzeug-Vergleich**: derselbe
+  DocuWare-Stack (Server/DB/Loadbalancer/Webseite), hier aus Sicht eines
+  klassischen, agentenbasierten Monitoring-Tools (CheckMK-Optik) statt
+  Grafana - Host-/Service-Tabelle mit Tactical-Overview-Kacheln
+  (Hosts/OK/Warn/Kritisch). "Störung auslösen" schlägt denselben
+  Datenträger-voll-Fall wie im Grafana-Dashboard/Kontrollzentrum auf einen
+  Service-Check nieder und schreibt einen Eintrag ins Alarmierungs-Log;
+  "Beheben" macht es rückgängig. Rein statisches Mockup (kein echter
+  CheckMK-Container, keine Agenten/Checks) - Zweck ist der visuelle
+  Werkzeug-Vergleich, nicht eine funktionierende zweite Monitoring-Instanz.
+- `mockups/oneuptime-network-map.html` - **Konzept: Live-Netzwerkkarte via
+  LLDP/CDP, in OneUptime-Optik**: dieselbe Standort-Leipzig-Topologie wie
+  im Grafana-Node-Graph-Panel, hier aber mit Port-zu-Port-
+  Nachbarschaftsdetails (lokaler Port, Nachbargerät, Port am Nachbarn,
+  LLDP/CDP), wie eine klassische Netzwerk-Auto-Discovery sie liefern
+  würde - ein Feature, das OneUptime **nicht** hat (Abhängigkeitsgraphen
+  kommen dort ausschließlich aus echten OpenTelemetry-Traces, siehe
+  Service-Catalog-Abschnitt oben). Gerät anklicken zeigt seine
+  Nachbarschaftstabelle. Statische Daten (keine echte SNMP-/LLDP-MIB-
+  Abfrage möglich, da die Switches synthetisch sind) - Zweck ist der
+  visuelle Konzeptvergleich, nicht eine funktionierende Discovery.
 
 ## Demo-Kontrollzentrum
 
@@ -984,10 +1114,11 @@ Default), per `?oneuptime=<url>` in der Adresszeile der Übersichtsseite
 (**http://localhost:7100**) - der zentrale Startpunkt für die ganze
 Demo, nicht nur für die Vorfall-Skripte:
 
-- Vier Szenario-Karten (Zertifikat, DocuWare, Customer Care,
-  Sicherheits-Vorfall), je mit kurzer Story, Illustration, Live-Status
-  und Break-/Fix-Buttons statt Terminal-Aufrufen. Die ersten drei lesen
-  ihren Status direkt aus Prometheus; der Sicherheits-Vorfall lebt in
+- Fünf Szenario-Karten (Zertifikat, DocuWare-Cluster, DocuWare-Festplatte
+  voll, Customer Care, Sicherheits-Vorfall), je mit kurzer Story,
+  Illustration, Live-Status und Break-/Fix-Buttons statt
+  Terminal-Aufrufen. Die ersten vier lesen ihren Status direkt aus
+  Prometheus; der Sicherheits-Vorfall lebt in
   OneUptime selbst (Manual-Monitor + Incident, kein Prometheus-Metrik
   dahinter) - der Kontrollserver hält dafür einen gecachten Login-Token
   über alle 5-Sekunden-Polls hinweg vor, statt sich bei jedem Poll neu

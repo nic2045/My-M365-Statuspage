@@ -39,6 +39,8 @@ ACTIONS = {
     "fix-demo": ("fix-demo.sh", "Zertifikat-Vorfall beheben"),
     "break-docuware": ("break-docuware.sh", "DocuWare-Cluster-Vorfall auslösen"),
     "fix-docuware": ("fix-docuware.sh", "DocuWare-Cluster-Vorfall beheben"),
+    "break-docuware-disk": ("break-docuware-disk.sh", "DocuWare-Festplatte-voll-Vorfall auslösen"),
+    "fix-docuware-disk": ("fix-docuware-disk.sh", "DocuWare-Festplatte-voll-Vorfall beheben"),
     "break-customer-care": ("break-customer-care.sh", "Customer-Care-Vorfall auslösen"),
     "fix-customer-care": ("fix-customer-care.sh", "Customer-Care-Vorfall beheben"),
     "break-security": ("break-security.sh", "Sicherheits-Vorfall auslösen"),
@@ -75,11 +77,23 @@ def get_links():
             summary = json.load(fh)
     except (FileNotFoundError, json.JSONDecodeError):
         summary = {}
+
+    # Written by docuware_disk_incident.py on every "break" run - the
+    # incident id (and so its roles-tab URL) changes each time, so this
+    # can't be derived from the stable ids above.
+    disk_incident_path = os.path.join(DEMO_DIR, ".docuware-disk-incident.json")
+    try:
+        with open(disk_incident_path) as fh:
+            disk_incident = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        disk_incident = {}
+
     return {
         "oneuptimeBase": summary.get("base", "http://localhost"),
         "statusPageId": summary.get("statusPageId"),
         "itServiceStatusPageId": summary.get("itServiceStatusPageId"),
         "leipzigStatusPageId": summary.get("leipzigStatusPageId"),
+        "docuwareDiskIncidentRolesUrl": disk_incident.get("rolesUrl"),
     }
 
 
@@ -197,6 +211,7 @@ def get_status():
     not Prometheus."""
     cert_days = prom_query('(probe_ssl_earliest_cert_expiry{demo_fixture="true"} - time()) / 86400')
     docuware_node2 = prom_query('docuware_mssql_cluster_node_up{node="db2"}')
+    docuware_disk = prom_query('docuware_disk_usage_percent{volume="Dokumentenspeicher"}')
     cc_chemnitz = prom_query('cc_site_vpn_up{site="Chemnitz"}')
 
     def state(value, healthy_fn):
@@ -207,6 +222,7 @@ def get_status():
     return {
         "demo": state(cert_days, lambda v: v >= 3),
         "docuware": state(docuware_node2, lambda v: v >= 1),
+        "docuware-disk": state(docuware_disk, lambda v: v < 90),
         "customer-care": state(cc_chemnitz, lambda v: v >= 1),
         "security": get_security_state(),
         "printer": get_printer_state(),

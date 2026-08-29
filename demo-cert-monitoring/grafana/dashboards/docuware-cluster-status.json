@@ -778,6 +778,66 @@
      }
     ]
    }
+  },
+  {
+   "id": 18,
+   "type": "timeseries",
+   "title": "Speicherplatz-Auslastung (SAN-Volumes)",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 49
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "docuware_disk_usage_percent{volume=\"Dokumentenspeicher\"}",
+     "legendFormat": "Dokumentenspeicher",
+     "refId": "A"
+    },
+    {
+     "expr": "docuware_disk_usage_percent{volume=\"Datenbank\"}",
+     "legendFormat": "Datenbank",
+     "refId": "B"
+    },
+    {
+     "expr": "docuware_disk_usage_percent{volume=\"Log\"}",
+     "legendFormat": "Log",
+     "refId": "C"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "max": 100,
+     "min": 0,
+     "custom": {
+      "lineInterpolation": "smooth"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 80
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
   }
  ]
 }

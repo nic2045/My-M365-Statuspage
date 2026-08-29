@@ -422,6 +422,29 @@
             </div>
           </div>
         </div>
+
+        <div class="msg" id="teams-msg-4">
+          <div class="avatar">OU</div>
+          <div class="msg-body">
+            <div class="msg-meta"><span class="name">OneUptime Statuspage</span><span class="time">Heute 18:12</span></div>
+            <div class="card" onclick="openDetail('roles')">
+              <div class="card-bar" style="background:#6366f1;"></div>
+              <div class="card-body">
+                <div class="card-badge" style="background:#e8e8fa;color:#4b4fa8;">Vorfallsrollen</div>
+                <div class="card-title">Rollen zugewiesen: DocuWare | Speicherplatz kritisch (Dokumentenspeicher)</div>
+                <div class="card-status">4 Rollen · 5 Personen zugewiesen</div>
+                <p class="card-text">
+                  <strong>@Jonas Weidner</strong> ist jetzt Incident Commander. <strong>@Lena Hoffmann</strong>
+                  übernimmt Communications Lead, <strong>@Tobias Krüger</strong> ist Responder.
+                  <strong>@Kristin Albrecht</strong> und <strong>@Paul Neumann</strong> sind als Observer eingetragen.
+                </p>
+                <div class="card-actions">
+                  <button class="primary" onclick="event.stopPropagation(); openDetail('roles')">Rollen ansehen</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="controls">
         <button class="btn-trigger" onclick="playTeams()">Vorfall auslösen</button>
@@ -505,6 +528,23 @@
           { who: "Anwendungsbetrieb DocuWare", when: "18:03", text: "Erste Analyse gestartet: Login-Service des Backends antwortet nicht, DB-Cluster wird geprüft." },
         ],
       },
+      roles: {
+        badge: "Vorfallsrollen", badgeBg: "#e8e8fa", badgeColor: "#4b4fa8",
+        title: "Rollen zugewiesen: DocuWare | Speicherplatz kritisch (Dokumentenspeicher)",
+        subtitle: "OneUptime · IT-Betrieb On-Call",
+        fields: [
+          ["Incident Commander", "Jonas Weidner"], ["Communications Lead", "Lena Hoffmann"],
+          ["Responder", "Tobias Krüger"], ["Observer", "Kristin Albrecht, Paul Neumann"],
+        ],
+        description: "Für den Vorfall wurden automatisch die vier Standard-Vorfallsrollen besetzt, " +
+          "ausgelöst über die On-Call-Richtlinie „IT-Betrieb On-Call“. Jede Person wurde einzeln " +
+          "benachrichtigt (Teams-Erwähnung + Push, siehe Mobil-Mockup). Die Rolle „Observer“ erlaubt " +
+          "mehrere Personen gleichzeitig - die übrigen drei Rollen sind auf eine Person begrenzt.",
+        worklog: [
+          { who: "OneUptime-Integration", when: "18:12", text: "Rollen automatisch zugewiesen: Incident Commander, Communications Lead, Responder, 2× Observer." },
+          { who: "Jonas Weidner", when: "18:13", text: "Übernahme als Incident Commander bestätigt." },
+        ],
+      },
     };
 
     function openDetail(key) {
@@ -556,15 +596,26 @@
 
     function playTeams() {
       document.getElementById("teams-empty").classList.add("hide");
-      var ids = ["teams-msg-1", "teams-msg-2", "teams-msg-3"];
+      var messages = document.querySelector(".messages");
+      var ids = ["teams-msg-1", "teams-msg-2", "teams-msg-3", "teams-msg-4"];
       ids.forEach(function (id, i) {
         setTimeout(function () {
           document.getElementById(id).classList.add("show");
+          // Real Teams/Slack clients auto-scroll to the newest message -
+          // without this the fixed-height chat pane just clips msg-4
+          // below the fold once there are more than ~3 messages. Scrolled
+          // again after the max-height transition finishes (it's still
+          // mid-expand at the moment "show" is added, so scrollHeight here
+          // is a bit short of its final value).
+          messages.scrollTo({ top: messages.scrollHeight, behavior: "smooth" });
+          setTimeout(function () {
+            messages.scrollTo({ top: messages.scrollHeight, behavior: "smooth" });
+          }, 500);
         }, i * 700);
       });
     }
     function resetTeams() {
-      ["teams-msg-1", "teams-msg-2", "teams-msg-3"].forEach(function (id) {
+      ["teams-msg-1", "teams-msg-2", "teams-msg-3", "teams-msg-4"].forEach(function (id) {
         document.getElementById(id).classList.remove("show");
       });
       document.getElementById("teams-empty").classList.remove("hide");

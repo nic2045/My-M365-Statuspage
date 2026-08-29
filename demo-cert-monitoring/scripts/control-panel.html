@@ -213,6 +213,10 @@
       <div class="hub-icon" style="background:#8a8f98;">B</div>
       <div class="hub-text"><div class="t">Benachrichtigungs-Mockups</div><div class="d">E-Mail / Teams / Mobil / BMC</div></div>
     </a>
+    <a class="hub-card" href="/mockups/monitoring-checkmk.html" target="_blank">
+      <div class="hub-icon" style="background:#1a3c34;">C</div>
+      <div class="hub-text"><div class="t">CheckMK-Vergleichsmockup</div><div class="d">DocuWare-Stack, Werkzeug-Vergleich</div></div>
+    </a>
     <a class="hub-card" href="http://localhost:9090" target="_blank">
       <div class="hub-icon" style="background:#8a8f98;">P</div>
       <div class="hub-text"><div class="t">Prometheus</div><div class="d">Rohdaten &amp; Alerts</div></div>
@@ -274,6 +278,36 @@
       <div class="actions">
         <button class="btn-break" onclick="run('break-docuware', 'docuware')">Vorfall auslösen</button>
         <button class="btn-fix" onclick="run('fix-docuware', 'docuware')">Beheben</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#9b3d1a"/>
+          <ellipse cx="24" cy="14" rx="11" ry="4" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <path d="M13 14 L13 34 C13 36.2 18 38 24 38 C30 38 35 36.2 35 34 L35 14" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <path d="M13 24 C13 26.2 18 28 24 28 C30 28 35 26.2 35 24" fill="none" stroke="#fff" stroke-width="2.2"/>
+        </svg>
+        <div>
+          <h2>DocuWare-Festplatte läuft voll</h2>
+          <span class="status unknown" id="status-docuware-disk"><span class="dot"></span>wird geprüft…</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Passiert:</strong> SAN-Volume "Dokumentenspeicher" füllt
+        sich auf 90-98% (App-Owner-Dashboard), echter OneUptime-Incident +
+        On-Call-Eskalation + Mitarbeiter-Benachrichtigung.<br>
+        <strong>Zeigt:</strong> Kapazitätsvorfall bleibt isoliert auf eine
+        Ressource - von Grafana über OneUptime bis zum BMC-Ticket.
+      </p>
+      <div class="links">
+        <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+        <a href="/mockups/backend-bmc-itsm.html" target="_blank">BMC-Ticket-Mockup</a>
+        <a id="link-docuware-disk-roles" href="#" target="_blank" style="display:none">Vorfallsrollen (OneUptime)</a>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-docuware-disk', 'docuware-disk')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-docuware-disk', 'docuware-disk')">Beheben</button>
       </div>
     </div>
 
@@ -398,13 +432,14 @@
       }
       buttons.forEach((b) => (b.disabled = false));
       refreshStatus();
+      loadLinks();
     }
 
     async function refreshStatus() {
       try {
         const res = await fetch("/api/status");
         const data = await res.json();
-        for (const key of ["demo", "docuware", "customer-care", "security", "printer"]) {
+        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer"]) {
           const el = document.getElementById("status-" + key);
           const state = data[key] || "unknown";
           el.className = "status " + state;
@@ -435,6 +470,14 @@
           } else {
             a.querySelector(".d").textContent = "noch nicht geseedet - ./seed-oneuptime.sh ausführen";
           }
+        }
+
+        const rolesLink = document.getElementById("link-docuware-disk-roles");
+        if (data.docuwareDiskIncidentRolesUrl) {
+          rolesLink.href = data.docuwareDiskIncidentRolesUrl;
+          rolesLink.style.display = "";
+        } else {
+          rolesLink.style.display = "none";
         }
       } catch (e) {
         // Kontrollserver kurz nicht erreichbar - Karten bleiben deaktiviert, kein Absturz.

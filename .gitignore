@@ -245,3 +245,8 @@ crash.*.log
 # refresh-demo.sh / scripts/refresh_demo.py track which rotating
 # "freshness" incidents they currently own here, across daily runs.
 demo-cert-monitoring/.refresh-demo-state.json
+
+# docuware_disk_incident.py writes this each break run so the control
+# panel can link straight to the currently-active incident's roles tab
+# (the incident id changes every re-trigger).
+demo-cert-monitoring/.docuware-disk-incident.json
