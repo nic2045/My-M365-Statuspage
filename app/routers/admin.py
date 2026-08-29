@@ -19,6 +19,7 @@ from app.app_settings import (
     verify_smtp_connection,
 )
 from app.auth import require_admin
+from app.azure_secret_manager import AzureSecretSyncError, get_or_rotate_client_secret
 from app.config import settings
 from app.crud import (
     add_incident_post,
@@ -321,6 +322,48 @@ async def admin_save_azure_settings(
     azure_cfg = await get_azure_settings(db)
     ok, msg = await verify_azure_connection(
         azure_cfg.tenant_id, azure_cfg.client_id, azure_cfg.client_secret
+    )
+    flash(request, msg, "success" if ok else "error")
+    return RedirectResponse(url="/admin/settings#azure", status_code=303)
+
+
+@router.post("/settings/azure/openbao")
+async def admin_sync_azure_secret_from_openbao(
+    request: Request,
+    force: Annotated[str, Form()] = "",
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Get-or-rotate AZURE_CLIENT_SECRET via OpenBao (see app/azure_secret_manager.py).
+
+    Uses the currently saved tenant/client ID (form save via /settings/azure is
+    still how those are set) - this only ever touches the secret itself.
+    """
+    azure_cfg = await get_azure_settings(db)
+    try:
+        result = await get_or_rotate_client_secret(
+            db, tenant_id=azure_cfg.tenant_id, client_id=azure_cfg.client_id, force=force == "1"
+        )
+    except AzureSecretSyncError as exc:
+        flash(request, str(exc), "error")
+        return RedirectResponse(url="/admin/settings#azure", status_code=303)
+    await db.commit()
+
+    if result.rotated:
+        flash(
+            request,
+            f"Neues Client-Secret via Microsoft Graph erstellt und in OpenBao abgelegt "
+            f"(gültig bis {result.expires_on}).",
+            "success",
+        )
+    else:
+        flash(
+            request,
+            f"Client-Secret aus OpenBao übernommen (gültig bis {result.expires_on}).",
+            "success",
+        )
+    ok, msg = await verify_azure_connection(
+        azure_cfg.tenant_id, azure_cfg.client_id, result.client_secret
     )
     flash(request, msg, "success" if ok else "error")
     return RedirectResponse(url="/admin/settings#azure", status_code=303)

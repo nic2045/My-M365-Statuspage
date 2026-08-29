@@ -95,6 +95,37 @@ On first visit you will be redirected to Entra ID.
 
 ---
 
+## Client secret via OpenBao (optional)
+
+Instead of keeping `AZURE_CLIENT_SECRET` only in `.env`/the DB, the app can pull it from
+[OpenBao](https://openbao.org/) (Vault-API-compatible) and rotate it itself — Admin →
+Settings → Azure AD app → **"Load from OpenBao / rotate"**.
+
+**Flow** (`app/azure_secret_manager.py` + `app/openbao_client.py`):
+
+1. Read the secret from OpenBao (`OPENBAO_SECRET_PATH`, KV v2).
+2. Still valid (further than `OPENBAO_RENEWAL_THRESHOLD_DAYS` from expiry) and not forced ->
+   use it as-is, no Azure call at all.
+3. Missing / expiring soon / "Force rotation" checked -> **rotate**: create a new client
+   secret via Microsoft Graph (`addPassword` - Graph only ever returns a secret's plaintext
+   at that moment; an existing one can only be queried as metadata afterwards), store it in
+   OpenBao, then remove the previous secret from the app registration (`removePassword`).
+4. Either way, the result is saved under "Save Azure AD app" - `graph_client.py`, `auth.py`
+   and `notifications.py` keep reading it unchanged via `app_settings.get_azure_settings()`.
+
+**Test the renewal path** without waiting for a real expiry: tick "Force rotation" next to the
+sync button - rotates immediately regardless of the stored secret's remaining lifetime.
+
+**VPN required:** OpenBao is reachable over VPN only. If it's unreachable, the sync fails with
+an error message asking you to connect the VPN - just click the button again afterwards.
+
+**Permissions:** rotation needs a token with `Application.ReadWrite.All` on the app
+registration - more than the app needs day to day (`ServiceHealth.Read.All`). Set
+`AZURE_MGMT_TENANT_ID`/`_CLIENT_ID`/`_CLIENT_SECRET` to use a separate, narrower-scoped
+credential for that instead of permanently over-privileging the main app registration.
+
+---
+
 ## Admin authorization (app role)
 
 By default **every** authenticated tenant user can access `/admin` (legacy behaviour; a warning is logged at startup). For production, restrict the admin area via an **Entra ID app role** — conveniently driven by a security group:
@@ -130,6 +161,12 @@ Alternatively or in addition, set an email allowlist (`ADMIN_EMAILS`, OR-combine
 | `POLL_INTERVAL_MINUTES` | Polling interval in minutes | `10` |
 | `DEFAULT_LANGUAGE` | Fallback UI language when no cookie / Accept-Language match. Supported: `de`, `en` | `de` |
 | `DEBUG` | Enables `/api/docs` and verbose logging | `false` |
+| `AZURE_MGMT_TENANT_ID` / `_CLIENT_ID` / `_CLIENT_SECRET` | Separate credentials used ONLY for the OpenBao secret rotation (`Application.ReadWrite.All`) - empty = `AZURE_*` is also used for it | *(empty)* |
+| `OPENBAO_ADDR` | Base URL of the OpenBao server (VPN-only) | `https://secrets-prod.pyur.com` |
+| `OPENBAO_SECRET_PATH` | KV v2 path of the Azure client secret | `secret/data/m365-statuspage/azure-client-secret` |
+| `OPENBAO_TOKEN` | OpenBao token with read/write on the path above | *(empty)* |
+| `OPENBAO_RENEWAL_THRESHOLD_DAYS` | Rotate when the stored secret expires within this many days | `30` |
+| `OPENBAO_NEW_SECRET_LIFETIME_DAYS` | Lifetime given to a newly created secret | `180` |
 
 **Supported `MONITORED_SERVICES` values** (must match the Graph API names exactly):
 

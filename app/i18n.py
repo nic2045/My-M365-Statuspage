@@ -293,6 +293,10 @@ LABELS_DE: dict[str, str] = {
     "admin.azure_save":               "Speichern & Verbindung prüfen",
     "admin.azure_status_configured":  "Verbunden",
     "admin.azure_status_pending":     "Unvollständig",
+    "admin.azure_openbao_heading":    "OpenBao-Sync",
+    "admin.azure_openbao_hint":       "Client-Secret aus OpenBao übernehmen (falls noch keins hinterlegt: neu erstellen und dort ablegen). OpenBao ist nur über VPN erreichbar.",
+    "admin.azure_openbao_force":      "Rotation erzwingen (Renewal testen)",
+    "admin.azure_openbao_sync":       "Aus OpenBao laden / rotieren",
     "toast.azure_saved":              "Azure AD App gespeichert.",
     # Admin – global search palette (Cmd+K / Ctrl+K)
     "admin.search.placeholder":        "Suchen…",
@@ -617,6 +621,10 @@ LABELS_EN: dict[str, str] = {
     "admin.azure_save":               "Save & test connection",
     "admin.azure_status_configured":  "Connected",
     "admin.azure_status_pending":     "Incomplete",
+    "admin.azure_openbao_heading":    "OpenBao sync",
+    "admin.azure_openbao_hint":       "Pull the client secret from OpenBao (create a new one and store it there if none exists yet). OpenBao is reachable over VPN only.",
+    "admin.azure_openbao_force":      "Force rotation (test renewal)",
+    "admin.azure_openbao_sync":       "Load from OpenBao / rotate",
     "toast.azure_saved":              "Azure AD app saved.",
     # Admin – global search palette (Cmd+K / Ctrl+K)
     "admin.search.placeholder":        "Search…",
