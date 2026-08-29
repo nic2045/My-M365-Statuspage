@@ -1,0 +1,25 @@
+grafana dashboard - callcenter optimierung - https://blog.upinget.com/2021/02/07/using-grafana-to-monitor-avaya-call-center/
+
+autorelad / notwendige restart der umgebung bei änderungen am code
+
+
+Ideen für weitere sinvolle Demo Vorfall-Szenarien
+
+CleanUp in Demo-Kontrollzentrum - Alles auf Anfang - Statistiken und Graphen werden gelöscht - OneUptime fängt mit null Info an. Konfigurationen bleiben erhalten.
+
+Anforderung - Oneuptime, Grafana  - für jedes produkt ein beispiel anlegen - wenns geht im kontext der bekannt ist, auch wenn es doppelt ist ggfs. in grafana.
+
+Netzwerk Map anlegen. standort leipzig - core im keller -  access über 1 etage und 4 bereiche - also 10 switche (HA) + internetrouter
+
+Anforderung: Dashboard für Infra Operation mit Node Exporter Full für Server etc. in unseren Case erstellen
+
+weiterer Vorfall-Szenario: Festplatte von Docuware läuft Vorfall
+
+weitere Anforderung: CheckMK als Vergleich daneben - Docuware Stack mit Server, DB, Lobadbalancer, Webseite darstellen im Monitoring und Altering - seperates OneUptime Statuspage mit meldung usw. 
+
+Demo-Kontrollzentrum anpassen um alles aktuell zu haben
+
+Vorfall: Customer-Care-Vorfall (Chemnitz) -> OneUptime Produkt Call on Duty darstellen mit Teams und Phone auch über unsere Mookups abgebildet - ggfs. über Spliscreen, um bei Auslöser die Aktionen inm Stack zu sehen
+
+Beispiel Docuware: OneUptime Performance-Profile über Grafana Alloy
+
