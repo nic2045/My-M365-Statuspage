@@ -897,6 +897,24 @@ Szenario **komplett durch** - Grafana ist hier nur der Anfang:
   (`INC000000222190`) referenziert im Detail-Modal die On-Call-Richtlinie
   und den verknüpften OneUptime-Incident, genau wie das bestehende
   Login-Ticket.
+- **Vorfallsrollen (OneUptime, echtes Produkt-Feature)**: fünf eigene,
+  echte OneUptime-User (nicht der eine `demo@example.com`-Account) -
+  Jonas Weidner, Lena Hoffmann, Tobias Krüger, Kristin Albrecht, Paul
+  Neumann - angelegt in `seed_oneuptime.py` per `/api/identity/signup`
+  (self-hosted verifiziert E-Mails automatisch, kein Bestätigungs-Mail-
+  Umweg) und der Team "Members" hinzugefügt. `break-docuware-disk.sh`
+  weist sie den vier Standard-Vorfallsrollen zu: Incident Commander
+  (Jonas), Communications Lead (Lena), Responder (Tobias), Observer -
+  **zwei** Personen (Kristin + Paul), um die "Multiple"-Fähigkeit dieser
+  einen Rolle zu zeigen. Idempotent (prüft bestehende
+  incident-member-Zuweisungen vor dem Anlegen, da OneUptime eine doppelte
+  Zuweisung ablehnt). Die Karte im Kontrollzentrum bekommt nach
+  "Vorfall auslösen" automatisch einen Link "Vorfallsrollen (OneUptime)"
+  direkt zum Rollen-Tab des gerade aktiven Incidents - geschrieben von
+  `docuware_disk_incident.py` in `.docuware-disk-incident.json`
+  (gitignored), weil die Incident-ID bei jedem Neu-Auslösen wechselt
+  (Delete-und-Neuanlegen aus dem Resolved-Zustand) und ein fest
+  verdrahteter Link sonst sofort veralten würde.
 
 ## Test-Incident live durchspielen: "Zertifikat abgelaufen, IT arbeitet an Behebung"
 

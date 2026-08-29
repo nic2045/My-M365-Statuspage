@@ -303,6 +303,7 @@
       <div class="links">
         <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
         <a href="/mockups/backend-bmc-itsm.html" target="_blank">BMC-Ticket-Mockup</a>
+        <a id="link-docuware-disk-roles" href="#" target="_blank" style="display:none">Vorfallsrollen (OneUptime)</a>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-docuware-disk', 'docuware-disk')">Vorfall auslösen</button>
@@ -431,6 +432,7 @@
       }
       buttons.forEach((b) => (b.disabled = false));
       refreshStatus();
+      loadLinks();
     }
 
     async function refreshStatus() {
@@ -468,6 +470,14 @@
           } else {
             a.querySelector(".d").textContent = "noch nicht geseedet - ./seed-oneuptime.sh ausführen";
           }
+        }
+
+        const rolesLink = document.getElementById("link-docuware-disk-roles");
+        if (data.docuwareDiskIncidentRolesUrl) {
+          rolesLink.href = data.docuwareDiskIncidentRolesUrl;
+          rolesLink.style.display = "";
+        } else {
+          rolesLink.style.display = "none";
         }
       } catch (e) {
         // Kontrollserver kurz nicht erreichbar - Karten bleiben deaktiviert, kein Absturz.

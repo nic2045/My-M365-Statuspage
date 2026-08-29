@@ -77,11 +77,23 @@ def get_links():
             summary = json.load(fh)
     except (FileNotFoundError, json.JSONDecodeError):
         summary = {}
+
+    # Written by docuware_disk_incident.py on every "break" run - the
+    # incident id (and so its roles-tab URL) changes each time, so this
+    # can't be derived from the stable ids above.
+    disk_incident_path = os.path.join(DEMO_DIR, ".docuware-disk-incident.json")
+    try:
+        with open(disk_incident_path) as fh:
+            disk_incident = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        disk_incident = {}
+
     return {
         "oneuptimeBase": summary.get("base", "http://localhost"),
         "statusPageId": summary.get("statusPageId"),
         "itServiceStatusPageId": summary.get("itServiceStatusPageId"),
         "leipzigStatusPageId": summary.get("leipzigStatusPageId"),
+        "docuwareDiskIncidentRolesUrl": disk_incident.get("rolesUrl"),
     }
 
 

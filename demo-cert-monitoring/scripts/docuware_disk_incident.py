@@ -146,11 +146,12 @@ if mode == "break":
         existing = None
 
     if existing:
+        incident_id = existing["_id"]
         payload = {"title": INCIDENT_TITLE, "description": description,
                   "incidentSeverityId": severity_id, "monitors": [entity_ref(monitor_id)]}
         if on_call_policy_ref:
             payload["onCallDutyPolicies"] = on_call_policy_ref
-        call(f"/api/incident/{existing['_id']}", {"data": payload}, method="PUT")
+        call(f"/api/incident/{incident_id}", {"data": payload}, method="PUT")
     else:
         payload = {"title": INCIDENT_TITLE, "description": description,
                   "incidentSeverityId": severity_id,
@@ -158,11 +159,67 @@ if mode == "break":
                   "monitors": [entity_ref(monitor_id)], "projectId": project_id}
         if on_call_policy_ref:
             payload["onCallDutyPolicies"] = on_call_policy_ref
-        call("/api/incident", {"data": payload})
+        incident_id = call("/api/incident", {"data": payload})["_id"]
+
+    # Incident roles: who's actually running this response, not just which
+    # team owns it. Reuses the demo team members seed_oneuptime.py creates
+    # (real OneUptime users, not the shared demo@example.com login) -
+    # Observer allows multiple assignees (canAssignMultipleUsers on the
+    # role), the other three are single-assignee. Guarded by an existence
+    # check per (incident, user, role) since IncidentMemberService rejects
+    # a duplicate assignment outright, and break can be called again on an
+    # already-active incident (documented no-op re-trigger case above).
+    ROLE_ASSIGNMENTS = {
+        "Incident Commander": ["jonas.weidner@pyur-demo.local"],
+        "Communications Lead": ["lena.hoffmann@pyur-demo.local"],
+        "Responder": ["tobias.krueger@pyur-demo.local"],
+        "Observer": ["kristin.albrecht@pyur-demo.local", "paul.neumann@pyur-demo.local"],
+    }
+    incident_roles = get_list("incident-role", select={"_id": True, "name": True})
+    existing_members = get_list("incident-member", query={"incidentId": incident_id},
+                                select={"userId": True, "incidentRoleId": True})
+    # userId/incidentRoleId come back as typed ObjectID refs ({"_type":
+    # "ObjectID", "value": "..."}), not plain strings - unwrap before
+    # using them as a hashable set key (confirmed live: using the dicts
+    # directly raised "TypeError: unhashable type: 'dict'").
+    existing_pairs = {(m["userId"]["value"], m["incidentRoleId"]["value"]) for m in existing_members}
+    assigned_names = []
+    for role_name, emails in ROLE_ASSIGNMENTS.items():
+        role = next((r for r in incident_roles if r["name"] == role_name), None)
+        if not role:
+            continue
+        for email in emails:
+            user = get_list("user", query={"email": typed("Email", email)}, select={"_id": True, "name": True})
+            if not user:
+                continue
+            user = user[0]
+            if (user["_id"], role["_id"]) in existing_pairs:
+                continue
+            call("/api/incident-member", {"data": {
+                "projectId": project_id, "incidentId": incident_id,
+                "userId": user["_id"], "incidentRoleId": role["_id"],
+            }})
+            assigned_names.append(f"{role_name}: {user['name']['value']}")
 
     set_monitor_status(degraded_status_id)
     print(f"==> '{INCIDENT_TITLE}' ist jetzt aktiv (Status: Identified).")
     print(f"    Monitor '{MONITOR_NAME}' auf Degraded gesetzt, On-Call-Eskalation verknüpft.")
+    if assigned_names:
+        print("    Vorfallsrollen neu zugewiesen: " + ", ".join(assigned_names))
+    roles_url = f"{BASE}/dashboard/{project_id}/incidents/{incident_id}/roles"
+    print(f"    Vorfallsrollen: {roles_url}")
+
+    # Written so the control panel can link straight to the roles tab of
+    # WHICHEVER incident is currently active - the incident id changes
+    # every time break re-creates it (delete-and-recreate on a Resolved
+    # incident, see above), so a static link in control-panel.html would
+    # go stale immediately.
+    with open(os.path.join(os.path.dirname(__file__), "..", ".docuware-disk-incident.json"), "w") as fh:
+        json.dump({
+            "incidentId": incident_id,
+            "rolesUrl": roles_url,
+            "overviewUrl": f"{BASE}/dashboard/{project_id}/incidents/{incident_id}",
+        }, fh)
 
 elif mode == "fix":
     incident = find_by_name("incident", INCIDENT_TITLE, name_field="title")
