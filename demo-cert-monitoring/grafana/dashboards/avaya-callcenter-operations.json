@@ -73,7 +73,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    }
   },
   {
@@ -126,7 +126,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    }
   },
   {
@@ -180,7 +180,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    }
   },
   {
@@ -234,7 +234,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    }
   },
   {
