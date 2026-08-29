@@ -944,7 +944,12 @@ Minor Incident ("E-Mail-Versand verzögert") - zwei Schweregrade, eine
 Mitarbeiterperspektive.
 
 **Einstieg:** `mockups/index.html` - Übersichtsseite mit anklickbaren
-Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
+Kacheln zu allen drei Kanälen, plus einer grün abgesetzten Kachel, die
+(anders als die übrigen) keine Vorschau ist, sondern die echte, laufende
+OneUptime-Instanz dieser Demo in einem neuen Tab öffnet - Standard-URL
+`http://localhost/` (passend zu `oneuptime-selfhosted/setup.sh`s eigenem
+Default), per `?oneuptime=<url>` in der Adresszeile der Übersichtsseite
+überschreibbar, ohne die Datei zu editieren. Einzeln direkt aufrufbar:
 
 - `mockups/benachrichtigung-email.html` - Posteingang-Ansicht (E-Mail-Client), zwischen mehreren Nachrichten klickbar
 - `mockups/benachrichtigung-teams.html` - Microsoft-Teams-Kanal mit Adaptive Cards,
