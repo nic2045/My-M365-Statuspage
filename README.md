@@ -92,6 +92,40 @@ Beim ersten Aufruf wird man zu Entra ID weitergeleitet.
 
 ---
 
+## Client-Secret über OpenBao (optional)
+
+Statt `AZURE_CLIENT_SECRET` nur in `.env`/der DB zu pflegen, kann die App das Secret aus
+[OpenBao](https://openbao.org/) (Vault-API-kompatibel) holen und dort selbst rotieren –
+Admin → Einstellungen → Azure AD App → **„Aus OpenBao laden / rotieren"**.
+
+**Ablauf** (`app/azure_secret_manager.py` + `app/openbao_client.py`):
+
+1. Sekret aus OpenBao lesen (`OPENBAO_SECRET_PATH`, KV v2).
+2. Noch gültig (weiter als `OPENBAO_RENEWAL_THRESHOLD_DAYS` vom Ablauf entfernt) und kein
+   erzwungener Renew → direkt übernehmen, kein Azure-Zugriff nötig.
+3. Fehlt / läuft bald ab / „Rotation erzwingen" angehakt → **rotieren**: neues Client-Secret
+   über Microsoft Graph anlegen (`addPassword` – Graph gibt den Klartext eines Secrets nur in
+   diesem einen Moment zurück, ein bestehendes lässt sich danach nur noch als Metadaten
+   abfragen), in OpenBao ablegen, dann das alte Secret über die App-Registrierung entfernen
+   (`removePassword`).
+4. Das Ergebnis wird in beiden Fällen unter „Azure AD App speichern" abgelegt – `graph_client.py`,
+   `auth.py` und `notifications.py` lesen es unverändert über `app_settings.get_azure_settings()`.
+
+**Renewal testen**, ohne auf einen echten Ablauf zu warten: Checkbox „Rotation erzwingen" beim
+Sync-Button aktivieren – rotiert sofort unabhängig von der Restlaufzeit des gespeicherten Secrets.
+
+**VPN-Pflicht:** OpenBao ist nur über VPN erreichbar. Ist es nicht erreichbar, bricht der Sync
+mit einer Fehlermeldung ab, die zum Verbinden des VPNs auffordert – einfach den Button danach
+erneut klicken.
+
+**Berechtigungen:** Die Rotation braucht ein Token mit `Application.ReadWrite.All` auf die
+App-Registrierung – mehr, als die App im Alltag benötigt (`ServiceHealth.Read.All`). Über
+`AZURE_MGMT_TENANT_ID`/`_CLIENT_ID`/`_CLIENT_SECRET` lässt sich dafür eine separate,
+enger berechtigte Credential hinterlegen, statt der Haupt-App-Registrierung diese zusätzliche
+Berechtigung dauerhaft zu geben.
+
+---
+
 ## Admin-Berechtigung (App-Rolle)
 
 Standardmäßig hat **jeder** authentifizierte Tenant-Benutzer Zugriff auf `/admin` (Legacy-Verhalten; beim Start wird gewarnt). Für Produktion solltest du den Admin-Bereich über eine **Entra-ID App-Rolle** einschränken — bequem steuerbar per Security-Gruppe:
@@ -126,6 +160,12 @@ Alternativ oder ergänzend kannst du eine E-Mail-Allowlist setzen (`ADMIN_EMAILS
 | `MONITORED_SERVICES` | Kommagetrennte Dienstnamen (Graph API exakt) | Exchange Online, SharePoint Online, Microsoft Teams |
 | `POLL_INTERVAL_MINUTES` | Abfrageintervall in Minuten | `10` |
 | `DEBUG` | Aktiviert `/api/docs`, ausführliches Logging | `false` |
+| `AZURE_MGMT_TENANT_ID` / `_CLIENT_ID` / `_CLIENT_SECRET` | Separate Credentials NUR für die OpenBao-Secret-Rotation (`Application.ReadWrite.All`) – leer = `AZURE_*` wird auch dafür verwendet | *(leer)* |
+| `OPENBAO_ADDR` | Basis-URL des OpenBao-Servers (nur über VPN erreichbar) | `https://secrets-prod.pyur.com` |
+| `OPENBAO_SECRET_PATH` | KV-v2-Pfad des Azure-Client-Secrets | `secret/data/m365-statuspage/azure-client-secret` |
+| `OPENBAO_TOKEN` | OpenBao-Token mit Lese-/Schreibrecht auf obigem Pfad | *(leer)* |
+| `OPENBAO_RENEWAL_THRESHOLD_DAYS` | Rotieren, wenn das gespeicherte Secret innerhalb dieser Tage abläuft | `30` |
+| `OPENBAO_NEW_SECRET_LIFETIME_DAYS` | Gültigkeitsdauer eines neu erstellten Secrets | `180` |
 
 **Unterstützte `MONITORED_SERVICES`-Werte** (Graph API-Namen exakt einhalten):
 

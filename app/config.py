@@ -22,6 +22,23 @@ class Settings(BaseSettings):
     AZURE_CLIENT_SECRET: str = "your-client-secret"
     AZURE_REDIRECT_URI: str = "http://localhost:8000/auth/callback"
 
+    # Optional, more privileged credentials (Application.ReadWrite.All) used ONLY to rotate
+    # AZURE_CLIENT_SECRET via Microsoft Graph (see app/azure_secret_manager.py) - the app's own
+    # AZURE_* credentials only need ServiceHealth.Read.All day to day. Falls back to AZURE_*
+    # when unset, for setups that deliberately grant the one app registration both.
+    AZURE_MGMT_TENANT_ID: str = ""
+    AZURE_MGMT_CLIENT_ID: str = ""
+    AZURE_MGMT_CLIENT_SECRET: str = ""
+
+    # OpenBao (Vault-API-compatible) – optional backing store for AZURE_CLIENT_SECRET, so the
+    # secret lives there instead of only in .env/the DB. Reachable ONLY over VPN, not
+    # continuously - see app/openbao_client.py.
+    OPENBAO_ADDR: str = "https://secrets-prod.pyur.com"
+    OPENBAO_SECRET_PATH: str = "secret/data/m365-statuspage/azure-client-secret"
+    OPENBAO_TOKEN: str = ""
+    OPENBAO_RENEWAL_THRESHOLD_DAYS: int = 30
+    OPENBAO_NEW_SECRET_LIFETIME_DAYS: int = 180
+
     # Session security – empty/placeholder triggers auto-generation on first run
     # (persisted to data/secret_key so sessions survive restarts).
     SECRET_KEY: str = ""
