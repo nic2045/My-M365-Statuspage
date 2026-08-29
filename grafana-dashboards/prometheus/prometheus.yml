@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Systemadmins - Node Exporter Full: real node_exporter, real data about
+  # the container it runs in (see docker-compose.yml).
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          role: "systemadmin"
+
+  # Webserver-Admins - Apache2: real apache_exporter against the real
+  # apache2 service in this stack (traffic-generator keeps it non-idle).
+  - job_name: "apache_exporter"
+    static_configs:
+      - targets: ["apache-exporter:9117"]
+        labels:
+          role: "webserver-admin"
+
+  # DB-Admins - MS SQL Server: synthetic sample data, see
+  # ../mock-exporters/mssql_mock_exporter.py for why (no real SQL Server
+  # in this stack) and how to swap in the real sql_exporter later.
+  - job_name: "mssql_mock"
+    static_configs:
+      - targets: ["mssql-mock-exporter:9399"]
+        labels:
+          role: "db-admin"
+
+  # Systemadmins - VMware host: synthetic sample data, see
+  # ../mock-exporters/vmware_mock_exporter.py for why (no real
+  # vCenter/ESXi in this stack) and how to swap in the real
+  # vmware_exporter later.
+  - job_name: "vmware_mock"
+    static_configs:
+      - targets: ["vmware-mock-exporter:9272"]
+        labels:
+          role: "systemadmin"
