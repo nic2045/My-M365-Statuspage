@@ -40,7 +40,21 @@ jobs:
           from app.auth import LoginRequired
           from app.routers import admin, api, auth_router, embed, status
           from app.main import app
-          routes = [r.path for r in app.routes]
+
+          # Starlette wraps each app.include_router(...) as an opaque
+          # _IncludedRouter (no .path) rather than flattening it into
+          # individual Route/APIRoute entries - recurse via .original_router
+          # to reach the real routes underneath.
+          def all_paths(routes):
+              paths = []
+              for r in routes:
+                  if hasattr(r, 'path'):
+                      paths.append(r.path)
+                  elif hasattr(r, 'original_router'):
+                      paths.extend(all_paths(r.original_router.routes))
+              return paths
+
+          routes = all_paths(app.routes)
           assert '/' in routes
           assert '/embed' in routes
           assert '/auth/login' in routes
