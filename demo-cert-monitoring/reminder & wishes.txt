@@ -1,5 +1,7 @@
 grafana dashboard - callcenter optimierung - https://blog.upinget.com/2021/02/07/using-grafana-to-monitor-avaya-call-center/
 
+übersetzungen mit https://github.com/ssut/py-googletrans 
+
 autorelad / notwendige restart der umgebung bei änderungen am code
 
 
