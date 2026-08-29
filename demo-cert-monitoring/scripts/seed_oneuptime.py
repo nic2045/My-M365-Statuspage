@@ -761,6 +761,89 @@ else:
     }})["_id"]
     print("    created incident state 'In Behebung'")
 
+# ── On-Call Duty: Eskalationsrichtlinie ──────────────────────────────────────
+# One policy reused for both the DocuWare and the security-incident
+# scenario (scripts/security_incident.py) - a real, separate OneUptime
+# product area (On-Call Duty, not just Incidents/Status Pages), kept
+# deliberately simple: no rotating schedule, just "escalate to the
+# Owners team after 5 minutes if nobody acknowledges". Every project
+# auto-creates an "Owners" team (ProjectService.addDefaultProjectTeams)
+# that the demo account is already a member of, so no extra user/team
+# setup is needed.
+ON_CALL_POLICY_NAME = "IT-Betrieb On-Call"
+ESCALATION_RULE_NAME = "Nach 5 Minuten eskalieren"
+owners_team = find_by_name("team", "Owners")
+
+existing_policy = find_by_name("on-call-duty-policy", ON_CALL_POLICY_NAME)
+if existing_policy:
+    on_call_policy_id = existing_policy["_id"]
+else:
+    on_call_policy_id = call("/api/on-call-duty-policy", {"data": {
+        "projectId": project_id, "name": ON_CALL_POLICY_NAME,
+        "description": "Eskalation bei Vorfällen, die außerhalb der üblichen "
+                       "Reaktionszeit nicht bestätigt werden.",
+    }})["_id"]
+    print(f"    created on-call policy '{ON_CALL_POLICY_NAME}'")
+
+# Escalation rule and its team attachment are checked independently of the
+# policy above (not nested inside "if the policy didn't exist yet") - a
+# run can fail partway through (as this one did live: the rule got
+# created, the team-attachment call failed on a missing required field),
+# and re-running must still finish the rest instead of silently skipping
+# it because the policy itself already exists.
+existing_rule = find_by_name("on-call-duty-policy-escalation-rule", ESCALATION_RULE_NAME,
+                             query={"onCallDutyPolicyId": on_call_policy_id})
+if existing_rule:
+    escalation_rule_id = existing_rule["_id"]
+else:
+    escalation_rule_id = call("/api/on-call-duty-policy-escalation-rule", {"data": {
+        "projectId": project_id, "name": ESCALATION_RULE_NAME,
+        "onCallDutyPolicyId": on_call_policy_id,
+        "escalateAfterInMinutes": 5, "order": 1,
+    }})["_id"]
+    print(f"    created escalation rule '{ESCALATION_RULE_NAME}'")
+
+if owners_team:
+    existing_rule_team = get_list(
+        "on-call-duty-policy-escalation-rule-team",
+        query={"onCallDutyPolicyEscalationRuleId": escalation_rule_id, "teamId": owners_team["_id"]},
+        select={"_id": True})
+    if not existing_rule_team:
+        call("/api/on-call-duty-policy-escalation-rule-team", {"data": {
+            "projectId": project_id,
+            "onCallDutyPolicyId": on_call_policy_id,
+            "onCallDutyPolicyEscalationRuleId": escalation_rule_id,
+            "teamId": owners_team["_id"],
+        }})
+        print(f"    attached Team 'Owners' to escalation rule '{ESCALATION_RULE_NAME}'")
+
+# ── Service Catalog ───────────────────────────────────────────────────────
+# NOTE: this OneUptime version dropped ServiceMonitor/ServiceDependency
+# (see schema migrations 1779739410559/1779277271302) - a Service can no
+# longer be linked to existing Monitors or to another Service via the
+# API; dependency edges are now derived purely from OpenTelemetry trace
+# spans. So this is deliberately just a named catalog entry per
+# component (description/color/owner), not a dependency graph.
+SERVICES = [
+    ("DocuWare", "Dokumentenmanagement-System (Sachbearbeitung & Rechnungsabruf).", "#c0392b"),
+    ("Customer Care", "Telefonie, Chat und Kundenportal für den Kundenservice.", "#2e7d32"),
+    ("Standort Leipzig – Netzwerk", "Lokales Netzwerk (Core-/Access-Switches) am Standort Leipzig.", "#0f6cbd"),
+]
+for service_name, service_desc, service_color in SERVICES:
+    existing_service = find_by_name("service", service_name)
+    service_payload = {"name": service_name, "description": service_desc,
+                       "serviceColor": typed("Color", service_color)}
+    if existing_service:
+        call(f"/api/service/{existing_service['_id']}", {"data": service_payload}, method="PUT")
+    else:
+        service_payload["projectId"] = project_id
+        new_service_id = call("/api/service", {"data": service_payload})["_id"]
+        if owners_team:
+            call("/api/service-owner-team", {"data": {
+                "projectId": project_id, "serviceId": new_service_id, "teamId": owners_team["_id"],
+            }})
+    print(f"    ensured service '{service_name}'")
+
 BMC_INCIDENT_NUMBER = "INC000000222127"
 BMC_INCIDENT_URL = ("https://pyur-smartit.onbmc.com/smartit/app/"
                     "#/incidentPV/IDGBB2EGIWYMIAT1O0TAT1O0TARK3T")
@@ -782,6 +865,7 @@ incident_payload = {
     "incidentSeverityId": severity,
     "currentIncidentStateId": in_remediation_id,
     "monitors": [entity_ref(docuware_monitor_id)],
+    "onCallDutyPolicies": [entity_ref(on_call_policy_id)],
 }
 if existing_incident:
     call(f"/api/incident/{existing_incident['_id']}", {"data": incident_payload}, method="PUT")
@@ -830,6 +914,163 @@ for posted_at, note_text in DOCUWARE_INCIDENT_UPDATES:
         "shouldStatusPageSubscribersBeNotifiedOnNoteCreated": True,
     }})
     print(f"    added incident update ({posted_at.strftime('%H:%M')})")
+
+# ── Telemetry: ein paar Log-Zeilen für den DocuWare-Login-Service ──────────
+# A third OneUptime product area (Logs/Traces/Metrics, not just
+# Monitors/Incidents/On-Call): real OTLP/HTTP-JSON log ingestion, no
+# OpenTelemetry SDK needed - a plain POST with the right JSON shape and an
+# ingestion-key header is enough. The "docuware-login" TelemetryService is
+# auto-created from the resource attributes on first ingest (no separate
+# create-service call needed here - the /api/service entry above is a
+# distinct, purely descriptive catalog row).
+TELEMETRY_KEY_NAME = "Demo Log Ingest"
+existing_telemetry_key = find_by_name("telemetry-ingestion-key", TELEMETRY_KEY_NAME)
+if not existing_telemetry_key:
+    created_key = call("/api/telemetry-ingestion-key", {"data": {
+        "projectId": project_id, "name": TELEMETRY_KEY_NAME,
+    }})
+    # secretKey comes back as a typed wrapper ({"_type": "ObjectID",
+    # "value": "..."}), like every other typed field this script sends -
+    # confirmed live via a direct get-list call, not assumed.
+    telemetry_secret_key = (created_key.get("secretKey") or {}).get("value")
+    if telemetry_secret_key:
+        _log_now_ns = int(datetime.now(timezone.utc).timestamp() * 1e9)
+        DOCUWARE_LOG_EVENTS = [
+            (25 * 60, 17, "Login-Service: Verbindung zur Datenbank docuware-db:5432 "
+                          "fehlgeschlagen (connection refused)"),
+            (20 * 60, 13, "Login-Service: erhöhte Antwortzeiten, Verbindungspool wird geprüft"),
+            (4 * 60, 9, "Login-Service: nach Neustart wieder erreichbar, Verbindungstest erfolgreich"),
+        ]
+        log_records = [{
+            "timeUnixNano": str(_log_now_ns - offset_s * 1_000_000_000),
+            "severityNumber": severity_number,
+            "body": {"stringValue": message},
+        } for offset_s, severity_number, message in DOCUWARE_LOG_EVENTS]
+        otlp_payload = {"resourceLogs": [{
+            "resource": {"attributes": [
+                {"key": "service.name", "value": {"stringValue": "docuware-login"}}]},
+            "scopeLogs": [{"scope": {"name": "demo-seed"}, "logRecords": log_records}],
+        }]}
+        log_req = urllib.request.Request(
+            f"{BASE}/otlp/v1/logs", data=json.dumps(otlp_payload).encode(), method="POST")
+        log_req.add_header("Content-Type", "application/json")
+        log_req.add_header("x-oneuptime-token", telemetry_secret_key)
+        try:
+            with urllib.request.urlopen(log_req, timeout=30) as resp:
+                resp.read()
+            print("    sent demo log lines for service 'docuware-login'")
+        except urllib.error.HTTPError as exc:
+            print(f"    WARNING: log ingest failed: HTTP {exc.code} {exc.read().decode()[:200]}")
+
+    # ── Security Events: a fourth OneUptime product area (SIEM-style, not
+    # just Incidents) - the same "Verdächtige Anmeldeversuche" story
+    # already told as a status-page Incident, now also as real Security
+    # Events. Generic-format ingest (POST /security-events/v1/ingest):
+    # accepts plain vendor-agnostic JSON, field lookup by common aliases
+    # (message/status/user/source_ip/vendor/product/...), no OCSF/UDM
+    # authoring needed. Same ingestion key/header as the logs above.
+    # `status`/`vendor` land on the event's statusName/vendorName columns
+    # completely unmodified (confirmed by reading GenericNormalizer.ts -
+    # no text transformation on those two fields, unlike e.g. `event_type`
+    # which gets prettified into className), so the DetectionRule below
+    # matches on those two instead of guessing at the prettified value.
+    _sec_now = datetime.now(timezone.utc)
+    ATTACKER_IP = "203.0.113.44"
+    TARGETED_USERS = ["m.schmidt", "j.wagner", "t.becker", "a.hoffmann"]
+    security_events = [{
+        "message": f"Fehlgeschlagene Anmeldung für Benutzerkonto {user}",
+        "status": "Failure",
+        "event_type": "authentication_failure",
+        "user": user,
+        "source_ip": ATTACKER_IP,
+        "host": "sso.pyur-intern.local",
+        "vendor": "PYUR IT-Sicherheit",
+        "product": "Anmeldung (SSO)",
+        "severity": "high",
+        # Deliberately near-"now", NOT backdated like the historical
+        # security incidents above: the detection rule's evaluation
+        # window only ever moves forward from lastEvaluatedAt (confirmed
+        # by reading EvaluateDetectionRules.ts), it never looks back past
+        # where it last stopped - events timestamped further in the past
+        # than the rule's very first window would be permanently
+        # unreachable, live-confirmed (4 empty evaluation cycles over
+        # events backdated 13-15 minutes before this fix).
+        "timestamp": iso(_sec_now - timedelta(seconds=(len(TARGETED_USERS) - i) * 5)),
+    } for i, user in enumerate(TARGETED_USERS)]
+    security_events.append({
+        "message": "Quell-IP nach wiederholten Fehlversuchen automatisch gesperrt",
+        "status": "Blocked",
+        "event_type": "ip_blocked",
+        "source_ip": ATTACKER_IP,
+        "host": "sso.pyur-intern.local",
+        "vendor": "PYUR IT-Sicherheit",
+        "product": "Anmeldung (SSO)",
+        "severity": "medium",
+        "rule_name": "Automatische IP-Sperre nach Brute-Force",
+        "timestamp": iso(_sec_now - timedelta(seconds=2)),
+    })
+    if telemetry_secret_key:
+        sec_req = urllib.request.Request(
+            f"{BASE}/security-events/v1/ingest",
+            data=json.dumps({"format": "generic", "events": security_events}).encode(),
+            method="POST")
+        sec_req.add_header("Content-Type", "application/json")
+        sec_req.add_header("x-oneuptime-token", telemetry_secret_key)
+        try:
+            with urllib.request.urlopen(sec_req, timeout=30) as resp:
+                resp.read()
+            print(f"    sent {len(security_events)} demo security events "
+                  f"('{ATTACKER_IP}' credential-stuffing wave)")
+        except urllib.error.HTTPError as exc:
+            print(f"    WARNING: security event ingest failed: HTTP {exc.code} "
+                  f"{exc.read().decode()[:200]}")
+
+# Detections-as-code: a Sigma rule that would catch the credential-stuffing
+# wave above (Sigma syntax/field names confirmed against
+# Common/Tests/Utils/SecurityEvent/SigmaRuleParser.test.ts's own
+# "Possible Brute Force" example, not guessed). distinctCountField groups
+# by attacker IP and counts distinct targeted usernames, so one account's
+# repeated typo doesn't fire it - only a real spray across several
+# accounts from the same source does.
+BRUTE_FORCE_SIGMA_YAML = """title: Verdächtige Anmeldeversuche (Credential Stuffing)
+id: 7c1e9c2a-1f3d-4b8e-9a2f-5e6d7c8b9a01
+description: Mehrere Benutzerkonten von derselben Quell-IP mit fehlgeschlagener Anmeldung.
+status: experimental
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1110
+detection:
+  selection:
+    statusName: Failure
+    vendorName: PYUR IT-Sicherheit
+  condition: selection
+"""
+existing_detection_rule = find_by_name("detection-rule", "Verdächtige Anmeldeversuche (Credential Stuffing)")
+if not existing_detection_rule:
+    alert_severities = get_list("alert-severity")
+    alert_severity_id = next(
+        (s["_id"] for s in alert_severities if "High" in s.get("name", "") or "Major" in s.get("name", "")),
+        alert_severities[0]["_id"] if alert_severities else None)
+    detection_rule_payload = {
+        "projectId": project_id,
+        "name": "Verdächtige Anmeldeversuche (Credential Stuffing)",
+        "description": "Erkennt, wenn dieselbe Quell-IP mehrere unterschiedliche "
+                       "Benutzerkonten mit fehlgeschlagener Anmeldung anspricht.",
+        "sigmaRuleYaml": BRUTE_FORCE_SIGMA_YAML,
+        "isEnabled": True,
+        "evaluationIntervalInMinutes": 1,
+        "groupByField": "principalIp",
+        "distinctCountField": "principalUser",
+        "matchCountThreshold": 3,
+        "shouldCreateAlert": True,
+        "shouldWriteDetectionFinding": True,
+        "shouldCreateIncident": False,
+    }
+    if alert_severity_id:
+        detection_rule_payload["alertSeverityId"] = alert_severity_id
+    call("/api/detection-rule", {"data": detection_rule_payload})
+    print("    created detection rule 'Verdächtige Anmeldeversuche (Credential Stuffing)'")
 
 # A "major incident: login broken" story next to a green monitor reads as
 # contradictory - reflect it on the status page too. "Degraded" (not

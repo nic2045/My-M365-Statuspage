@@ -121,6 +121,14 @@ if mode == "break":
               if not s.get("isAcknowledgedState") and not s.get("isResolvedState")),
              incident_states[0]["_id"]))
 
+    # Reuses the same "IT-Betrieb On-Call" policy seed_oneuptime.py creates
+    # for the DocuWare incident - one policy, both scenarios, consistent
+    # with the rest of this demo reusing context instead of duplicating it.
+    # Not fatal if seed_oneuptime.py hasn't been (re-)run since this policy
+    # was added: on_call_policy_ref stays None and is simply omitted.
+    on_call_policy = find_by_name("on-call-duty-policy", "IT-Betrieb On-Call")
+    on_call_policy_ref = [entity_ref(on_call_policy["_id"])] if on_call_policy else None
+
     description = (
         "Wir beobachten aktuell ungewöhnlich viele fehlgeschlagene "
         "Anmeldeversuche auf mehrere Mitarbeiterkonten. Die Anmeldung "
@@ -145,18 +153,19 @@ if mode == "break":
         existing = None
 
     if existing:
-        call(f"/api/incident/{existing['_id']}", {"data": {
-            "title": INCIDENT_TITLE, "description": description,
-            "incidentSeverityId": severity_id, "monitors": [entity_ref(monitor_id)],
-        }}, method="PUT")
+        payload = {"title": INCIDENT_TITLE, "description": description,
+                  "incidentSeverityId": severity_id, "monitors": [entity_ref(monitor_id)]}
+        if on_call_policy_ref:
+            payload["onCallDutyPolicies"] = on_call_policy_ref
+        call(f"/api/incident/{existing['_id']}", {"data": payload}, method="PUT")
     else:
-        call("/api/incident", {"data": {
-            "title": INCIDENT_TITLE, "description": description,
-            "incidentSeverityId": severity_id,
-            "currentIncidentStateId": identified_state_id,
-            "monitors": [entity_ref(monitor_id)],
-            "projectId": project_id,
-        }})
+        payload = {"title": INCIDENT_TITLE, "description": description,
+                  "incidentSeverityId": severity_id,
+                  "currentIncidentStateId": identified_state_id,
+                  "monitors": [entity_ref(monitor_id)], "projectId": project_id}
+        if on_call_policy_ref:
+            payload["onCallDutyPolicies"] = on_call_policy_ref
+        call("/api/incident", {"data": payload})
 
     set_monitor_status(degraded_status_id)
     print(f"==> '{INCIDENT_TITLE}' ist jetzt aktiv (Status: Identified).")

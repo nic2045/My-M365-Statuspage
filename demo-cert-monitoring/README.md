@@ -142,6 +142,21 @@ komplette Demo-Einrichtung direkt an** - über `seed-oneuptime.sh`:
   Stack läuft ohnehin kein Mailserver)
 - Projekt **Zertifikats-Monitoring Demo**
 
+> **Login-Rate-Limit angehoben.** OneUptime begrenzt Logins standardmäßig
+> auf 10 Versuche/15 Minuten pro Konto - beim wiederholten Ausführen von
+> Seed-/Break-/Fix-Skripten während der Entwicklung (und beim mehrfachen
+> Neustart von `start-demo.sh --with-oneuptime`) reicht das schnell nicht
+> mehr, live selbst mehrfach erlebt (`HTTP 429: Too many sign-in
+> attempts`). `oneuptime-selfhosted/oneuptime/config.env` setzt deshalb
+> `IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW=200` (Standard-Rationale
+> und Env-Var-Name in `Common/Server/Middleware/IdentityRateLimit.ts`
+> nachgelesen). Diese Variable wurde vom `app`-Service in
+> `docker-compose.base.yml` bisher nicht durchgereicht - eigener,
+> minimaler Patch dort ergänzt (nur diese eine neue Variable, sonst
+> nichts an OneUptimes eigenem Compose-Setup verändert). Nur für dieses
+> lokale Demo-/Dev-Setup sinnvoll, nicht für ein echtes Deployment mit
+> echten Sicherheitsanforderungen.
+
 **Drei öffentliche Statusseiten, drei unterschiedliche Fälle** (bewusst
 getrennt statt eine Seite mit allem):
 
@@ -288,6 +303,77 @@ Netzwerk-Backbone) und Gruppe "AI / LLM Observability
 GPU-Auslastung, Guardrails & Fehlerquote, Kosten & Nutzung) - beide rein
 statisch/beispielhaft, `Manual`-Monitore mit beschreibendem Text.
 
+**Vier weitere OneUptime-Produktbereiche** (nicht nur Monitore/
+Statusseiten/Incidents - je ein Beispiel, im Kontext der bestehenden
+Demo-Story statt isoliert):
+
+- **On-Call Duty**: Richtlinie "IT-Betrieb On-Call" mit einer
+  Eskalationsregel ("Nach 5 Minuten eskalieren" → Team "Owners", das
+  jedes Projekt automatisch anlegt und in dem der Demo-Account bereits
+  Mitglied ist - kein zusätzliches Team/User-Setup nötig). Am DocuWare-
+  Incident **und** am live auslösbaren Sicherheits-Incident
+  (`security_incident.py`) verankert (`Incident.onCallDutyPolicies`) -
+  eine Richtlinie, zweimal im Kontext genutzt, statt zwei isolierten
+  Beispielen. Ohne echten Push-/SMS-/E-Mail-Provider in diesem lokalen
+  Stack bleibt der Effekt visuell (Eskalationskette auf der
+  Incident-Detailseite), keine echte Benachrichtigung.
+- **Service Catalog**: drei `Service`-Einträge (DocuWare, Customer Care,
+  Standort Leipzig – Netzwerk) mit Beschreibung, Farbe und Owner-Team
+  "Owners" - dieselben Komponenten, die die Demo an anderer Stelle schon
+  ausführlich zeigt, hier als knappe Katalogeinträge. **Einschränkung
+  recherchiert und bestätigt:** diese OneUptime-Version hat
+  `ServiceMonitor`/`ServiceDependency` per Schema-Migration entfernt
+  (`1779739410559-MigrationName.ts` / `1779277271302-DropServiceDependencyTable.ts`)
+  - ein Service lässt sich über die API **nicht mehr** mit bestehenden
+  Monitoren verknüpfen oder mit einer manuellen Abhängigkeits-Kante zu
+  einem anderen Service versehen; Abhängigkeiten werden inzwischen
+  ausschließlich aus echten OpenTelemetry-Trace-Spans abgeleitet. Bewusst
+  keine vorgetäuschte Abhängigkeitsgrafik gebaut, wo die API keine
+  erlaubt.
+- **Telemetry (Logs)**: ein paar realistische Log-Zeilen für einen
+  Dienst `docuware-login` (z. B. "Verbindung zur Datenbank
+  docuware-db:5432 fehlgeschlagen"), passend zur DocuWare-Vorfall-Story.
+  Reines OTLP/HTTP-JSON per `POST /otlp/v1/logs` mit
+  `x-oneuptime-token`-Header - kein OpenTelemetry-SDK/Collector nötig.
+  Ein `TelemetryIngestionKey` wird dafür einmalig angelegt
+  (`secretKey` kommt als typisiertes Feld `{"_type": "ObjectID", "value":
+  ...}` zurück, live bestätigt statt geraten). Der Dienst `docuware-login`
+  entsteht dabei automatisch als eigener Service-Catalog-Eintrag (Name
+  aus dem `service.name`-Resource-Attribut) - ohne vorherige manuelle
+  Anlage. Logs nur beim ersten Anlegen des Ingestion-Keys verschickt
+  (kein Spam bei jedem erneuten Lauf); Inhalt am besten direkt in
+  OneUptime unter Telemetry → Logs prüfen, die Logs-Analytics-Daten
+  liegen in ClickHouse und sind nicht über die generische
+  `/api/<model>/get-list`-Route abfragbar wie der Rest dieses Skripts.
+- **Security Events / Detection Rules**: dieselbe "Verdächtige
+  Anmeldeversuche"-Story, die schon als statusseiten-Incident erzählt
+  wird, jetzt zusätzlich als echte SIEM-artige Security Events - eine
+  Quell-IP mit fehlgeschlagenen Anmeldungen für vier verschiedene
+  Benutzerkonten plus eine automatische IP-Sperre, per generischem JSON
+  gegen `POST /security-events/v1/ingest` gesendet (Feld-Aliasse wie
+  `message`/`status`/`user`/`source_ip`/`vendor`, keine OCSF/UDM-Kenntnis
+  nötig - Format live anhand `Common/Utils/SecurityEvent/GenericNormalizer.ts`
+  bestätigt). Dazu eine echte **Sigma-Detection-Rule**
+  ("Verdächtige Anmeldeversuche (Credential Stuffing)", 1-Minuten-Takt,
+  gruppiert nach Quell-IP, zählt eindeutige betroffene Benutzerkonten,
+  Schwelle 3) - Sigma-Syntax gegen den offiziellen Testfall
+  `SigmaRuleParser.test.ts` ("Possible Brute Force") abgeglichen statt
+  geraten. **Live end-to-end verifiziert:** Die Regel hat innerhalb einer
+  Minute automatisch einen Alert erzeugt (`[Detection] Verdächtige
+  Anmeldeversuche (Credential Stuffing) — 203.0.113.44`) - der komplette
+  Pfad von Rohdaten bis Alarm funktioniert tatsächlich, nicht nur die
+  Konfiguration.
+
+  > **Bug gefunden & behoben: Detection Rule feuerte nicht.**
+  > Auswertungsfenster laufen laut Quellcode (`EvaluateDetectionRules.ts`)
+  > ausschließlich vorwärts ab `lastEvaluatedAt` - nie rückwirkend. Die
+  > Security Events waren anfangs wie die historischen Incidents 13-15
+  > Minuten in die Vergangenheit datiert; dadurch lagen sie dauerhaft
+  > außerhalb jedes je ausgeführten Auswertungsfensters (4 Zyklen lang
+  > `lastMatchAt: null` bestätigt). Fix: Zeitstempel auf nahezu "jetzt"
+  > gesetzt - danach hat der allererste Auswertungszyklus sofort
+  > gematcht.
+
 Das Skript ist idempotent und konvergent - ein erneuter Lauf verwendet
 vorhandenen Account, Projekt, Monitore und Statuspage weiter (statt
 Duplikate anzulegen) und zieht sie zugleich auf die aktuellen Texte und
@@ -348,6 +434,23 @@ im Keller, 10 Access-Switches über 4 Bereiche auf einer Etage
   `labelsToFields`+gescopetem-`merge`-Transformation gebaut - siehe
   Bug-Hinweis im Customer-Care-Abschnitt): Router → Core → je Access-
   Switch, Kantenfarbe nach Uplink-Status (rot = offline)
+
+  > **Zweiter Bug gefunden & behoben (live vom Nutzer gemeldet: "zeigt
+  > keine Switche an"):** Anders als bei Customer Care (dort liefern
+  > Health-*Formeln* den generischen Feldnamen `Value`) fragt dieses
+  > Panel **rohe Metriken direkt** ab (`net_device_up`,
+  > `net_uplink_up`) - und eine rohe Metrik-Abfrage benennt ihr
+  > Wertfeld nach der Metrik selbst, live per `/api/ds/query` bestätigt.
+  > Die `organize`-Transformation rannte auf `renameByName: {"Value":
+  > "mainStat"}` ins Leere, weil dieses Feld unter diesem Namen nie
+  > existierte - `mainStat` blieb leer, das Node-Graph-Panel hatte keine
+  > sinnvollen Werte zum Rendern. Zusätzlich erschwert: die Edges-Query
+  > vereinigt zwei *verschiedene* Metriken (`net_uplink_up` für die 10
+  > Access-Switch-Kanten, `net_device_up` für die Router-Core-Kante) -
+  > beide Feldnamen mussten auf `mainStat` umbenannt werden, nicht nur
+  > einer. Fix live verifiziert (Feldnamen-Fix im Dashboard-JSON,
+  > Grafana-Reprovisionierung bestätigt) - die tatsächliche Darstellung
+  > bitte im Browser gegenchecken.
 - **Geräte im Detail** (Tabelle): Online-Status, CPU, Temperatur je Gerät
 
 `./break-leipzig-network.sh` lässt einen Access-Switch

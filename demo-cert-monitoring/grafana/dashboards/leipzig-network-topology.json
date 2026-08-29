@@ -132,7 +132,10 @@
      "id": "organize",
      "options": {
       "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true, "role": true },
-      "renameByName": { "device": "id", "area": "subTitle", "Value": "mainStat" }
+      "renameByName": {
+       "device": "id", "area": "subTitle",
+       "net_device_up": "mainStat", "net_uplink_up": "mainStat"
+      }
      }
     }
    ],

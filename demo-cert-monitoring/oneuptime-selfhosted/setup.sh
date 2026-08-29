@@ -44,6 +44,23 @@ fi
 
 cd "$CLONE_DIR"
 
+# Local demo/dev convenience, not appropriate for a real deployment: raise
+# the login rate limit. Repeated seed-/break-/fix-script runs (and
+# restarting start-demo.sh --with-oneuptime a few times) legitimately
+# exceed OneUptime's default 10-logins/15-minutes-per-account limit -
+# live-hit multiple times during this demo's own development. The knob is
+# IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW
+# (Common/Server/Middleware/IdentityRateLimit.ts), but docker-compose.base.yml
+# doesn't forward it to the app container by default - patched in here,
+# idempotently, right after cloning so a fresh setup gets it too.
+if ! grep -q "IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW" docker-compose.base.yml 2>/dev/null; then
+  sed -i.bak \
+    's|\(TELEMETRY_FANIN_MAX_CONCURRENT_INSERTS: \${TELEMETRY_FANIN_MAX_CONCURRENT_INSERTS}\)|\1\n      IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW: \${IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW:-}|' \
+    docker-compose.base.yml
+  rm -f docker-compose.base.yml.bak
+  echo "==> Patched docker-compose.base.yml to forward IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW."
+fi
+
 if [ -f config.env ]; then
   echo "==> config.env already exists, leaving it untouched."
 else
@@ -76,6 +93,15 @@ else
   rm -f config.env.bak
 
   echo "==> config.env written with randomized core secrets."
+fi
+
+if ! grep -q "^IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW=" config.env 2>/dev/null; then
+  {
+    echo ""
+    echo "# Local demo/dev only - see setup.sh for why this is raised."
+    echo "IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW=200"
+  } >> config.env
+  echo "==> Raised the login rate limit in config.env (local demo/dev only)."
 fi
 
 echo ""
