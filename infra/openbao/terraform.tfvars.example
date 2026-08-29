@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars (gitignored) and fill in from the requester's issue
+# (see ../../.github/ISSUE_TEMPLATE/openbao-secret-request.yml). Pre-filled
+# below with the M365 Statuspage app's own request as a worked example - if
+# you're bootstrapping exactly that app's OpenBao access (see PR #150 /
+# docs/azure-secret-openbao.md), these defaults are already correct as-is.
+
+app_name         = "m365-statuspage"
+secret_name      = "azure-client-secret"
+requested_by     = "team-or-person-from-the-issue"
+ticket_reference = "https://github.com/nic2045/My-M365-Statuspage/issues/REPLACE_ME"
+
+# Leave as default unless the requester asked for something else.
+# token_period_seconds = 2592000
