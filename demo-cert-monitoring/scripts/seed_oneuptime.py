@@ -698,6 +698,99 @@ SECURITY_EVENTS = [
 for title, monitor_id, days_ago, description in SECURITY_EVENTS:
     ensure_security_incident(title, monitor_id, days_ago, description)
 
+# ── Postmortem-Beispiel: eine Zeitachse aus echten IncidentPublicNotes +
+# das native rootCause-Feld (#135) ─────────────────────────────────────────
+# Die drei SECURITY_EVENTS oben sind bewusst einzeilig (nur declaredAt
+# zurückdatiert) - für ein Postmortem-Beispiel braucht es eine echte
+# Zeitachse (mehrere zeitversetzte IncidentPublicNotes: erkannt ->
+# untersucht -> Ursache gefunden -> behoben) plus eine strukturierte
+# Root-Cause-Analyse. Confirmed against the actual OneUptime source
+# (Common/Models/DatabaseModels/{Incident,IncidentPublicNote}.ts, not
+# guessed): Incident has a dedicated Markdown `rootCause` column, and
+# IncidentPublicNote has a settable `postedAt` column - so both pieces
+# of this ask map onto real, native OneUptime fields instead of being
+# faked into the description text.
+POSTMORTEM_TITLE = "Jira-Ticketsuche zeitweise nicht verfügbar"
+postmortem_declared_at = datetime.now() - timedelta(days=35)
+POSTMORTEM_TIMELINE = [
+    (0, "**Erkannt.** Monitoring meldet eine erhöhte Fehlerquote bei der "
+        "Ticket-Suche in Jira. Die IT hat die Untersuchung begonnen."),
+    (8, "**Untersucht.** Der Fehler wurde auf den Suchindex-Dienst "
+        "eingegrenzt. Wir prüfen, ob ein Neustart des Dienstes hilft."),
+    (22, "**Ursache gefunden.** Ein automatisches Sicherheitsupdate hat den "
+         "Suchindex-Dienst in der Nacht auf eine inkompatible "
+         "Java-Version aktualisiert - dadurch stürzte er unter der "
+         "Vormittagslast wiederholt ab."),
+    (35, "**Behoben.** Der Suchindex-Dienst wurde auf die vorherige "
+         "Java-Version zurückgesetzt und läuft seither stabil. Die "
+         "Ticket-Suche funktioniert wieder normal."),
+]
+postmortem_root_cause = (
+    "**Auslöser:** Ein automatisches Sicherheitsupdate hat nachts die "
+    "Java-Laufzeitumgebung des Jira-Suchindex-Dienstes (Lucene) auf eine "
+    "Version aktualisiert, die mit der eingesetzten Suchindex-Version "
+    "nicht vollständig kompatibel war.\n\n"
+    "**Auswirkung:** Der Suchindex-Dienst stürzte unter der "
+    "Vormittagslast wiederholt ab und startete automatisch neu, was zu "
+    "zeitweise sehr langsamen oder fehlschlagenden Ticket-Suchen führte. "
+    "Anlegen und Bearbeiten von Tickets war durchgehend möglich - nur "
+    "die Suche war betroffen.\n\n"
+    "**Behebung:** Rollback der Java-Laufzeitumgebung auf die zuletzt "
+    "bekannt gute Version. Das automatische Sicherheitsupdate wurde für "
+    "diesen Dienst pausiert, bis die Kompatibilität mit der nächsten "
+    "Suchindex-Version geprüft ist.\n\n"
+    "**Follow-up-Maßnahmen:**\n"
+    "- Kompatibilitätstest neuer Java-Versionen in einer "
+    "Staging-Umgebung vor dem Rollout\n"
+    "- Alarmierung bereits bei wiederholten Dienst-Neustarts, nicht "
+    "erst beim kompletten Ausfall\n"
+    "- Java-Version des Suchindex-Dienstes in die "
+    "Änderungs-Checkliste für Sicherheitsupdates aufgenommen"
+)
+postmortem_description = (
+    "Die Ticket-Suche in Jira war zeitweise sehr langsam oder lieferte "
+    "keine Ergebnisse. **Anlegen und Bearbeiten von Tickets war "
+    "jederzeit möglich** - nur die Suche war betroffen. Die Störung ist "
+    "behoben; die vollständige Zeitachse und Root-Cause-Analyse stehen "
+    "unten."
+)
+
+postmortem_payload = {
+    "title": POSTMORTEM_TITLE,
+    "description": postmortem_description,
+    "rootCause": postmortem_root_cause,
+    "incidentSeverityId": security_severity,
+    "currentIncidentStateId": security_resolved_state_id,
+    "monitors": [entity_ref(monitor_ids["Anmeldung & Ticket-Suche"])],
+    "declaredAt": iso(postmortem_declared_at),
+}
+existing_postmortem = find_by_name("incident", POSTMORTEM_TITLE,
+                                   select={"_id": True, "title": True}, legacy=[], name_field="title")
+if existing_postmortem:
+    postmortem_incident_id = existing_postmortem["_id"]
+    call(f"/api/incident/{postmortem_incident_id}", {"data": postmortem_payload}, method="PUT")
+    print(f"    updated postmortem incident '{POSTMORTEM_TITLE}'")
+else:
+    postmortem_payload["projectId"] = project_id
+    postmortem_incident_id = call("/api/incident", {"data": postmortem_payload})["_id"]
+    print(f"    created postmortem incident '{POSTMORTEM_TITLE}' "
+          f"({postmortem_declared_at.strftime('%d.%m.%Y')})")
+
+existing_postmortem_notes = get_list(
+    "incident-public-note", query={"incidentId": postmortem_incident_id},
+    select={"_id": True, "note": True})
+for minutes_after, note_text in POSTMORTEM_TIMELINE:
+    if any(n.get("note") == note_text for n in existing_postmortem_notes):
+        continue
+    call("/api/incident-public-note", {"data": {
+        "projectId": project_id,
+        "incidentId": postmortem_incident_id,
+        "note": note_text,
+        "postedAt": iso(postmortem_declared_at + timedelta(minutes=minutes_after)),
+        "shouldStatusPageSubscribersBeNotifiedOnNoteCreated": False,
+    }})
+print(f"    postmortem timeline: {len(POSTMORTEM_TIMELINE)} entries ensured")
+
 # DocuWare-Cluster: einfache Nutzeransicht + Major Incident. Deliberately a
 # Manual monitor, NOT the demo-broken-site-style heartbeat: the whole
 # point of this example is "site reachable, login broken" - a distinction
@@ -1230,12 +1323,6 @@ ensure_scheduled_maintenance(
     printer_start, printer_end, sm_scheduled, [printer_monitor_id], [leipzig_page_id],
 )
 
-# Announcement: firewall upgrade window Wed 20:00 - Fri 06:00 next week.
-fw_monday = next_week_monday()
-fw_start = (fw_monday + timedelta(days=2)).replace(hour=20, minute=0)  # Wednesday
-fw_end = (fw_monday + timedelta(days=4)).replace(hour=6, minute=0)     # Friday
-
-
 def ensure_announcement(title, description, show_at, end_at, status_page_ids):
     found = find_by_name("status-page-announcement", title, select={"_id": True, "title": True},
                      legacy=[], name_field="title")
@@ -1255,15 +1342,60 @@ def ensure_announcement(title, description, show_at, end_at, status_page_ids):
     return created["_id"]
 
 
-ensure_announcement(
-    "Geplantes Firewall-Upgrade (Barracuda)",
-    f"Zwischen **{fmt_de(fw_start)}** und **{fmt_de(fw_end)}** führt die IT ein geplantes "
-    f"Upgrade der Barracuda-Firewall durch. Das Zeitfenster liegt außerhalb der "
-    f"Kernarbeitszeit; dennoch kann es zu **kurzen, wenige Minuten dauernden "
-    f"Unterbrechungen** der Internetverbindung kommen. Ein genauer Termin innerhalb "
-    f"des Fensters wird noch bekanntgegeben.",
-    now, fw_end, [it_service_page_id, leipzig_page_id],
-)
+def parse_iso_loosely(value):
+    """Best-effort parse of a Date/DateTime value as returned by get-list -
+    either a plain ISO string (how iso() writes it - Date/DateTime columns
+    take a plain string, see iso()'s own docstring above) or, defensively,
+    a {"_type": "Date", "value": ...} typed wrapper as other column types
+    use elsewhere in this script. Returns None on anything unexpected -
+    callers must treat that as "unknown, not confirmed past" rather than
+    fail the whole seed run over a formatting mismatch."""
+    if isinstance(value, dict):
+        value = value.get("value")
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+# Announcement: firewall upgrade window Wed 20:00 - Fri 06:00 next week.
+# #135: once an existing announcement's window has already ended, leave
+# it alone instead of fast-forwarding it into next week again on every
+# reseed. OneUptime's own overview API already stops treating an
+# announcement as active once `now` passes `endAnnouncementAt` (see the
+# iso()-timezone bug note above) - so an already-elapsed window
+# naturally reads as history on the status page. Without this check,
+# reseeding the day after the window ended would silently resurrect it
+# into a brand-new future window instead of ever letting it finish -
+# exactly the "am Tag danach automatisch als vergangen behandeln" ask.
+FW_ANNOUNCEMENT_TITLE = "Geplantes Firewall-Upgrade (Barracuda)"
+existing_fw_announcement = find_by_name(
+    "status-page-announcement", FW_ANNOUNCEMENT_TITLE,
+    select={"_id": True, "title": True, "endAnnouncementAt": True},
+    legacy=[], name_field="title")
+fw_end_parsed = (
+    parse_iso_loosely(existing_fw_announcement.get("endAnnouncementAt"))
+    if existing_fw_announcement else None)
+fw_already_past = fw_end_parsed is not None and fw_end_parsed < datetime.now(timezone.utc)
+
+if fw_already_past:
+    print(f"    '{FW_ANNOUNCEMENT_TITLE}' window already ended ({fw_end_parsed.date()}) - "
+          f"leaving it as history instead of moving it to next week")
+else:
+    fw_monday = next_week_monday()
+    fw_start = (fw_monday + timedelta(days=2)).replace(hour=20, minute=0)  # Wednesday
+    fw_end = (fw_monday + timedelta(days=4)).replace(hour=6, minute=0)     # Friday
+    ensure_announcement(
+        FW_ANNOUNCEMENT_TITLE,
+        f"Zwischen **{fmt_de(fw_start)}** und **{fmt_de(fw_end)}** führt die IT ein geplantes "
+        f"Upgrade der Barracuda-Firewall durch. Das Zeitfenster liegt außerhalb der "
+        f"Kernarbeitszeit; dennoch kann es zu **kurzen, wenige Minuten dauernden "
+        f"Unterbrechungen** der Internetverbindung kommen. Ein genauer Termin innerhalb "
+        f"des Fensters wird noch bekanntgegeben.",
+        now, fw_end, [it_service_page_id, leipzig_page_id],
+    )
 
 # ── 6) Interne Admin-Sicht: Infrastruktur- und LLM-Observability ────────────
 # MonitorGroup/MonitorGroupResource organize monitors on OneUptime's OWN

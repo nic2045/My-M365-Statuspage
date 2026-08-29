@@ -241,3 +241,7 @@ demo-cert-monitoring/.oneuptime-logo-*.id
 !*.tfvars.example
 crash.log
 crash.*.log
+
+# refresh-demo.sh / scripts/refresh_demo.py track which rotating
+# "freshness" incidents they currently own here, across daily runs.
+demo-cert-monitoring/.refresh-demo-state.json
