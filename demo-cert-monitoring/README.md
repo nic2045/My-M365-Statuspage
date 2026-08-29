@@ -819,6 +819,17 @@ langsamer werden - sichtbar im Grafana-Dashboard binnen ~15-30s (nächster
 Prometheus-Scrape). `./fix-docuware.sh` macht es rückgängig. Unabhängig
 vom DocuWare-Erreichbarkeits-Heartbeat, der die ganze Zeit gesund bleibt.
 
+**Zweites, unabhängiges Vorfall-Szenario - Festplatte läuft voll:**
+`./break-docuware-disk.sh` lässt das SAN-Volume "Dokumentenspeicher" auf
+92-98% Auslastung klettern (Panel "Speicherplatz-Auslastung
+(SAN-Volumes)", rot ab 90%) - Datenbank- und Log-Volume bleiben
+unverändert im Normalbereich, gleiche isolierte Blast-Radius-Erzählung
+wie beim MSSQL/WAF-Szenario oben. `./fix-docuware-disk.sh` macht es
+rückgängig. Nutzt einen eigenen State-File
+(`/tmp/docuware-disk-state` im Container) unabhängig von
+`break-docuware.sh`, damit beide Szenarien einzeln oder zusammen
+vorgeführt werden können.
+
 ## Test-Incident live durchspielen: "Zertifikat abgelaufen, IT arbeitet an Behebung"
 
 `demo-broken-site` startet **gesund** (gültiges Zertifikat,
@@ -979,10 +990,11 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
 (**http://localhost:7100**) - der zentrale Startpunkt für die ganze
 Demo, nicht nur für die Vorfall-Skripte:
 
-- Vier Szenario-Karten (Zertifikat, DocuWare, Customer Care,
-  Sicherheits-Vorfall), je mit kurzer Story, Illustration, Live-Status
-  und Break-/Fix-Buttons statt Terminal-Aufrufen. Die ersten drei lesen
-  ihren Status direkt aus Prometheus; der Sicherheits-Vorfall lebt in
+- Fünf Szenario-Karten (Zertifikat, DocuWare-Cluster, DocuWare-Festplatte
+  voll, Customer Care, Sicherheits-Vorfall), je mit kurzer Story,
+  Illustration, Live-Status und Break-/Fix-Buttons statt
+  Terminal-Aufrufen. Die ersten vier lesen ihren Status direkt aus
+  Prometheus; der Sicherheits-Vorfall lebt in
   OneUptime selbst (Manual-Monitor + Incident, kein Prometheus-Metrik
   dahinter) - der Kontrollserver hält dafür einen gecachten Login-Token
   über alle 5-Sekunden-Polls hinweg vor, statt sich bei jedem Poll neu

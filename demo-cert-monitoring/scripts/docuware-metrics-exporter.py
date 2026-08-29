@@ -35,6 +35,10 @@ import time
 
 PORT = int(os.environ.get("METRICS_PORT", "9200"))
 STATE_FILE = os.environ.get("STATE_FILE", "/tmp/docuware-state")
+# Separate state file for the disk-full scenario (break-docuware-disk.sh),
+# independent of STATE_FILE above (the MSSQL/WAF infrastructure incident)
+# so the two can be demoed on their own or together.
+DISK_STATE_FILE = os.environ.get("DISK_STATE_FILE", "/tmp/docuware-disk-state")
 
 START = time.time()
 _waf_requests_total = 0.0
@@ -48,6 +52,14 @@ def is_unhealthy():
     try:
         with open(STATE_FILE) as fh:
             return fh.read().strip() == "unhealthy"
+    except FileNotFoundError:
+        return False
+
+
+def is_disk_full():
+    try:
+        with open(DISK_STATE_FILE) as fh:
+            return fh.read().strip() == "full"
     except FileNotFoundError:
         return False
 
@@ -75,6 +87,7 @@ def render_metrics():
     global _waf_requests_total, _waf_blocked_total
     global _portal_requests_total, _invoices_retrieved_total
     unhealthy = is_unhealthy()
+    disk_full = is_disk_full()
     bursting = maybe_burst()
 
     # ── WAF / website ────────────────────────────────────────────────────
@@ -211,6 +224,12 @@ def render_metrics():
         f'docuware_hardware_status{{component="san"}} {hw}',
         f'docuware_hardware_status{{component="power"}} {hw}',
         f'docuware_hardware_status{{component="cooling"}} {hw}',
+        "# HELP docuware_disk_usage_percent SAN volume usage - break-docuware-disk.sh fills the document store volume.",
+        "# TYPE docuware_disk_usage_percent gauge",
+        f'docuware_disk_usage_percent{{volume="Dokumentenspeicher"}} '
+        f'{(wave(60, 92, 98, phase=0.3) if disk_full else wave(90, 55, 70, phase=0.3)):.1f}',
+        f'docuware_disk_usage_percent{{volume="Datenbank"}} {wave(100, 40, 60, phase=1.1):.1f}',
+        f'docuware_disk_usage_percent{{volume="Log"}} {wave(80, 20, 35, phase=1.7):.1f}',
     ]
     return "\n".join(lines) + "\n"
 
