@@ -618,6 +618,48 @@ Erfurt.
 > überall dieselbe robuste Methode statt zwei verschiedener,
 > fehleranfälliger Ansätze).
 
+> **Vierter Nachtrag: die beiden Node-Graph-Panels zeigten weiterhin
+> "No data" - trotz zwischenzeitlich "bestätigt" (siehe Historie oben).**
+> Live vom Nutzer gemeldet ("Netzwerk-Topologie – Leipzig-Hub ↔ Standorte
+> zeigt no data"). Diesmal per Playwright/Chromium tatsächlich im Browser
+> nachgeprüft statt nur strukturell/per API - und dabei festgestellt,
+> dass **auch das als "funktionierend" dokumentierte Leipzig-Netzwerk-
+> Node-Graph-Panel nie wirklich lief**, nur nie jemand mit echtem
+> Browser-Zugriff nachgeschaut hatte. Zwei zusammenwirkende, per
+> Panel-Inspector (`Inspect → JSON → Panel data`) am tatsächlichen
+> Datenframe verifizierte Root-Causes, beide nicht offensichtlich aus der
+> Dashboard-JSON ablesbar:
+> 1. `organize`s `renameByName` setzt **nur** `field.config.displayName`,
+>    nicht den echten `field.name` - bestätigt am Datenframe (`"name":
+>    "company", "config": {"displayName": "title"}`, der Rohname bleibt
+>    unverändert). Node-Graph verlangt aber den **echten** Feldnamen
+>    (`id`/`title`/`mainStat`/`source`/`target`) - eine nur umbenannte
+>    Anzeige reicht nicht.
+> 2. Der gescopte `merge`-Schritt benennt die einzige numerische Spalte
+>    grundsätzlich zu `Value #<refId>` um, komplett unabhängig vom
+>    ursprünglichen Metrik- oder Abfragenamen (auch mit einem via
+>    `label_replace(..., "__name__", ...)` erzwungenen eindeutigen Namen
+>    reproduziert) - vermutlich ein Nebeneffekt von `merge`s internem
+>    `outerJoinDataFrames` beim Fehlen eines gemeinsamen Join-Schlüssels.
+>
+> Robuster Fix (kein Rätselraten über Zwischennamen mehr nötig): für
+> String-Felder (`id`/`title`/`subTitle`/`source`/`target`) direkt in der
+> PromQL per `label_replace` ein Label mit dem **exakt** benötigten Namen
+> erzeugen, damit `labelsToFields` das Feld von Anfang an korrekt nennt.
+> Für die numerische `mainStat`-Spalte, die `merge` ohnehin umbenennt,
+> einen gescopten `calculateField`-Transformationsschritt (`mode:
+> "reduceRow"`, `reduce.include: ["Value #<refId>"]`, `alias: "mainStat"`)
+> **nach** `merge` einfügen - der erzeugt ein neues Feld mit echtem
+> `field.name`, statt ein bestehendes umzubenennen. Betraf beide
+> Node-Graph-Panels im Stack (Leipzig-Panel 5, Customer-Care-Panel 22) -
+> beide jetzt per Screenshot (nicht nur API) bestätigt korrekt gerendert.
+>
+> Lehre für künftige Node-Graph-Panels in diesem Stack: **API-/JSON-
+> Verifikation reicht bei diesem Panel-Typ nicht aus** - `renameByName`
+> wirkt dort nie wie erwartet, ein echter Browser-Check (z. B. via
+> Playwright, `npx playwright install chromium`) ist die einzige
+> verlässliche Probe.
+
 **Grafana-Dashboard "Customer Care – Standortübersicht (Technical
 Owner)"** (`grafana/dashboards/customer-care-overview.json`, 22 Panels,
 automatisch provisioniert):
