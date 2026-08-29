@@ -1050,11 +1050,23 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
   klickbar** (Karten und die einfache Wartungs-Textnachricht) und öffnet
   ein Detail-Modal (Status, betroffenes System, Beschreibung, bei den
   beiden Incidents zusätzlich ein Verlauf) - gleiches Muster wie das
-  BMC-ITSM-Mockup, nur im Teams-Farbschema
+  BMC-ITSM-Mockup, nur im Teams-Farbschema. Eine vierte Nachricht zeigt
+  die **Vorfallsrollen-Zuweisung** für den DocuWare-Festplatte-Incident
+  (Incident Commander/Communications Lead/Responder/2× Observer,
+  @-erwähnt) - derselbe Klick-ins-Detail-Modal-Trick, hier mit den fünf
+  echten Demo-Usern aus `seed_oneuptime.py`. Der Chat-Bereich hat eine
+  feste Höhe mit internem Scroll (wie echtes Teams) - `playTeams()`
+  scrollt automatisch zur neuesten Nachricht mit, sonst würde die vierte
+  Nachricht unterhalb des sichtbaren Bereichs verschwinden (live beim
+  Testen mit Playwright/Chromium aufgefallen, nicht auf den ersten Blick
+  aus der HTML/JS ersichtlich).
 - `mockups/benachrichtigung-mobil.html` - Smartphone-Sperrbildschirm (Push) + SMS-Verlauf,
   per "Vorfall auslösen"-Knopf **animiert** (reines CSS/JS, kein Backend) -
   Benachrichtigungen federn wie echte Push-Meldungen von oben ein,
-  SMS-Bubbles poppen nacheinander auf; "Zurücksetzen" spielt es erneut ab
+  SMS-Bubbles poppen nacheinander auf; "Zurücksetzen" spielt es erneut ab.
+  Vierte Push-Meldung: persönliche On-Call-Benachrichtigung "Rolle
+  zugewiesen: Incident Commander" - dieselbe Vorfallsrollen-Story wie im
+  Teams-Mockup, aus der Perspektive des benachrichtigten Handys.
 - `mockups/backend-bmc-itsm.html` - **Backend-Sicht statt Mitarbeiter-Sicht**:
   zeigt, wie OneUptime im Hintergrund einen BMC-ITSM-Vorfall meldet und ein
   Ticket eröffnet. "Vorfall auslösen" spielt eine dreistufige

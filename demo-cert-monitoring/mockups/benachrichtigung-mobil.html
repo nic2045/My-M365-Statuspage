@@ -236,6 +236,13 @@
             <div class="body-text">Blueant kurzzeitig gestört</div>
           </div>
         </div>
+        <div class="notif2" id="push-4">
+          <div class="icon" style="background:#6366f1;">R</div>
+          <div class="content">
+            <div class="title">Rolle zugewiesen: Incident Commander</div>
+            <div class="body-text">DocuWare | Speicherplatz kritisch (Dokumentenspeicher) – über IT-Betrieb On-Call</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="controls">
@@ -288,7 +295,7 @@
   <script>
     function playPush() {
       document.getElementById("push-empty").classList.add("hide");
-      var ids = ["push-1", "push-2", "push-3"];
+      var ids = ["push-1", "push-2", "push-3", "push-4"];
       ids.forEach(function (id, i) {
         setTimeout(function () {
           document.getElementById(id).classList.add("show");
@@ -296,7 +303,7 @@
       });
     }
     function resetPush() {
-      ["push-1", "push-2", "push-3"].forEach(function (id) {
+      ["push-1", "push-2", "push-3", "push-4"].forEach(function (id) {
         document.getElementById(id).classList.remove("show");
       });
       document.getElementById("push-empty").classList.remove("hide");
