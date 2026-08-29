@@ -230,12 +230,9 @@
         </div>
       </div>
       <p class="story">
-        Die Demo-Website läuft mit einem gültigen Zertifikat - bis ihr den
-        Vorfall auslöst. Dann zeigt Prometheus/Grafana das ablaufende
-        Zertifikat, OneUptime markiert den Dienst offline, ein echter
-        Incident entsteht, und binnen Minuten kommt eine echte
-        Abonnenten-E-Mail in Mailpit an. Guter Einstieg: die volle Kette
-        von der Erkennung bis zur Benachrichtigung.
+        <strong>Passiert:</strong> Zertifikat der Demo-Website läuft ab.<br>
+        <strong>Zeigt:</strong> volle Kette Erkennung → Incident → echte
+        E-Mail (Grafana, OneUptime, Mailpit). Guter Einstieg.
       </p>
       <div class="links">
         <a href="http://localhost:3000" target="_blank">Grafana</a>
@@ -262,12 +259,10 @@
         </div>
       </div>
       <p class="story">
-        Der DocuWare-Cluster läuft "geschäftig, aber gesund" - Kundenportal
-        und internes Backend sind getrennt sichtbar. Der Vorfall lässt den
-        zweiten MSSQL-Knoten ausfallen, WAF-Blocks hochschnellen und die
-        Antwortzeiten steigen - live im App-Owner-Dashboard. Das
-        Kundenportal bleibt bewusst unberührt: zeigt, dass ein
-        Infrastruktur-Vorfall nicht zwangsläufig Kunden betrifft.
+        <strong>Passiert:</strong> MSSQL-Knoten fällt aus, WAF-Blocks &amp;
+        Antwortzeiten steigen (App-Owner-Dashboard).<br>
+        <strong>Zeigt:</strong> Infrastruktur-Vorfall betrifft nicht
+        zwangsläufig Kunden - Kundenportal bleibt grün.
       </p>
       <div class="links">
         <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
@@ -290,12 +285,10 @@
         </div>
       </div>
       <p class="story">
-        Sechs Standorte hängen per Standleitung (S2S-VPN) am Rechenzentrum
-        Leipzig - alle grün, sichtbar auf der Deutschlandkarte. Der Vorfall
-        lässt die Verbindung nach Chemnitz hart einbrechen: Paketverlust,
-        schlechte Sprachqualität, Bandbreiten-Kollaps. Auf der Karte
-        springt der Chemnitz-Marker auf Rot, die Avaya-Warteschlange läuft
-        voll - ein Standort-Ausfall, live und geografisch verortet.
+        <strong>Passiert:</strong> VPN nach Chemnitz bricht ein
+        (Paketverlust, schlechte Sprachqualität).<br>
+        <strong>Zeigt:</strong> Standort-Ausfall live und geografisch
+        verortet - Karte + Warteschlange laufen synchron mit.
       </p>
       <div class="links">
         <a href="http://localhost:3000/d/customer-care-overview" target="_blank">Grafana-Dashboard</a>
@@ -318,13 +311,10 @@
         </div>
       </div>
       <p class="story">
-        Ergänzt die drei bereits abgeschlossenen Sicherheitsereignisse auf
-        der IT-Services-Statusseite um ein viertes, live auslösbares: die
-        Anmeldung (SSO) wird eingeschränkt, ein echter Incident
-        "Ungewöhnliche Anmeldeaktivität wird untersucht" entsteht - in
-        mitarbeiterverständlicher Sprache, ohne Fachbegriffe. Beheben
-        postet ein echtes Auflösungs-Update (inkl. Mailpit-E-Mail) und
-        setzt beides zurück.
+        <strong>Passiert:</strong> Verdächtige Anmeldeversuche, Anmeldung
+        (SSO) wird eingeschränkt.<br>
+        <strong>Zeigt:</strong> mitarbeiterverständliche, transparente
+        Sicherheitskommunikation statt Fachjargon.
       </p>
       <div class="links">
         <a href="http://localhost" target="_blank">OneUptime</a>
