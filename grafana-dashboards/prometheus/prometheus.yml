@@ -7,19 +7,21 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
-  # Systemadmins - Node Exporter Full: real node_exporter, real data about
-  # the container it runs in (see docker-compose.yml).
-  - job_name: "node_exporter"
+  # Systemadmins - Node Exporter Full: synthetic sample data, see
+  # ../mock-exporters/node_mock_exporter.py for why (it's a demo) and how
+  # to swap in the real node_exporter later.
+  - job_name: "node_mock"
     static_configs:
-      - targets: ["node-exporter:9100"]
+      - targets: ["node-mock-exporter:9100"]
         labels:
           role: "systemadmin"
 
-  # Webserver-Admins - Apache2: real apache_exporter against the real
-  # apache2 service in this stack (traffic-generator keeps it non-idle).
-  - job_name: "apache_exporter"
+  # Webserver-Admins - Apache2: synthetic sample data, see
+  # ../mock-exporters/apache_mock_exporter.py for why (it's a demo) and
+  # how to swap in the real apache_exporter later.
+  - job_name: "apache_mock"
     static_configs:
-      - targets: ["apache-exporter:9117"]
+      - targets: ["apache-mock-exporter:9117"]
         labels:
           role: "webserver-admin"
 

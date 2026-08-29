@@ -1,21 +1,23 @@
 # IT-Infra-Ops-Dashboards (Grafana)
 
-Rollenbasierte Grafana-Dashboards für die reale IT-Infrastruktur - eigenständig von der
+Rollenbasierte Grafana-Dashboards als **Demo** - eigenständig von der
 `demo-cert-monitoring/`-Verkaufsdemo (andere Zielgruppe, anderer Zweck), aber nach demselben
-Prinzip **mit Beispieldaten sofort lauffähig**, bevor irgendein echter Exporter angeschlossen
-ist.
+Prinzip gebaut: alle vier Exporter liefern **synthetische Beispieldaten**, der Stack ist also
+sofort mit Inhalt lauffähig, ganz ohne echtes SQL Server/Apache/Server/vCenter im Hintergrund.
 
-| Rolle | Dashboard | Ziel-Tool | Exporter | Beispieldaten in diesem Stack |
-|---|---|---|---|---|
-| DB-Admins | MS SQL Server – Best Practices | Microsoft SQL Server | `sql_exporter` | synthetisch (`mock-exporters/mssql_mock_exporter.py`) |
-| Webserver-Admins | Apache2 | Apache HTTP Server | `apache_exporter` | **echt** (echter Apache2 + echter apache_exporter) |
-| Systemadmins | Node Exporter Full | Linux/Unix-Hosts (Server + VMs) | `node_exporter` | **echt** (echter node_exporter über diesen Host) |
-| Systemadmins | VMware vSphere Host | ESXi/vCenter | `vmware_exporter` | synthetisch (`mock-exporters/vmware_mock_exporter.py`) |
+| Rolle | Dashboard | Nachgebildeter Exporter | Mock-Exporter |
+|---|---|---|---|
+| DB-Admins | MS SQL Server – Best Practices | `sql_exporter` | `mock-exporters/mssql_mock_exporter.py` |
+| Webserver-Admins | Apache2 | `apache_exporter` | `mock-exporters/apache_mock_exporter.py` |
+| Systemadmins | Node Exporter Full | `node_exporter` | `mock-exporters/node_mock_exporter.py` |
+| Systemadmins | VMware vSphere Host | `vmware_exporter` | `mock-exporters/vmware_mock_exporter.py` |
 
-Bei den beiden synthetischen Exportern gibt es **keine** Garantie, exakt die Panel-Queries
-der jeweiligen (noch ungesehenen) Grafana.com-Dashboards zu treffen - siehe die
-Docstrings in `mock-exporters/*.py` für den genauen Vorbehalt. Real vs. synthetisch lässt
-sich jederzeit tauschen, ohne die Dashboards selbst anzufassen (gleiche Metriknamen).
+Jeder Mock-Exporter nutzt dieselben Metriknamen wie sein echtes Vorbild - **ohne Garantie**,
+damit exakt die Panel-Queries der jeweiligen (noch ungesehenen) Grafana.com-Dashboards zu
+treffen, siehe die Docstrings in `mock-exporters/*.py` für den genauen Vorbehalt. Später auf
+echte Daten umstellen: den jeweiligen Mock-Service in `docker-compose.yml` durch den echten
+Exporter (siehe Tabelle) ersetzen und in `prometheus/prometheus.yml` das Scrape-Target
+anpassen - an den Dashboards selbst ändert sich nichts.
 
 ## Schnellstart – Beispieldaten lokal ansehen
 
