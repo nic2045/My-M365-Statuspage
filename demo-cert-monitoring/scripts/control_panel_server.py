@@ -41,6 +41,8 @@ ACTIONS = {
     "fix-docuware": ("fix-docuware.sh", "DocuWare-Cluster-Vorfall beheben"),
     "break-customer-care": ("break-customer-care.sh", "Customer-Care-Vorfall auslösen"),
     "fix-customer-care": ("fix-customer-care.sh", "Customer-Care-Vorfall beheben"),
+    "break-security": ("break-security.sh", "Sicherheits-Vorfall auslösen"),
+    "fix-security": ("fix-security.sh", "Sicherheits-Vorfall beheben"),
 }
 
 
@@ -79,10 +81,71 @@ def get_links():
     }
 
 
+OU_BASE = os.environ.get("OU_BASE", "http://localhost")
+_ou_token = None  # cached across polls - see get_security_state() below
+
+
+def _ou_login():
+    global _ou_token
+    payload = json.dumps({"data": {
+        "email": {"_type": "Email", "value": "demo@example.com"},
+        "password": {"_type": "HashedString", "value": "DemoDemo123!"},
+    }}).encode()
+    req = urllib.request.Request(f"{OU_BASE}/api/identity/login", data=payload, method="POST")
+    req.add_header("Content-Type", "application/json")
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        body = json.load(resp)
+    _ou_token = body.get("_miscData", {}).get("accessToken")
+    return _ou_token
+
+
+def get_security_state():
+    """healthy/unhealthy/unknown for the security-incident scenario - this
+    one lives in OneUptime, not Prometheus (a Manual monitor + Incident,
+    no metric backs it), so it needs the OneUptime API instead of
+    prom_query(). The login token is cached at module level and reused
+    across polls (the panel polls /api/status every 5s) - OneUptime's
+    login endpoint is rate-limited (10 attempts/15min), so logging in on
+    every poll would lock the demo account out within seconds."""
+    global _ou_token
+    try:
+        if not _ou_token and not _ou_login():
+            return "unknown"
+        req = urllib.request.Request(
+            f"{OU_BASE}/api/monitor/get-list", method="POST",
+            data=json.dumps({
+                "query": {}, "select": {"name": True, "currentMonitorStatus": {"isOperationalState": True}},
+                "sort": {}, "skip": 0, "limit": 100,
+            }).encode())
+        req.add_header("Content-Type", "application/json")
+        req.add_header("Authorization", f"Bearer {_ou_token}")
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                body = json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403):
+                _ou_token = None  # token expired/invalid - retry once with a fresh login
+                if not _ou_login():
+                    return "unknown"
+                req.add_header("Authorization", f"Bearer {_ou_token}")
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    body = json.load(resp)
+            else:
+                raise
+        for m in body.get("data", []):
+            if m.get("name") == "Anmeldung (SSO)":
+                op = (m.get("currentMonitorStatus") or {}).get("isOperationalState", True)
+                return "healthy" if op else "unhealthy"
+        return "unknown"
+    except (urllib.error.URLError, ValueError, KeyError, TimeoutError):
+        return "unknown"
+
+
 def get_status():
     """healthy/unhealthy/unknown per scenario, read live from Prometheus -
     no separate state file invented here, Prometheus already is the
-    stack's single source of truth (see docker-compose.yml header)."""
+    stack's single source of truth (see docker-compose.yml header).
+    The security scenario is the one exception (see get_security_state())."""
     cert_days = prom_query('(probe_ssl_earliest_cert_expiry{demo_fixture="true"} - time()) / 86400')
     docuware_node2 = prom_query('docuware_mssql_cluster_node_up{node="db2"}')
     cc_chemnitz = prom_query('cc_site_vpn_up{site="Chemnitz"}')
@@ -96,6 +159,7 @@ def get_status():
         "demo": state(cert_days, lambda v: v >= 3),
         "docuware": state(docuware_node2, lambda v: v >= 1),
         "customer-care": state(cc_chemnitz, lambda v: v >= 1),
+        "security": get_security_state(),
     }
 
 

@@ -181,6 +181,26 @@ getrennt statt eine Seite mit allem):
      relativ zu "heute", wie jedes andere Datum in diesem Skript) - live
      bestätigt: erscheinen korrekt in `timelineIncidents` der
      Status-Page-Overview-API, neben dem aktiven DocuWare-Incident.
+   - **Live auslösbares viertes Sicherheitsereignis:** `./break-security.sh`
+     setzt "Anmeldung (SSO)" auf Degraded und legt den echten, aktiven
+     Incident "Ungewöhnliche Anmeldeaktivität wird untersucht" an
+     (Status "Identified", gleiche mitarbeiterverständliche Sprache wie
+     oben). `./fix-security.sh` postet ein echtes Auflösungs-Update
+     (`IncidentPublicNote`, löst bei aktivem Mailpit-Abonnenten eine
+     echte E-Mail aus) und setzt Incident auf Resolved sowie den Monitor
+     zurück auf Operational - danach ist es ein vierter Eintrag neben den
+     drei statischen Ereignissen. `scripts/security_incident.py`
+     (Login/API-Zugriff, kein Import von `seed_oneuptime.py` - das würde
+     dessen kompletten Seed-Lauf erneut auslösen, da es beim Import statt
+     hinter `if __name__=="__main__"` läuft). Erneutes Auslösen von
+     `break-security.sh` während der Vorfall schon aktiv ist, ist
+     absichtlich ein No-op statt eines Fehlers - OneUptime erzwingt
+     Vorwärts-only-Statuswechsel (`In Behebung` → `Identified` schlägt
+     serverseitig mit HTTP 400 fehl, live bestätigt) und das Skript prüft
+     das vorher ab. Live end-to-end durchgetestet: Vorfall auslösen →
+     erneut auslösen (No-op, kein Fehler) → beheben → alle vier
+     Sicherheitsereignisse korrekt in `timelineIncidents`, nur DocuWare
+     bleibt aktiv.
 
    Alle Dienste sind feste `Manual`-Monitore ohne Sensor, starten
    automatisch grün und werden nur gezielt (z.B. via Wartung/Incident) auf
@@ -721,10 +741,16 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
 (**http://localhost:7100**) - der zentrale Startpunkt für die ganze
 Demo, nicht nur für die Vorfall-Skripte:
 
-- Drei Szenario-Karten (Zertifikat, DocuWare, Customer Care), je mit
-  kurzer Story, Illustration, Live-Status (direkt aus Prometheus
-  gelesen, kein separates Tracking) und Break-/Fix-Buttons statt
-  Terminal-Aufrufen
+- Vier Szenario-Karten (Zertifikat, DocuWare, Customer Care,
+  Sicherheits-Vorfall), je mit kurzer Story, Illustration, Live-Status
+  und Break-/Fix-Buttons statt Terminal-Aufrufen. Die ersten drei lesen
+  ihren Status direkt aus Prometheus; der Sicherheits-Vorfall lebt in
+  OneUptime selbst (Manual-Monitor + Incident, kein Prometheus-Metrik
+  dahinter) - der Kontrollserver hält dafür einen gecachten Login-Token
+  über alle 5-Sekunden-Polls hinweg vor, statt sich bei jedem Poll neu
+  anzumelden (OneUptimes Login-Endpunkt ist auf 10 Versuche/15 Min.
+  begrenzt - ein Login pro Poll hätte den Demo-Account innerhalb von
+  Sekunden gesperrt, live selbst erlebt beim Testen dieses Features).
 - **Hub-Bereich** darunter, gruppiert in "Statusseiten
   (Mitarbeiter/Kunden)" (alle drei OneUptime-Statusseiten, Links live
   aus `.oneuptime-demo-summary` gelesen statt hartkodiert), "Dashboards

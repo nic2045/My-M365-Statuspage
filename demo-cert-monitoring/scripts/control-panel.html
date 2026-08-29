@@ -302,6 +302,36 @@
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#6b2fb3"/>
+          <path d="M24 9 L38 15 V23 C38 32 32 39 24 41 C16 39 10 32 10 23 V15 Z" fill="none" stroke="#fff" stroke-width="2.3"/>
+          <path d="M19 24 L23 28 L30 19" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <h2>Sicherheits-Vorfall (Anmeldung)</h2>
+          <span class="status unknown" id="status-security"><span class="dot"></span>wird geprüft…</span>
+        </div>
+      </div>
+      <p class="story">
+        Ergänzt die drei bereits abgeschlossenen Sicherheitsereignisse auf
+        der IT-Services-Statusseite um ein viertes, live auslösbares: die
+        Anmeldung (SSO) wird eingeschränkt, ein echter Incident
+        "Ungewöhnliche Anmeldeaktivität wird untersucht" entsteht - in
+        mitarbeiterverständlicher Sprache, ohne Fachbegriffe. Beheben
+        postet ein echtes Auflösungs-Update (inkl. Mailpit-E-Mail) und
+        setzt beides zurück.
+      </p>
+      <div class="links">
+        <a href="http://localhost" target="_blank">OneUptime</a>
+        <a href="http://localhost:8025" target="_blank">Mailpit</a>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-security', 'security')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-security', 'security')">Beheben</button>
+      </div>
+    </div>
+
   </div>
 
   <div class="log-section">
@@ -346,7 +376,7 @@
       try {
         const res = await fetch("/api/status");
         const data = await res.json();
-        for (const key of ["demo", "docuware", "customer-care"]) {
+        for (const key of ["demo", "docuware", "customer-care", "security"]) {
           const el = document.getElementById("status-" + key);
           const state = data[key] || "unknown";
           el.className = "status " + state;
