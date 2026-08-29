@@ -128,20 +128,27 @@ if mode == "break":
         "werden geprüft - es sind noch keine Zugangsdaten kompromittiert. "
         "Wir informieren euch, sobald mehr bekannt ist."
     )
+    # OneUptime enforces strictly forward-only state transitions - not
+    # just "no going back to an earlier active state" (In Behebung ->
+    # Identified was already rejected with HTTP 400), but ANY backward
+    # move, including Resolved -> Identified (confirmed live: same
+    # HTTP 400, "Identified is before Resolved in the order of incident
+    # states"). So a resolved incident genuinely can't be reopened via
+    # PUT - the only correct way to represent "this happened again" is a
+    # fresh incident, same as it would be in reality. If the existing one
+    # is still active (not yet fixed), leave it alone - that's a no-op
+    # re-trigger, not an error.
     existing = find_by_name("incident", INCIDENT_TITLE, name_field="title",
                             select={"_id": True, "title": True, "currentIncidentState": {"isResolvedState": True}})
+    if existing and (existing.get("currentIncidentState") or {}).get("isResolvedState"):
+        call(f"/api/incident/{existing['_id']}", None, method="DELETE")
+        existing = None
+
     if existing:
-        # OneUptime enforces forward-only state transitions (rejects e.g.
-        # In Behebung -> Identified with HTTP 400) - re-running break
-        # while the incident is already active would otherwise fail
-        # loudly for no reason. Only reset the state if it's currently
-        # Resolved (a fresh trigger after a previous fix); otherwise it's
-        # already active and this is a no-op.
-        payload = {"title": INCIDENT_TITLE, "description": description,
-                   "incidentSeverityId": severity_id, "monitors": [entity_ref(monitor_id)]}
-        if (existing.get("currentIncidentState") or {}).get("isResolvedState"):
-            payload["currentIncidentStateId"] = identified_state_id
-        call(f"/api/incident/{existing['_id']}", {"data": payload}, method="PUT")
+        call(f"/api/incident/{existing['_id']}", {"data": {
+            "title": INCIDENT_TITLE, "description": description,
+            "incidentSeverityId": severity_id, "monitors": [entity_ref(monitor_id)],
+        }}, method="PUT")
     else:
         call("/api/incident", {"data": {
             "title": INCIDENT_TITLE, "description": description,
