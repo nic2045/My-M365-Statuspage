@@ -159,10 +159,29 @@
     // OneUptime-Startseite) entweder hier die Konstante anpassen, oder
     // beim Aufruf dieser Seite ?oneuptime=<url> anhängen (z.B. für eine
     // Live-Vorführung, ohne die Datei zu editieren).
+    //
+    // ?oneuptime= wird NICHT ungeprüft übernommen (CodeQL js/client-side-
+    // unvalidated-url-redirection + js/xss - ein "javascript:"-URI oder
+    // eine beliebige fremde Domain im Query-Param wäre sonst ein
+    // Open-Redirect/XSS-Vektor über einen präparierten Link zu dieser
+    // Demo-Seite): geparst über die URL-API und nur http(s) akzeptiert,
+    // alles andere (ungültige URL, anderes Schema) fällt auf den Default
+    // zurück statt in href zu landen.
     (function () {
       const DEFAULT_ONEUPTIME_URL = "http://localhost/";
       const params = new URLSearchParams(window.location.search);
-      const url = params.get("oneuptime") || DEFAULT_ONEUPTIME_URL;
+      const raw = params.get("oneuptime");
+      let url = DEFAULT_ONEUPTIME_URL;
+      if (raw) {
+        try {
+          const parsed = new URL(raw, window.location.href);
+          if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+            url = parsed.href;
+          }
+        } catch (e) {
+          // Ungültige URL - beim Default bleiben.
+        }
+      }
       document.getElementById("oneuptime-live-card").href = url;
     })();
   </script>
