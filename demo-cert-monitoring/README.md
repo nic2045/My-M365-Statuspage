@@ -902,6 +902,32 @@ Vordergrund außerhalb von Docker** (Ctrl+C stoppt es) statt als weiterer
 `docker-compose.yml`-Service - `./start-demo.sh` weist am Ende auf
 diesen Befehl hin, startet ihn aber nicht automatisch mit.
 
+## Bei Code-Änderungen: was lädt automatisch, was braucht einen Neustart
+
+- **Lädt automatisch:** Grafana-Dashboards (`grafana/dashboards/*.json`,
+  Datei-Provisioner scannt alle ~30s neu), `mockups/*.html` und
+  `scripts/control-panel.html` (werden bei jedem Request frisch von der
+  Platte gelesen) - einfach speichern und (bei Dashboards) kurz warten
+  bzw. (bei HTML) den Browser-Tab neu laden.
+- **Braucht einen Neustart:** die `*-metrics-exporter.py`-Skripte (laufen
+  in einem langlebigen Container, Python liest die Datei nur beim
+  Container-Start) und `scripts/control_panel_server.py` (läuft als
+  eigener Host-Prozess, kein Hot-Reload). `./reload-demo.sh` erledigt
+  beides in einem Schritt - live getestet.
+
+## Demo-Daten zurücksetzen (Konfiguration bleibt erhalten)
+
+`./reset-demo-data.sh` leert Prometheus' aufgelaufene Metrik-Historie
+(Graphen starten wieder bei null), lässt aber jede Konfiguration
+unangetastet (Targets, Alert-Regeln, Grafana, OneUptime). **Bewusst nur
+Prometheus** - für OneUptimes eigene Historie (Incident-Timelines, Logs,
+Security Events, bereits ausgelöste Alerts) gibt es keinen einzelnen
+"Historie löschen, Konfiguration behalten"-API-Aufruf, der nicht riskiert,
+die geseedete Struktur mit zu zerstören; `./seed-oneuptime.sh` konvergiert
+die Struktur ohnehin bei jedem Lauf neu, danach erneut ausführen für einen
+konsistenten Zustand. Enthält `docker volume rm` (löscht Daten) - bewusst
+nicht automatisch mitgetestet, bitte gezielt selbst ausführen.
+
 ## Aufräumen
 
 ```bash
