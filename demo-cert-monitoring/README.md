@@ -225,6 +225,27 @@ getrennt statt eine Seite mit allem):
    (nutzerorientiert: was/wann/Alternative/Kontakt) und **abgeschlossen:**
    "Wartung Netzwerk-Switches (Rechenzentrum Leipzig)".
 
+   **Live auslösbarer Druckerwartungs-Prozess (#148):** Neben der
+   statischen "nächsten Freitag"-Wartung oben zeigt `./break-printer.sh`
+   den kompletten Prozess auf Knopfdruck: Drucker meldet eine Störung →
+   die IT terminiert kurzfristig eine Wartung ("Kurzfristige Wartung –
+   Drucker (Hauptgebäude)", 2 Stunden Vorlauf) → die Standort-Leipzig-
+   Statusseite zeigt sie sofort an. Der Monitor `Drucker (Hauptgebäude)`
+   bleibt dabei bewusst **Operational** - eine Scheduled Maintenance
+   kündigt eine Auswirkung nur an, sie erzeugt selbst keine; der Drucker
+   ist also bis zum Beginn der Wartung nicht eingeschränkt. `./fix-printer.sh`
+   setzt die Wartung auf "Completed" und reiht sie damit neben "Wartung
+   Netzwerk-Switches" als weiteren abgeschlossenen Eintrag ein. Eigener,
+   separat benannter Eintrag statt Wiederverwendung der statischen
+   Freitags-Wartung - gleiches Prinzip wie das live auslösbare vierte
+   Sicherheitsereignis oben, das ebenfalls neben statischen Einträgen
+   steht statt sie zu überschreiben (`scripts/printer_maintenance.py`,
+   kein Import von `seed_oneuptime.py`, siehe dortige Begründung). Auch im
+   Demo-Kontrollzentrum (`./control-panel.sh`) als Karte "Druckerwartung
+   (Prozess)" auslösbar, inkl. Link zu den Benachrichtigungs-Mockups, in
+   denen sich die Statuspage-Info für Mitarbeitende manuell durchklicken
+   lässt.
+
 **Alle Termine werden bei jedem Lauf neu relativ zu "heute" berechnet**
 (Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen
 immer 6-10 Tage in der Vergangenheit, die Druckerwartung immer am

@@ -43,6 +43,8 @@ ACTIONS = {
     "fix-customer-care": ("fix-customer-care.sh", "Customer-Care-Vorfall beheben"),
     "break-security": ("break-security.sh", "Sicherheits-Vorfall auslösen"),
     "fix-security": ("fix-security.sh", "Sicherheits-Vorfall beheben"),
+    "break-printer": ("break-printer.sh", "Druckerwartung ankündigen"),
+    "fix-printer": ("fix-printer.sh", "Druckerwartung abschließen"),
 }
 
 
@@ -141,11 +143,58 @@ def get_security_state():
         return "unknown"
 
 
+def get_printer_state():
+    """healthy/unhealthy/unknown for the printer-maintenance-process
+    scenario (#148) - like the security scenario, this one lives in
+    OneUptime (a Scheduled Maintenance, no metric backs it): "unhealthy"
+    means the live-triggered "Kurzfristige Wartung" entry is currently
+    announced (not yet Completed), "healthy" means none is open right
+    now. Deliberately not about the printer's own monitor status - that
+    one is never touched by this scenario, see break-printer.sh."""
+    global _ou_token
+    try:
+        if not _ou_token and not _ou_login():
+            return "unknown"
+        req = urllib.request.Request(
+            f"{OU_BASE}/api/scheduled-maintenance/get-list", method="POST",
+            data=json.dumps({
+                "query": {}, "select": {
+                    "title": True,
+                    "currentScheduledMaintenanceState": {"isResolvedState": True},
+                },
+                "sort": {}, "skip": 0, "limit": 100,
+            }).encode())
+        req.add_header("Content-Type", "application/json")
+        req.add_header("Authorization", f"Bearer {_ou_token}")
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                body = json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403):
+                _ou_token = None  # token expired/invalid - retry once with a fresh login
+                if not _ou_login():
+                    return "unknown"
+                req.add_header("Authorization", f"Bearer {_ou_token}")
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    body = json.load(resp)
+            else:
+                raise
+        for m in body.get("data", []):
+            if m.get("title") == "Kurzfristige Wartung – Drucker (Hauptgebäude)":
+                resolved = (m.get("currentScheduledMaintenanceState") or {}).get("isResolvedState", True)
+                return "unhealthy" if not resolved else "healthy"
+        return "healthy"
+    except (urllib.error.URLError, ValueError, KeyError, TimeoutError):
+        return "unknown"
+
+
 def get_status():
     """healthy/unhealthy/unknown per scenario, read live from Prometheus -
     no separate state file invented here, Prometheus already is the
     stack's single source of truth (see docker-compose.yml header).
-    The security scenario is the one exception (see get_security_state())."""
+    The security and printer scenarios are the exceptions (see
+    get_security_state()/get_printer_state()) - both live in OneUptime,
+    not Prometheus."""
     cert_days = prom_query('(probe_ssl_earliest_cert_expiry{demo_fixture="true"} - time()) / 86400')
     docuware_node2 = prom_query('docuware_mssql_cluster_node_up{node="db2"}')
     cc_chemnitz = prom_query('cc_site_vpn_up{site="Chemnitz"}')
@@ -160,6 +209,7 @@ def get_status():
         "docuware": state(docuware_node2, lambda v: v >= 1),
         "customer-care": state(cc_chemnitz, lambda v: v >= 1),
         "security": get_security_state(),
+        "printer": get_printer_state(),
     }
 
 
