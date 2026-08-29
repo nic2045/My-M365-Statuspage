@@ -10,7 +10,9 @@ needs one OpenBao-backed secret with the same read/write-your-own-path shape.
 
 - **Anforderer (requester):** opens an issue with
   [`.github/ISSUE_TEMPLATE/openbao-secret-request.yml`](../../.github/ISSUE_TEMPLATE/openbao-secret-request.yml) -
-  fills in app name, which secret, and why. That's their one manual step.
+  or, without a GitHub account, fills in the same fields at `/openbao-request` in the
+  M365 Statuspage app itself (any logged-in tenant user - files the identical issue via
+  the GitHub API). Either way: app name, which secret, and why. That's their one manual step.
 - **Cloud Operator:** the only one who runs this module - needs VPN connectivity to
   `secrets-prod.pyur.com` and an OpenBao token with rights to create policies and
   tokens (an admin/root token, not the app's own eventual token). Copies the issue's

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-lg mx-auto mt-12 mb-12">
+  <div class="mb-6">
+    <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ L["openbao_request.title"] }}</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ L["openbao_request.intro"] }}</p>
+  </div>
+
+  {% if success_url %}
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-8 py-10 shadow-sm text-center">
+    <div class="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center mx-auto mb-4">
+      <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+      </svg>
+    </div>
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ L["openbao_request.success_title"] }}</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ L["openbao_request.success_body"] }}</p>
+    <a href="{{ success_url }}" target="_blank" rel="noopener"
+       class="inline-flex items-center gap-1.5 text-sm text-brand dark:text-brand-light hover:underline">
+      {{ success_url }}
+    </a>
+  </div>
+  {% else %}
+
+  {% if error %}
+  <div class="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/60 dark:border-red-800 dark:text-red-200 text-sm">
+    {{ L[error] }}
+  </div>
+  {% elif error_detail %}
+  <div class="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/60 dark:border-red-800 dark:text-red-200 text-sm">
+    {{ error_detail }}
+  </div>
+  {% endif %}
+
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+    <form method="post" action="/openbao-request" class="p-5 space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["openbao_request.app_name_label"] }}</label>
+        <input type="text" name="app_name" required
+               value="{{ form.app_name }}"
+               placeholder="m365-statuspage"
+               autocomplete="off" spellcheck="false"
+               class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+        <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{{ L["openbao_request.app_name_hint"] }}</p>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["openbao_request.secret_name_label"] }}</label>
+        <input type="text" name="secret_name" required
+               value="{{ form.secret_name }}"
+               placeholder="azure-client-secret"
+               autocomplete="off" spellcheck="false"
+               class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+        <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{{ L["openbao_request.secret_name_hint"] }}</p>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["openbao_request.requested_by_label"] }}</label>
+        <input type="text" name="requested_by" required
+               value="{{ form.requested_by }}"
+               class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["openbao_request.justification_label"] }}</label>
+        <textarea name="justification" required rows="3"
+                  class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">{{ form.justification }}</textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["openbao_request.token_period_label"] }}</label>
+        <input type="number" name="token_period" min="0"
+               value="{{ form.token_period }}"
+               placeholder="2592000"
+               class="w-full text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+        <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{{ L["openbao_request.token_period_hint"] }}</p>
+      </div>
+
+      <div class="flex items-center justify-end pt-2 border-t border-gray-100 dark:border-gray-800">
+        <button type="submit"
+                class="inline-flex items-center gap-2 text-sm px-4 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 font-medium transition-colors">
+          {{ L["openbao_request.submit"] }}
+        </button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

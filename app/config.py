@@ -39,6 +39,16 @@ class Settings(BaseSettings):
     OPENBAO_RENEWAL_THRESHOLD_DAYS: int = 30
     OPENBAO_NEW_SECRET_LIFETIME_DAYS: int = 180
 
+    # GitHub - used only to file OpenBao secret-access requests on behalf of logged-in users
+    # who don't have/want a GitHub account (see app/routers/openbao_request.py). Use a
+    # fine-grained PAT scoped to Issues:write on the repo below only - never repo-admin,
+    # never other repos. Deliberately NOT named plain GITHUB_TOKEN/GITHUB_REPO - some
+    # deployment environments (CI runners, dev sandboxes) set a generic GITHUB_TOKEN of
+    # their own in the process environment, which pydantic-settings would silently pick up
+    # instead of an explicitly configured value.
+    OPENBAO_REQUEST_GITHUB_TOKEN: str = ""
+    OPENBAO_REQUEST_GITHUB_REPO: str = "nic2045/My-M365-Statuspage"
+
     # Session security – empty/placeholder triggers auto-generation on first run
     # (persisted to data/secret_key so sessions survive restarts).
     SECRET_KEY: str = ""

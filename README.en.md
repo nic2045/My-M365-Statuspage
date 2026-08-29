@@ -124,6 +124,14 @@ registration - more than the app needs day to day (`ServiceHealth.Read.All`). Se
 `AZURE_MGMT_TENANT_ID`/`_CLIENT_ID`/`_CLIENT_SECRET` to use a separate, narrower-scoped
 credential for that instead of permanently over-privileging the main app registration.
 
+**Requesting OpenBao access for a (new) app:** `infra/openbao/` (OpenTofu) automates the
+Cloud Operator side (policy + token) - requesters submit either via the GitHub issue form
+(`.github/ISSUE_TEMPLATE/openbao-secret-request.yml`) or, without a GitHub account, via
+**`/openbao-request`** in this app (any logged-in tenant user, see the nav bar) - files the
+same kind of issue automatically. Configure via `OPENBAO_REQUEST_GITHUB_TOKEN`/
+`OPENBAO_REQUEST_GITHUB_REPO` (see configuration reference below); without a token set, the
+page just shows a message instead of submitting automatically.
+
 ---
 
 ## Admin authorization (app role)
@@ -167,6 +175,8 @@ Alternatively or in addition, set an email allowlist (`ADMIN_EMAILS`, OR-combine
 | `OPENBAO_TOKEN` | OpenBao token with read/write on the path above | *(empty)* |
 | `OPENBAO_RENEWAL_THRESHOLD_DAYS` | Rotate when the stored secret expires within this many days | `30` |
 | `OPENBAO_NEW_SECRET_LIFETIME_DAYS` | Lifetime given to a newly created secret | `180` |
+| `OPENBAO_REQUEST_GITHUB_TOKEN` | Fine-grained PAT (`Issues: Read and write`) for `/openbao-request` - empty = page only shows a message | *(empty)* |
+| `OPENBAO_REQUEST_GITHUB_REPO` | Target repo (`owner/name`) for the issues it files | `nic2045/My-M365-Statuspage` |
 
 **Supported `MONITORED_SERVICES` values** (must match the Graph API names exactly):
 
