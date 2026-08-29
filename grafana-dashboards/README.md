@@ -1,23 +1,48 @@
 # IT-Infra-Ops-Dashboards (Grafana)
 
-Rollenbasierte Grafana-Dashboards für die reale IT-Infrastruktur - **kein Bestandteil der
-`demo-cert-monitoring/`-Verkaufsdemo** (die nutzt bewusst synthetische Fake-Metriken für
-eine Vorführung; das hier sind Standard-Community-Dashboards für echte Exporter gegen
-echte Server/Datenbanken/Webserver).
+Rollenbasierte Grafana-Dashboards für die reale IT-Infrastruktur - eigenständig von der
+`demo-cert-monitoring/`-Verkaufsdemo (andere Zielgruppe, anderer Zweck), aber nach demselben
+Prinzip **mit Beispieldaten sofort lauffähig**, bevor irgendein echter Exporter angeschlossen
+ist.
 
-| Rolle | Dashboard | Ziel-Tool | Exporter |
-|---|---|---|---|
-| DB-Admins | MS SQL Server – Best Practices | Microsoft SQL Server | `sql_exporter` |
-| Webserver-Admins | Apache2 | Apache HTTP Server | `apache_exporter` |
-| Systemadmins | Node Exporter Full | Linux/Unix-Hosts (Server + VMs) | `node_exporter` |
-| Systemadmins | VMware vSphere Host | ESXi/vCenter | `vmware_exporter` |
+| Rolle | Dashboard | Ziel-Tool | Exporter | Beispieldaten in diesem Stack |
+|---|---|---|---|---|
+| DB-Admins | MS SQL Server – Best Practices | Microsoft SQL Server | `sql_exporter` | synthetisch (`mock-exporters/mssql_mock_exporter.py`) |
+| Webserver-Admins | Apache2 | Apache HTTP Server | `apache_exporter` | **echt** (echter Apache2 + echter apache_exporter) |
+| Systemadmins | Node Exporter Full | Linux/Unix-Hosts (Server + VMs) | `node_exporter` | **echt** (echter node_exporter über diesen Host) |
+| Systemadmins | VMware vSphere Host | ESXi/vCenter | `vmware_exporter` | synthetisch (`mock-exporters/vmware_mock_exporter.py`) |
 
-## Setup in drei Schritten
+Bei den beiden synthetischen Exportern gibt es **keine** Garantie, exakt die Panel-Queries
+der jeweiligen (noch ungesehenen) Grafana.com-Dashboards zu treffen - siehe die
+Docstrings in `mock-exporters/*.py` für den genauen Vorbehalt. Real vs. synthetisch lässt
+sich jederzeit tauschen, ohne die Dashboards selbst anzufassen (gleiche Metriknamen).
+
+## Schnellstart – Beispieldaten lokal ansehen
+
+```bash
+cd grafana-dashboards
+cp .env.example .env
+./fetch-community-dashboards.sh   # siehe Hinweis unten - braucht echten Internetzugang
+docker compose up -d
+```
+
+Grafana danach unter `http://localhost:3000` (Login aus `.env`, Standard `admin` /
+`change-me-please` - **vor produktivem Einsatz ändern**). Ordner "IT Infra Ops" enthält alle
+vier Dashboards, sobald Schritt 2 (Dashboard-JSONs holen) einmal gelaufen ist.
+
+`docker compose config -q` wurde in dieser Sandbox erfolgreich gegen die Compose-Datei
+geprüft (Syntax valide) - ein echter `docker compose up` konnte hier nicht laufen (kein
+Docker-Daemon in dieser Sandbox verfügbar, nur die CLI) und ist daher **nicht** end-to-end
+gegen echte Container verifiziert.
+
+## Setup in drei Schritten (für echte Infra statt/zusätzlich zu den Beispieldaten)
 
 1. **Exporter auf den Zielsystemen installieren** (siehe Tabelle unten je Rolle) und in
    Prometheus eintragen - fertige Scrape-Config-Snippets liegen in
    [`prometheus-scrape-configs.yml`](prometheus-scrape-configs.yml), einfach in eure
-   bestehende `prometheus.yml` unter `scrape_configs:` einfügen.
+   bestehende `prometheus.yml` unter `scrape_configs:` einfügen (oder, wenn ihr den
+   Compose-Stack oben nutzt: `prometheus/prometheus.yml` direkt anpassen und die
+   entsprechenden Mock-Exporter-Services aus `docker-compose.yml` entfernen).
 2. **Dashboard-JSONs holen** – `grafana.com` ist aus dieser (Claude-Code-)Sandbox heraus per
    Egress-Policy blockiert, deshalb liegen hier keine fertigen JSON-Dateien bei. Von einer
    Maschine mit normalem Internetzugang einmalig:
@@ -80,11 +105,13 @@ echte Server/Datenbanken/Webserver).
   Deckt Host-CPU/Memory/Storage/Netzwerk auf Hypervisor-Ebene ab - ergänzt Node Exporter
   Full (Gast-OS-Sicht) um die Host-Sicht.
 
-## Provisioning (optional, file-basiert wie in `demo-cert-monitoring/`)
+## Provisioning in eine andere, bereits laufende Grafana-Instanz einbinden
 
+Der Schnellstart oben bringt seine eigene Grafana mit (`docker-compose.yml`). Wollt ihr die
+Dashboards stattdessen in eine schon existierende Grafana-Instanz einhängen, folgen
 [`provisioning/dashboards/dashboards.yml`](provisioning/dashboards/dashboards.yml) +
-[`provisioning/datasources/datasource.yml`](provisioning/datasources/datasource.yml) folgen
-demselben Muster wie die Demo - in einer eigenen Grafana-Instanz einbinden:
+[`provisioning/datasources/datasource.yml`](provisioning/datasources/datasource.yml)
+demselben file-basierten Muster wie `demo-cert-monitoring/` - dort z. B. so einbinden:
 
 ```yaml
 volumes:
