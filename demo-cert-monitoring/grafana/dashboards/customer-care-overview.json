@@ -1480,13 +1480,42 @@
        "job": true,
        "lat": true,
        "lon": true,
-       "photo": true
+       "photo": true,
+       "role": true
       },
       "renameByName": {
        "site": "id",
        "company": "title",
        "Value": "mainStat"
       }
+     },
+     "filter": {
+      "id": "byRefId",
+      "options": "A"
+     }
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "instance": true,
+       "job": true,
+       "lat": true,
+       "lon": true,
+       "photo": true,
+       "role": true,
+       "company": true,
+       "site": true
+      },
+      "renameByName": {
+       "Value": "mainStat"
+      }
+     },
+     "filter": {
+      "id": "byRefId",
+      "options": "B"
      }
     }
    ],
