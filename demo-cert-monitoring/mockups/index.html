@@ -65,6 +65,27 @@
     color: var(--accent);
     font-weight: 600;
   }
+  /* "live" card = opens the real, running OneUptime status page (external,
+     new tab) - visually set apart from the static internal mockup cards
+     above so it's obvious this one leaves the mockup sandbox. */
+  a.card.live {
+    border-color: #15803d;
+    background: #f0fdf4;
+  }
+  a.card.live .icon { background: #15803d; }
+  a.card.live .tag { color: #15803d; }
+  .badge-live {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #15803d;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+  }
   footer {
     max-width: 920px;
     margin: 40px auto 0;
@@ -81,7 +102,8 @@
       Statische, in sich geschlossene HTML-Vorschauen dessen, was Abonnentinnen und Abonnenten
       der Statusseite in verschiedenen Kanälen sehen würden. Keine echten Integrationen -
       es wird nichts verschickt, kein SMTP/Teams-Webhook/SMS-Gateway angebunden. Jede Karte
-      öffnet die jeweilige Ansicht.
+      öffnet die jeweilige Ansicht. Die grün markierte Karte ist keine Vorschau, sondern
+      verlinkt auf die echte, laufende OneUptime-Statusseite dieser Demo.
     </p>
   </header>
   <div class="grid">
@@ -134,10 +156,52 @@
          hat.</p>
       <span class="tag">Öffnen →</span>
     </a>
+    <a class="card live" id="oneuptime-live-card" href="http://localhost/" target="_blank" rel="noopener">
+      <div class="icon">O</div>
+      <h2>M365-Statusseite (Original)<span class="badge-live">LIVE</span></h2>
+      <p>Keine Vorschau - öffnet die echte, laufende OneUptime-Instanz dieser Demo in einem
+         neuen Tab (<code>seed_oneuptime.py</code> / <code>oneuptime-selfhosted/</code>).
+         Nur erreichbar, wenn OneUptime tatsächlich läuft.</p>
+      <span class="tag">Öffnen (neuer Tab) ↗</span>
+    </a>
   </div>
   <footer>
     Teil der Demo unter <code>demo-cert-monitoring/</code> - siehe README.md, Abschnitt
     „Benachrichtigungs-Mockups".
   </footer>
+  <script>
+    // URL der echten OneUptime-Statusseite. Default passt zu
+    // oneuptime-selfhosted/setup.sh's eigenem Default (HOST=localhost,
+    // ONEUPTIME_HTTP_PORT=80) - bei abweichender Konfiguration (anderer
+    // Host/Port, oder direkt der Public-Status-Page-Pfad statt der
+    // OneUptime-Startseite) entweder hier die Konstante anpassen, oder
+    // beim Aufruf dieser Seite ?oneuptime=<url> anhängen (z.B. für eine
+    // Live-Vorführung, ohne die Datei zu editieren).
+    //
+    // ?oneuptime= wird NICHT ungeprüft übernommen (CodeQL js/client-side-
+    // unvalidated-url-redirection + js/xss - ein "javascript:"-URI oder
+    // eine beliebige fremde Domain im Query-Param wäre sonst ein
+    // Open-Redirect/XSS-Vektor über einen präparierten Link zu dieser
+    // Demo-Seite): geparst über die URL-API und nur http(s) akzeptiert,
+    // alles andere (ungültige URL, anderes Schema) fällt auf den Default
+    // zurück statt in href zu landen.
+    (function () {
+      const DEFAULT_ONEUPTIME_URL = "http://localhost/";
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get("oneuptime");
+      let url = DEFAULT_ONEUPTIME_URL;
+      if (raw) {
+        try {
+          const parsed = new URL(raw, window.location.href);
+          if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+            url = parsed.href;
+          }
+        } catch (e) {
+          // Ungültige URL - beim Default bleiben.
+        }
+      }
+      document.getElementById("oneuptime-live-card").href = url;
+    })();
+  </script>
 </body>
 </html>
