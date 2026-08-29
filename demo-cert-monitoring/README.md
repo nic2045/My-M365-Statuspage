@@ -216,6 +216,18 @@ getrennt statt eine Seite mit allem):
      erneut auslösen (No-op, kein Fehler) → beheben → alle vier
      Sicherheitsereignisse korrekt in `timelineIncidents`, nur DocuWare
      bleibt aktiv.
+   - **Postmortem-Beispiel mit Zeitachse und Root-Cause-Analyse (#135):**
+     "Jira-Ticketsuche zeitweise nicht verfügbar" (Anmeldung &
+     Ticket-Suche, vor 35 Tagen, `Resolved`) - anders als die drei
+     Sicherheitsereignisse oben (nur `declaredAt` zurückdatiert) hat
+     dieser Incident eine echte Zeitachse aus vier zeitversetzten
+     `IncidentPublicNote`-Einträgen (erkannt → untersucht → Ursache
+     gefunden → behoben, je mit eigenem `postedAt`) plus eine
+     strukturierte Analyse im nativen `Incident.rootCause`-Feld
+     (Auslöser/Auswirkung/Behebung/Follow-up-Maßnahmen) - beide Felder
+     im tatsächlichen OneUptime-Quellcode bestätigt
+     (`Common/Models/DatabaseModels/{Incident,IncidentPublicNote}.ts`),
+     nicht in die Beschreibung hineingetextet.
 
    Alle Dienste sind feste `Manual`-Monitore ohne Sensor, starten
    automatisch grün und werden nur gezielt (z.B. via Wartung/Incident) auf
@@ -250,7 +262,14 @@ getrennt statt eine Seite mit allem):
 (Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen
 immer 6-10 Tage in der Vergangenheit, die Druckerwartung immer am
 kommenden Freitag, das Firewall-Fenster immer Mi–Fr der nächsten Woche),
-damit die Demo auch Wochen später noch aktuell aussieht.
+damit die Demo auch Wochen später noch aktuell aussieht. **Ausnahme,
+bewusst (#135):** ist das Firewall-Fenster einer bereits bestehenden
+Ankündigung schon vorbei, wird es bei einem erneuten `./seed-oneuptime.sh`
+**nicht** erneut in die nächste Woche verschoben - die Ankündigung bleibt
+als vergangener Eintrag stehen (verschwindet dadurch automatisch von der
+aktiven Statusseite, siehe die `iso()`-Zeitzonen-Anmerkung oben zur
+Overview-API-Filterung) statt bei jedem Lauf unbegrenzt in die Zukunft zu
+wandern.
 
 Auch die Incident-Meldung selbst ist deutsch: kippt ein Monitor, legt
 OneUptime automatisch einen Incident **"&lt;Name&gt; ist offline"** an, mit dem
@@ -1039,6 +1058,35 @@ die geseedete Struktur mit zu zerstören; `./seed-oneuptime.sh` konvergiert
 die Struktur ohnehin bei jedem Lauf neu, danach erneut ausführen für einen
 konsistenten Zustand. Enthält `docker volume rm` (löscht Daten) - bewusst
 nicht automatisch mitgetestet, bitte gezielt selbst ausführen.
+
+## Demo täglich frisch halten (#135)
+
+`./refresh-demo.sh` - gedacht für einen täglichen Cron-Job, aber jederzeit
+auch manuell ausführbar (jeder Schritt ist idempotent/best-effort):
+
+1. **Heilt Liegengebliebenes:** ruft alle `fix-*.sh` best-effort auf, falls
+   von einer früheren Vorführung noch ein `break-*.sh` offen war - jeder
+   Fehler ("nichts zu beheben") wird verschluckt statt das Skript
+   abzubrechen. Läuft der Kern-Stack gerade nicht, wird der komplette
+   Lauf übersprungen (nichts ist einer Zielgruppe gegenüber sichtbar
+   kaputt, wenn die Demo gar nicht deployed ist).
+2. **Rotiert einen frischen, bereits aufgelösten Vorfall ein**
+   (`scripts/refresh_demo.py`) aus einem Themen-Pool (Jira-Benachrichtigungen,
+   Kalenderfreigaben, VPN-Neuverbindung, Blueant, WLAN, Jira-Anhänge) -
+   damit eine Demo auch Wochen später noch einen kürzlich behobenen
+   Vorfall zum Zeigen hat statt immer dieselben drei
+   Wochen alten Sicherheitsereignisse. Hält maximal zwei rotierende
+   Einträge gleichzeitig aktiv und löscht den ältesten, bevor ein neuer
+   dazukommt - welche Incidents zur Rotation gehören, steht in
+   `.refresh-demo-state.json` (gitignored), nicht in einem Text-Marker im
+   Vorfall selbst, damit die rotierten Einträge genauso aussehen wie jeder
+   andere echte Vorfall auf der Statusseite.
+
+Als Cron-Job:
+
+```cron
+0 6 * * * cd /pfad/zu/demo-cert-monitoring && ./refresh-demo.sh >> /tmp/refresh-demo.log 2>&1
+```
 
 ## Aufräumen
 
