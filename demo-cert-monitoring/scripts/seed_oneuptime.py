@@ -1287,6 +1287,49 @@ def ensure_scheduled_maintenance(title, description, starts_at, ends_at, state_i
                                  status_page_ids):
     found = find_by_name("scheduled-maintenance", title, select={"_id": True, "title": True},
                      legacy=[], name_field="title")
+    # A PUT trying to move a ScheduledMaintenance "backwards" is rejected
+    # outright (HTTP 400 "X is before Y in the order of..."), which
+    # "Patchday Server Gruppe 3" hits on every re-run since it's
+    # deliberately reframed to "happening right now" each time (dates
+    # recomputed relative to "now" on every run).
+    #
+    # Two things confirmed live by reading
+    # ScheduledMaintenanceStateTimelineService.onBeforeCreate directly
+    # (guessed fixes based on currentScheduledMaintenanceState.isEndedState
+    # and on the row's stored endsAt both failed against the real bug):
+    # the validation does NOT look at the item's current-state column at
+    # all - it looks up the *state-timeline entry with the closest
+    # startsAt before the new one* and compares state `order`. A
+    # background worker had already inserted an "Ended" timeline entry
+    # once a PAST run's endsAt (now+6h, computed hours/days ago) elapsed
+    # - the item's own currentScheduledMaintenanceStateId column was
+    # never updated to match (still read "Ongoing"), so that column is a
+    # red herring here. Since this run's new startsAt (now-2h, using
+    # *this* run's now) sorts after that stale "Ended" entry, the
+    # timeline lookup finds it as "the state before this one" and rejects
+    # Ongoing (order 2) as not-forward-enough from Ended (order 3).
+    #
+    # Fix: check the actual timeline (sorted by startsAt) for whatever
+    # entry would be found as "before" this run's new startsAt, and only
+    # delete-and-recreate if ITS order would reject our target order -
+    # matching the real validation instead of guessing at a proxy signal.
+    if found:
+        target_state = call(f"/api/scheduled-maintenance-state/{state_id}/get-item", {
+            "select": {"order": True}})
+        target_order = (target_state or {}).get("order")
+        timeline_before = get_list(
+            "scheduled-maintenance-state-timeline",
+            query={"scheduledMaintenanceId": found["_id"],
+                  "startsAt": typed("LessThan", iso(starts_at))},
+            select={"scheduledMaintenanceState": {"order": True}})
+        # No "order by" support confirmed for this helper - sort client-side
+        # by order (higher order == later in time for a healthy timeline)
+        # and take the highest, matching "closest state before this one".
+        prior_orders = [t["scheduledMaintenanceState"]["order"] for t in timeline_before
+                        if t.get("scheduledMaintenanceState", {}).get("order")]
+        if prior_orders and target_order and target_order <= max(prior_orders):
+            call(f"/api/scheduled-maintenance/{found['_id']}", None, method="DELETE")
+            found = None
     payload = {
         "title": title, "description": description,
         "startsAt": iso(starts_at), "endsAt": iso(ends_at),
