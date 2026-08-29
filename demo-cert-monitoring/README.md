@@ -1079,6 +1079,17 @@ Kacheln zu allen drei Kanälen. Einzeln direkt aufrufbar:
   "Beheben" macht es rückgängig. Rein statisches Mockup (kein echter
   CheckMK-Container, keine Agenten/Checks) - Zweck ist der visuelle
   Werkzeug-Vergleich, nicht eine funktionierende zweite Monitoring-Instanz.
+- `mockups/oneuptime-network-map.html` - **Konzept: Live-Netzwerkkarte via
+  LLDP/CDP, in OneUptime-Optik**: dieselbe Standort-Leipzig-Topologie wie
+  im Grafana-Node-Graph-Panel, hier aber mit Port-zu-Port-
+  Nachbarschaftsdetails (lokaler Port, Nachbargerät, Port am Nachbarn,
+  LLDP/CDP), wie eine klassische Netzwerk-Auto-Discovery sie liefern
+  würde - ein Feature, das OneUptime **nicht** hat (Abhängigkeitsgraphen
+  kommen dort ausschließlich aus echten OpenTelemetry-Traces, siehe
+  Service-Catalog-Abschnitt oben). Gerät anklicken zeigt seine
+  Nachbarschaftstabelle. Statische Daten (keine echte SNMP-/LLDP-MIB-
+  Abfrage möglich, da die Switches synthetisch sind) - Zweck ist der
+  visuelle Konzeptvergleich, nicht eine funktionierende Discovery.
 
 ## Demo-Kontrollzentrum
 

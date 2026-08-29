@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Live-Netzwerkkarte via LLDP/CDP (Mockup)</title>
+<style>
+  :root {
+    --bg: #f8f8fb;
+    --panel: #ffffff;
+    --topbar: #ffffff;
+    --accent: #6366f1;
+    --accent-dot: #22c55e;
+    --border: #e4e4ea;
+    --text: #18181b;
+    --muted: #71717a;
+    --sidebar: #fafafa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .topbar {
+    background: var(--topbar);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar .brand { font-weight: 800; font-size: 17px; display: flex; align-items: center; gap: 6px; }
+  .topbar .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-dot); }
+  .topbar .crumb { font-size: 13px; color: var(--muted); }
+  .layout { display: flex; }
+  .sidebar {
+    width: 200px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    padding: 16px 12px;
+    min-height: calc(100vh - 49px);
+    font-size: 13px;
+  }
+  .sidebar .group { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 8px 6px; }
+  .sidebar .item { padding: 7px 8px; border-radius: 6px; color: var(--text); }
+  .sidebar .item.active { background: #eef0ff; color: var(--accent); font-weight: 600; }
+  .sidebar .item.new { display: flex; align-items: center; justify-content: space-between; }
+  .sidebar .item.new .tag { font-size: 9.5px; background: var(--accent); color: #fff; padding: 1px 6px; border-radius: 999px; font-weight: 700; }
+
+  .main { flex: 1; padding: 24px 28px; max-width: 1180px; }
+  .intro {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 900px;
+    margin-bottom: 18px;
+  }
+  .intro strong { color: var(--text); }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  .sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+
+  .map-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .map-panel .panel-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .map-panel .panel-hint { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+  .tree { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .tier { display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; position: relative; }
+  .tier + .tier { margin-top: 34px; }
+  .node {
+    background: var(--panel);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    text-align: center;
+    cursor: pointer;
+    min-width: 132px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .node:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(99,102,241,0.15); }
+  .node .name { font-weight: 700; }
+  .node .role { color: var(--muted); font-size: 10.5px; margin-top: 2px; }
+  .node .proto { display: inline-block; margin-top: 5px; font-size: 9.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; }
+  .node .proto.lldp { background: #eef0ff; color: var(--accent); }
+  .node .proto.cdp { background: #fef3c7; color: #92400e; }
+  .connector { color: var(--border); font-size: 20px; text-align: center; }
+
+  .detail {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+  }
+  .detail h2 { font-size: 14px; margin: 0 0 2px; }
+  .detail .detail-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .detail .empty { font-size: 13px; color: var(--muted); font-style: italic; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  thead th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+  .proto-pill { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .proto-pill.lldp { background: #eef0ff; color: var(--accent); }
+  .proto-pill.cdp { background: #fef3c7; color: #92400e; }
+
+  .limits {
+    margin-top: 20px;
+    background: #fafafa;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .limits strong { color: var(--text); }
+  a.back { color: var(--muted); text-decoration: none; font-size: 13px; }
+  a.back:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span>OneUptime</div>
+    <div class="crumb">Standort Leipzig &rsaquo; Netzwerk-Topologie (Auto-Discovery)</div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="item">Overview</div>
+      <div class="item">Incidents</div>
+      <div class="item">Monitors</div>
+      <div class="group">Topology</div>
+      <div class="item new active">Netzwerkkarte <span class="tag">Konzept</span></div>
+      <div class="item">Service Catalog</div>
+      <div class="group">Team</div>
+      <div class="item">On-Call Duty</div>
+      <div class="item">Roles</div>
+      <div class="group">Settings</div>
+      <div class="item">Integrations</div>
+    </div>
+
+    <div class="main">
+      <h1>Netzwerkkarte: Standort Leipzig</h1>
+      <div class="sub">Automatisch erkannt über LLDP/CDP-Nachbarschaftsdaten &middot; zuletzt aktualisiert vor 2 Minuten</div>
+
+      <div class="intro">
+        <strong>Konzept-Mockup, keine echte OneUptime-Funktion.</strong>
+        OneUptime hat aktuell keine LLDP/CDP-basierte Auto-Discovery - Abhängigkeitsgrafen
+        werden dort ausschließlich aus echten OpenTelemetry-Traces abgeleitet (siehe
+        Service Catalog im README). Diese Seite zeigt, wie eine „Live map of your network
+        built from LLDP and CDP neighbor data" (ein Feature-Muster aus klassischen
+        Netzwerk-Discovery-Tools) in der OneUptime-Optik aussehen könnte - mit denselben
+        Standort-Leipzig-Geräten wie im Grafana-Dashboard, hier aber inklusive
+        Port-zu-Port-Nachbarschaftsdetails, die reines Metrik-Monitoring nicht liefert.
+      </div>
+
+      <div class="map-panel">
+        <div class="panel-title">Topologie</div>
+        <div class="panel-hint">Gerät anklicken für die per LLDP/CDP entdeckten Nachbarschaftsdetails.</div>
+
+        <div class="tree">
+          <div class="tier">
+            <div class="node" onclick="showDetail('router')">
+              <div class="name">Internet-Router</div>
+              <div class="role">Keller</div>
+              <div class="proto lldp">LLDP</div>
+            </div>
+          </div>
+          <div class="connector">│</div>
+          <div class="tier">
+            <div class="node" onclick="showDetail('core')">
+              <div class="name">Core-Switch (Keller)</div>
+              <div class="role">Core</div>
+              <div class="proto lldp">LLDP + CDP</div>
+            </div>
+          </div>
+          <div class="connector">│</div>
+          <div class="tier" id="access-tier"></div>
+        </div>
+      </div>
+
+      <div class="detail" id="detail-panel">
+        <h2>Nachbarschaftsdetails</h2>
+        <div class="detail-sub">Wähle oben ein Gerät aus.</div>
+        <div class="empty">Noch kein Gerät ausgewählt.</div>
+      </div>
+
+      <div class="limits">
+        <strong>Warum das ein Mockup bleibt:</strong> eine echte LLDP/CDP-Discovery
+        bräuchte SNMP- oder SSH-Zugriff auf jedes Gerät, um dessen MIB (LLDP-MIB /
+        Cisco CDP) auszulesen - für dieses Demo-Setup (synthetischer Prometheus-Exporter,
+        keine echten Switches) nicht sinnvoll nachzubilden. Die Port-/Nachbarschaftsdaten
+        unten sind deshalb statisch, nicht live wie der Rest der Demo.
+      </div>
+
+      <p><a class="back" href="index.html">&larr; Zurück zur Mockup-Übersicht</a></p>
+    </div>
+  </div>
+
+<script>
+var AREAS = { "Verwaltung": 3, "Vertrieb": 3, "Technik": 2, "Besprechung": 2 };
+var ACCESS = [];
+var corePort = 1; // Gi0/1 is already the router uplink - access switches start at Gi0/2
+Object.keys(AREAS).forEach(function (area) {
+  for (var i = 1; i <= AREAS[area]; i++) {
+    corePort++;
+    ACCESS.push({
+      id: "access-" + area + "-" + i,
+      name: "Access-Switch " + area + "-" + i,
+      area: area,
+      corePort: "Gi0/" + corePort,
+      switchPort: "Gi0/24",
+      proto: (corePort % 3 === 0) ? "cdp" : "lldp",
+    });
+  }
+});
+
+var NEIGHBORS = {
+  router: [
+    { local: "Gi0/0", remoteDevice: "Core-Switch (Keller)", remotePort: "Gi0/1", proto: "lldp", note: "Uplink zum internen Netz" },
+  ],
+  core: [
+    { local: "Gi0/1", remoteDevice: "Internet-Router", remotePort: "Gi0/0", proto: "lldp", note: "Uplink zum Internet" },
+  ],
+};
+ACCESS.forEach(function (sw) {
+  NEIGHBORS.core.push({ local: sw.corePort, remoteDevice: sw.name, remotePort: sw.switchPort, proto: sw.proto, note: sw.area });
+  NEIGHBORS[sw.id] = [
+    { local: sw.switchPort, remoteDevice: "Core-Switch (Keller)", remotePort: sw.corePort, proto: sw.proto, note: "Uplink zum Core" },
+  ];
+});
+
+var LABELS = {
+  router: { name: "Internet-Router", sub: "Keller" },
+  core: { name: "Core-Switch (Keller)", sub: "Core" },
+};
+ACCESS.forEach(function (sw) { LABELS[sw.id] = { name: sw.name, sub: sw.area }; });
+
+var tier = document.getElementById("access-tier");
+ACCESS.forEach(function (sw) {
+  var div = document.createElement("div");
+  div.className = "node";
+  div.onclick = function () { showDetail(sw.id); };
+  div.innerHTML = '<div class="name">' + sw.name + '</div>' +
+    '<div class="role">' + sw.area + '</div>' +
+    '<div class="proto ' + sw.proto + '">' + (sw.proto === "cdp" ? "CDP" : "LLDP") + '</div>';
+  tier.appendChild(div);
+});
+
+function showDetail(key) {
+  var neighbors = NEIGHBORS[key] || [];
+  var label = LABELS[key];
+  var panel = document.getElementById("detail-panel");
+  var rows = neighbors.map(function (n) {
+    return "<tr><td>" + n.local + "</td><td>" + n.remoteDevice + "</td><td>" + n.remotePort + "</td>" +
+      '<td><span class="proto-pill ' + n.proto + '">' + (n.proto === "cdp" ? "CDP" : "LLDP") + "</span></td>" +
+      "<td>" + n.note + "</td></tr>";
+  }).join("");
+  panel.innerHTML =
+    "<h2>Nachbarschaftsdetails: " + label.name + "</h2>" +
+    '<div class="detail-sub">' + neighbors.length + " über LLDP/CDP entdeckte Nachbarschaft(en)</div>" +
+    "<table><thead><tr><th>Lokaler Port</th><th>Nachbargerät</th><th>Port am Nachbarn</th><th>Protokoll</th><th>Hinweis</th></tr></thead>" +
+    "<tbody>" + rows + "</tbody></table>";
+}
+</script>
+</body>
+</html>
