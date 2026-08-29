@@ -1,0 +1,222 @@
+{
+ "title": "Standort Leipzig – Netzwerk-Topologie (Facility-IT)",
+ "uid": "leipzig-network-topology",
+ "timezone": "browser",
+ "editable": true,
+ "refresh": "30s",
+ "time": { "from": "now-6h", "to": "now" },
+ "schemaVersion": 39,
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "Geräte insgesamt",
+   "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "count(net_device_up)", "instant": true, "refId": "A" }
+   ],
+   "options": {
+    "reduceOptions": { "calcs": ["lastNotNull"] },
+    "textMode": "value_and_name"
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Geräte offline",
+   "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "sum(net_device_up < bool 1)", "instant": true, "refId": "A" }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "green", "value": null },
+       { "color": "red", "value": 1 }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": { "calcs": ["lastNotNull"] },
+    "textMode": "value_and_name"
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Ø CPU-Auslastung",
+   "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "avg(net_device_cpu_percent)", "instant": true, "refId": "A" }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "green", "value": null },
+       { "color": "yellow", "value": 70 },
+       { "color": "red", "value": 90 }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": { "calcs": ["lastNotNull"] },
+    "textMode": "value_and_name"
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Max. Temperatur",
+   "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "max(net_device_temperature_celsius)", "instant": true, "refId": "A" }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "celsius",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "green", "value": null },
+       { "color": "yellow", "value": 50 },
+       { "color": "red", "value": 60 }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": { "calcs": ["lastNotNull"] },
+    "textMode": "value_and_name"
+   }
+  },
+  {
+   "id": 5,
+   "type": "nodeGraph",
+   "title": "Netzwerk-Topologie: Internet-Router → Core (Keller) → Access-Switches",
+   "description": "Ein Internet-Router, ein Core-Switch im Keller, 10 Access-Switches über 4 Bereiche auf einer Etage.",
+   "gridPos": { "h": 14, "w": 24, "x": 0, "y": 6 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    {
+     "expr": "net_device_up",
+     "instant": true,
+     "format": "table",
+     "refId": "A"
+    },
+    {
+     "expr": "label_replace(label_replace(net_uplink_up, \"source\", \"Core-Switch (Keller)\", \"\", \"\"), \"target\", \"$1\", \"device\", \"(.*)\") or label_replace(label_replace(net_device_up{device=\"Core-Switch (Keller)\"}, \"source\", \"Internet-Router\", \"\", \"\"), \"target\", \"Core-Switch (Keller)\", \"\", \"\")",
+     "instant": true,
+     "format": "table",
+     "refId": "B"
+    }
+   ],
+   "transformations": [
+    { "id": "labelsToFields", "options": {} },
+    { "id": "merge", "options": {}, "filter": { "id": "byFrameRefID", "options": "A" } },
+    { "id": "merge", "options": {}, "filter": { "id": "byFrameRefID", "options": "B" } },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true, "role": true },
+      "renameByName": { "device": "id", "area": "subTitle", "Value": "mainStat" }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "color": { "mode": "thresholds" },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "red", "value": null },
+       { "color": "green", "value": 1 }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "nodes": { "mainStatUnit": "none" },
+    "edges": { "mainStatUnit": "none" }
+   }
+  },
+  {
+   "id": 6,
+   "type": "table",
+   "title": "Geräte im Detail",
+   "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "net_device_up", "instant": true, "format": "table", "refId": "A" },
+    { "expr": "net_device_cpu_percent", "instant": true, "format": "table", "refId": "B" },
+    { "expr": "net_device_temperature_celsius", "instant": true, "format": "table", "refId": "C" }
+   ],
+   "transformations": [
+    { "id": "labelsToFields", "options": {} },
+    { "id": "merge", "options": {}, "filter": { "id": "byFrameRefID", "options": "A" } },
+    { "id": "merge", "options": {}, "filter": { "id": "byFrameRefID", "options": "B" } },
+    { "id": "merge", "options": {}, "filter": { "id": "byFrameRefID", "options": "C" } },
+    { "id": "joinByField", "options": { "byField": "device", "mode": "outer" } },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true, "Time 2": true, "Time 3": true,
+       "__name__": true, "__name__ 2": true, "__name__ 3": true,
+       "instance": true, "instance 2": true, "instance 3": true,
+       "job": true, "job 2": true, "job 3": true
+      },
+      "renameByName": {
+       "device": "Gerät", "role": "Rolle", "area": "Bereich",
+       "net_device_up": "Online", "net_device_cpu_percent": "CPU %",
+       "net_device_temperature_celsius": "Temperatur °C"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": { "id": "byName", "options": "Online" },
+      "properties": [
+       { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          { "color": "red", "value": null },
+          { "color": "green", "value": 1 }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "matcher": { "id": "byName", "options": "CPU %" },
+      "properties": [{ "id": "unit", "value": "percent" }]
+     },
+     {
+      "matcher": { "id": "byName", "options": "Temperatur °C" },
+      "properties": [{ "id": "unit", "value": "celsius" }]
+     }
+    ]
+   }
+  }
+ ]
+}

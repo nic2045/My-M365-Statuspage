@@ -116,6 +116,22 @@ services:
     ports:
       - "${CUSTOMER_CARE_METRICS_PORT:-9300}:9300"
 
+  leipzig-network-metrics-exporter:
+    # Synthetic Prometheus exporter for the Standort Leipzig LAN itself
+    # (distinct from the Customer-Care S2S-VPN links above): one core
+    # switch in the basement, one internet router, 10 access switches
+    # across 4 areas on one floor - see scripts/leipzig-network-exporter.py.
+    image: python:3.12-alpine
+    container_name: cert-demo-leipzig-network-metrics
+    restart: unless-stopped
+    environment:
+      METRICS_PORT: "9400"
+    volumes:
+      - ./scripts/leipzig-network-exporter.py:/leipzig-network-exporter.py:ro
+    entrypoint: ["python3", "/leipzig-network-exporter.py"]
+    ports:
+      - "${LEIPZIG_NETWORK_METRICS_PORT:-9400}:9400"
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: cert-demo-prometheus
@@ -132,6 +148,8 @@ services:
       docuware-metrics-exporter:
         condition: service_started
       customer-care-metrics-exporter:
+        condition: service_started
+      leipzig-network-metrics-exporter:
         condition: service_started
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro

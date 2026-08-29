@@ -332,6 +332,30 @@ Für Cloud-Trial (https://oneuptime.com) oder eigene Einrichtung:
    Ping aus, markiert OneUptime den Monitor nach seiner eigenen
    Kulanzzeit als "down" - dort konfigurierbar.
 
+## Standort Leipzig – Netzwerk-Topologie (Grafana, Facility-IT)
+
+`grafana/dashboards/leipzig-network-topology.json` +
+`scripts/leipzig-network-exporter.py` - eigenes LAN am Standort Leipzig
+(nicht zu verwechseln mit den Customer-Care-S2S-VPN-Strecken **ins**
+Rechenzentrum Leipzig, siehe oben): ein Internet-Router, ein Core-Switch
+im Keller, 10 Access-Switches über 4 Bereiche auf einer Etage
+(Verwaltung ×3, Vertrieb ×3, Technik ×2, Besprechung ×2).
+
+- **Übersicht**: Geräte insgesamt, Geräte offline, Ø CPU-Auslastung,
+  max. Temperatur
+- **Netzwerk-Topologie** (Node-Graph, gleiches Muster wie die
+  Customer-Care-Topologie oben, von Anfang an mit der korrekten
+  `labelsToFields`+gescopetem-`merge`-Transformation gebaut - siehe
+  Bug-Hinweis im Customer-Care-Abschnitt): Router → Core → je Access-
+  Switch, Kantenfarbe nach Uplink-Status (rot = offline)
+- **Geräte im Detail** (Tabelle): Online-Status, CPU, Temperatur je Gerät
+
+`./break-leipzig-network.sh` lässt einen Access-Switch
+(Access-Switch Vertrieb-2) offline gehen - Uplink bricht weg, Node-Graph
+zeigt ihn rot, "Geräte offline" springt auf 1. `./fix-leipzig-network.sh`
+macht es rückgängig. Live durchgetestet (`net_device_up`/`net_uplink_up`
+vor/nach dem Break bestätigt).
+
 ## Website & Zertifikats-Dashboard (Grafana, App-Owner)
 
 `grafana/dashboards/website-cert-monitoring.json` - technisches

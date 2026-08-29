@@ -101,3 +101,11 @@ scrape_configs:
       - targets: ["customer-care-metrics-exporter:9300"]
         labels:
           instance: "customer-care-cluster"
+
+  # Standort-Leipzig-LAN: Core-Switch (Keller), Internet-Router, 10
+  # Access-Switches auf einer Etage - siehe scripts/leipzig-network-exporter.py.
+  - job_name: "leipzig_network"
+    static_configs:
+      - targets: ["leipzig-network-metrics-exporter:9400"]
+        labels:
+          instance: "leipzig-lan"
