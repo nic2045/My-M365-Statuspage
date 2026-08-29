@@ -37,7 +37,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    },
    "fieldConfig": {
     "defaults": {
@@ -85,7 +85,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    },
    "fieldConfig": {
     "defaults": {
@@ -133,7 +133,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    }
   },
   {
@@ -163,7 +163,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    },
    "fieldConfig": {
     "defaults": {
@@ -498,7 +498,62 @@
      "format": "table",
      "refId": "A"
     }
-   ]
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "instance": true
+      },
+      "renameByName": {
+       "node": "Knoten"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byFrameRefID",
+       "options": "A"
+      },
+      "properties": [
+       {
+        "id": "displayName",
+        "value": "Online"
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background"
+        }
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "red",
+           "value": null
+          },
+          {
+           "color": "green",
+           "value": 1
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   }
   },
   {
    "id": 13,
@@ -667,7 +722,62 @@
      "format": "table",
      "refId": "A"
     }
-   ]
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "instance": true
+      },
+      "renameByName": {
+       "component": "Komponente"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byFrameRefID",
+       "options": "A"
+      },
+      "properties": [
+       {
+        "id": "displayName",
+        "value": "Status"
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background"
+        }
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "red",
+           "value": null
+          },
+          {
+           "color": "green",
+           "value": 1
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   }
   }
  ]
 }

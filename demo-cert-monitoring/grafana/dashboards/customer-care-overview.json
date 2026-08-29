@@ -37,7 +37,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    },
    "fieldConfig": {
     "defaults": {
@@ -85,7 +85,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    },
    "fieldConfig": {
     "defaults": {
@@ -133,7 +133,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    },
    "fieldConfig": {
     "defaults": {
@@ -185,7 +185,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    },
    "fieldConfig": {
     "defaults": {
@@ -660,7 +660,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    },
    "fieldConfig": {
     "defaults": {
@@ -713,7 +713,7 @@
       "lastNotNull"
      ]
     },
-    "textMode": "value_and_name"
+    "textMode": "value"
    }
   },
   {
