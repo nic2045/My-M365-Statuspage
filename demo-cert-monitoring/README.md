@@ -273,12 +273,16 @@ Avaya-Callcenter-Dashboard (das Szenario lässt live auch dessen
 Warteschlange volllaufen, war aber nirgends verlinkt), und Security-Karte
 einen direkten Statusseiten-Link statt nur des generischen
 OneUptime-Logins. Jede Karte gruppiert ihre Links jetzt zusätzlich unter
-"Admin"/"Nutzer"-Labels statt einer undifferenzierten Liste. **Farblich
-unterscheidbar:** jede Karte hat eine eigene Akzentfarbe (farbiger oberer
-Rand + leicht eingefärbter Hintergrund, nicht nur das kleine Icon wie
-vorher) - sieben klar unterscheidbare Farbtöne, damit man während einer
-Vorführung nicht erst den Kartentitel lesen muss, um die richtige Karte
-zu finden.
+"Admin"/"Nutzer"-Labels, **je Rolle in einer eigenen Zeile** (nicht nur
+optisch getrennt durch Zeilenumbruch) statt einer undifferenzierten
+Liste. **Farblich unterscheidbar:** jede Karte hat eine eigene
+Akzentfarbe (farbiger oberer Rand + leicht eingefärbter Hintergrund,
+nicht nur das kleine Icon wie vorher) - sieben klar unterscheidbare
+Farbtöne, damit man während einer Vorführung nicht erst den Kartentitel
+lesen muss, um die richtige Karte zu finden. Zusätzlich eine
+**Farb-Legende** direkt über dem Kartenraster (Punkt + Name je Szenario,
+anklickbar - springt zur jeweiligen Karte), als schnelle Übersicht statt
+das ganze Raster nach einer Farbe absuchen zu müssen.
 
 **Alle Termine werden bei jedem Lauf neu relativ zu "heute" berechnet**
 (Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen

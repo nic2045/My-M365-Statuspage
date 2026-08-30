@@ -142,6 +142,34 @@
   .hub-group { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--muted);
     text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 -2px; }
   .hub-group:first-child { margin-top: 0; }
+
+  /* Farb-Legende über den Szenario-Karten: derselbe Farbton wie der
+     Kartenrand, als klickbarer Sprung zur Karte - falls man während der
+     Vorführung schneller den Namen als die Position im Raster im Kopf
+     hat. */
+  .legend {
+    max-width: 1080px;
+    margin: 0 auto 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .legend a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 12px 5px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .legend a:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
+  .legend .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   a.hub-card {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -244,9 +272,18 @@
   </div>
 
   <div class="section-title">Vorfall- &amp; Prozess-Szenarien</div>
+  <div class="legend">
+    <a href="#card-demo"><span class="dot" style="background:#0f6cbd;"></span>Zertifikat</a>
+    <a href="#card-docuware"><span class="dot" style="background:#0e7a4d;"></span>DocuWare-Cluster</a>
+    <a href="#card-docuware-disk"><span class="dot" style="background:#b8860b;"></span>DocuWare-Festplatte</a>
+    <a href="#card-customer-care"><span class="dot" style="background:#c25a00;"></span>Customer Care</a>
+    <a href="#card-security"><span class="dot" style="background:#6b2fb3;"></span>Sicherheit</a>
+    <a href="#card-printer"><span class="dot" style="background:#0e7490;"></span>Druckerwartung</a>
+    <a href="#card-leipzig-network"><span class="dot" style="background:#b0266f;"></span>Leipzig-Netzwerk</a>
+  </div>
   <div class="grid">
 
-    <div class="card" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
+    <div class="card" id="card-demo" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f6cbd"/>
           <path d="M24 10 L36 14 V24 C36 32 30 39 24 42 C18 39 12 32 12 24 V14 Z" fill="none" stroke="#fff" stroke-width="2.5"/>
@@ -280,7 +317,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#0e7a4d; --accent-bg:#f1f9f4;">
+    <div class="card" id="card-docuware" style="--accent:#0e7a4d; --accent-bg:#f1f9f4;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0e7a4d"/>
           <rect x="13" y="12" width="16" height="20" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -312,7 +349,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#b8860b; --accent-bg:#fbf7ec;">
+    <div class="card" id="card-docuware-disk" style="--accent:#b8860b; --accent-bg:#fbf7ec;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b8860b"/>
           <ellipse cx="24" cy="14" rx="11" ry="4" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -352,7 +389,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#c25a00; --accent-bg:#fdf5ee;">
+    <div class="card" id="card-customer-care" style="--accent:#c25a00; --accent-bg:#fdf5ee;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c25a00"/>
           <path d="M24 10 C18 10 13 15 13 21 C13 30 24 38 24 38 C24 38 35 30 35 21 C35 15 30 10 24 10 Z" fill="#fff"/>
@@ -383,7 +420,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#6b2fb3; --accent-bg:#f7f2fc;">
+    <div class="card" id="card-security" style="--accent:#6b2fb3; --accent-bg:#f7f2fc;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#6b2fb3"/>
           <path d="M24 9 L38 15 V23 C38 32 32 39 24 41 C16 39 10 32 10 23 V15 Z" fill="none" stroke="#fff" stroke-width="2.3"/>
@@ -419,7 +456,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#0e7490; --accent-bg:#eff8fa;">
+    <div class="card" id="card-printer" style="--accent:#0e7490; --accent-bg:#eff8fa;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0e7490"/>
           <rect x="12" y="10" width="24" height="10" rx="1.5" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -457,7 +494,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#b0266f; --accent-bg:#fbf0f6;">
+    <div class="card" id="card-leipzig-network" style="--accent:#b0266f; --accent-bg:#fbf0f6;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b0266f"/>
           <circle cx="24" cy="12" r="4" fill="none" stroke="#fff" stroke-width="2.2"/>
