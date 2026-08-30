@@ -1662,6 +1662,7 @@ with open(".oneuptime-demo-summary", "w") as fh:
     json.dump({"base": BASE, "email": EMAIL, "projectId": project_id,
                "statusPageId": page_id, "itServiceStatusPageId": it_service_page_id,
                "leipzigStatusPageId": leipzig_page_id,
+               "onCallPolicyId": on_call_policy_id,
                "monitors": heartbeats}, fh, indent=1)
 print(f"STATUS_PAGE_ID={page_id}")
 print(f"IT_SERVICE_STATUS_PAGE_ID={it_service_page_id}")

@@ -37,8 +37,13 @@
     gap: 20px;
   }
   .card {
-    background: var(--card-bg);
+    /* Each scenario card sets --accent/--accent-bg inline (see the markup
+       below) so it's recognizable by color alone during a live demo, not
+       just by its small icon - a full grid of otherwise-identical white
+       cards was too slow to scan through under time pressure. */
+    background: var(--accent-bg, var(--card-bg));
     border: 1px solid var(--border);
+    border-top: 4px solid var(--accent, var(--border));
     border-radius: 12px;
     padding: 22px;
     display: flex;
@@ -68,9 +73,18 @@
 
   .story { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
 
-  .links { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; }
-  .links a { color: #0f6cbd; text-decoration: none; }
+  .links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; }
+  .links a { color: var(--accent, #0f6cbd); text-decoration: none; font-weight: 600; }
   .links a:hover { text-decoration: underline; }
+  .links a.disabled { color: var(--muted); pointer-events: none; text-decoration: none; font-weight: 400; }
+  /* Role labels ("Admin:"/"Nutzer:") group the links that follow them so a
+     scenario with distinct audiences (see the printer card) reads as two
+     short lists instead of one undifferentiated row. */
+  .links .role-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted); background: rgba(0,0,0,0.05); padding: 2px 7px; border-radius: 999px;
+  }
+  .links .role-label:not(:first-child) { margin-left: 4px; }
 
   .actions { display: flex; gap: 10px; margin-top: auto; }
   .actions button {
@@ -226,7 +240,7 @@
   <div class="section-title">Vorfall- &amp; Prozess-Szenarien</div>
   <div class="grid">
 
-    <div class="card">
+    <div class="card" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f6cbd"/>
           <path d="M24 10 L36 14 V24 C36 32 30 39 24 42 C18 39 12 32 12 24 V14 Z" fill="none" stroke="#fff" stroke-width="2.5"/>
@@ -243,8 +257,11 @@
         E-Mail (Grafana, OneUptime, Mailpit). Guter Einstieg.
       </p>
       <div class="links">
+        <span class="role-label">Admin</span>
         <a href="http://localhost:3000" target="_blank">Grafana</a>
         <a href="http://localhost:9090/alerts" target="_blank">Prometheus-Alerts</a>
+        <span class="role-label">Nutzer</span>
+        <a class="disabled" id="link-demo-statuspage" href="#" target="_blank">Statusseite</a>
         <a href="http://localhost:8025" target="_blank">Mailpit</a>
       </div>
       <div class="actions">
@@ -253,7 +270,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="--accent:#0e7a4d; --accent-bg:#f1f9f4;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0e7a4d"/>
           <rect x="13" y="12" width="16" height="20" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -270,9 +287,11 @@
         <strong>Passiert:</strong> MSSQL-Knoten fällt aus, WAF-Blocks &amp;
         Antwortzeiten steigen (App-Owner-Dashboard).<br>
         <strong>Zeigt:</strong> Infrastruktur-Vorfall betrifft nicht
-        zwangsläufig Kunden - Kundenportal bleibt grün.
+        zwangsläufig Kunden - Kundenportal bleibt grün. Bewusst nur
+        Grafana - kein Nutzer sieht hiervon etwas.
       </p>
       <div class="links">
+        <span class="role-label">Admin</span>
         <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
       </div>
       <div class="actions">
@@ -281,9 +300,9 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="--accent:#b8860b; --accent-bg:#fbf7ec;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#9b3d1a"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b8860b"/>
           <ellipse cx="24" cy="14" rx="11" ry="4" fill="none" stroke="#fff" stroke-width="2.2"/>
           <path d="M13 14 L13 34 C13 36.2 18 38 24 38 C30 38 35 36.2 35 34 L35 14" fill="none" stroke="#fff" stroke-width="2.2"/>
           <path d="M13 24 C13 26.2 18 28 24 28 C30 28 35 26.2 35 24" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -298,12 +317,18 @@
         sich auf 90-98% (App-Owner-Dashboard), echter OneUptime-Incident +
         On-Call-Eskalation + Mitarbeiter-Benachrichtigung.<br>
         <strong>Zeigt:</strong> Kapazitätsvorfall bleibt isoliert auf eine
-        Ressource - von Grafana über OneUptime bis zum BMC-Ticket.
+        Ressource - von Grafana über OneUptime bis zum BMC-Ticket, inkl.
+        Vorfallsrollen und echter On-Call-Eskalation.
       </p>
       <div class="links">
+        <span class="role-label">Admin</span>
         <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
         <a href="/mockups/backend-bmc-itsm.html" target="_blank">BMC-Ticket-Mockup</a>
-        <a id="link-docuware-disk-roles" href="#" target="_blank" style="display:none">Vorfallsrollen (OneUptime)</a>
+        <a id="link-docuware-disk-roles" href="#" target="_blank" style="display:none">Vorfallsrollen</a>
+        <a class="disabled" id="link-oncall-escalation-1" href="#" target="_blank">On-Call-Eskalation</a>
+        <a class="disabled" id="link-oncall-logs-1" href="#" target="_blank">On-Call-Protokoll</a>
+        <span class="role-label">Nutzer</span>
+        <a class="disabled" id="link-docuware-disk-statuspage" href="#" target="_blank">Statusseite</a>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-docuware-disk', 'docuware-disk')">Vorfall auslösen</button>
@@ -311,7 +336,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="--accent:#c25a00; --accent-bg:#fdf5ee;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c25a00"/>
           <path d="M24 10 C18 10 13 15 13 21 C13 30 24 38 24 38 C24 38 35 30 35 21 C35 15 30 10 24 10 Z" fill="#fff"/>
@@ -324,12 +349,15 @@
       </div>
       <p class="story">
         <strong>Passiert:</strong> VPN nach Chemnitz bricht ein
-        (Paketverlust, schlechte Sprachqualität).<br>
+        (Paketverlust, schlechte Sprachqualität), Avaya-Warteschlange
+        läuft voll.<br>
         <strong>Zeigt:</strong> Standort-Ausfall live und geografisch
         verortet - Karte + Warteschlange laufen synchron mit.
       </p>
       <div class="links">
+        <span class="role-label">Admin</span>
         <a href="http://localhost:3000/d/customer-care-overview" target="_blank">Grafana-Dashboard</a>
+        <a href="http://localhost:3000/d/avaya-callcenter-operations" target="_blank">Avaya-Dashboard</a>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-customer-care', 'customer-care')">Vorfall auslösen</button>
@@ -337,7 +365,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="--accent:#6b2fb3; --accent-bg:#f7f2fc;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#6b2fb3"/>
           <path d="M24 9 L38 15 V23 C38 32 32 39 24 41 C16 39 10 32 10 23 V15 Z" fill="none" stroke="#fff" stroke-width="2.3"/>
@@ -350,12 +378,17 @@
       </div>
       <p class="story">
         <strong>Passiert:</strong> Verdächtige Anmeldeversuche, Anmeldung
-        (SSO) wird eingeschränkt.<br>
+        (SSO) wird eingeschränkt, On-Call-Eskalation läuft mit.<br>
         <strong>Zeigt:</strong> mitarbeiterverständliche, transparente
         Sicherheitskommunikation statt Fachjargon.
       </p>
       <div class="links">
+        <span class="role-label">Admin</span>
         <a href="http://localhost" target="_blank">OneUptime</a>
+        <a class="disabled" id="link-oncall-escalation-2" href="#" target="_blank">On-Call-Eskalation</a>
+        <a class="disabled" id="link-oncall-logs-2" href="#" target="_blank">On-Call-Protokoll</a>
+        <span class="role-label">Nutzer</span>
+        <a class="disabled" id="link-security-statuspage" href="#" target="_blank">Statusseite</a>
         <a href="http://localhost:8025" target="_blank">Mailpit</a>
       </div>
       <div class="actions">
@@ -364,9 +397,9 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="--accent:#0e7490; --accent-bg:#eff8fa;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#5b5fc7"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0e7490"/>
           <rect x="12" y="10" width="24" height="10" rx="1.5" fill="none" stroke="#fff" stroke-width="2.2"/>
           <rect x="10" y="20" width="28" height="14" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
           <rect x="16" y="30" width="16" height="9" fill="#fff"/>
@@ -379,18 +412,53 @@
       </div>
       <p class="story">
         <strong>Passiert:</strong> Drucker im Hauptgebäude meldet eine
-        Störung, die IT kündigt kurzfristig eine Wartung an.<br>
-        <strong>Zeigt:</strong> Meldung → Terminierung → Mitarbeiter-Info
-        per Statuspage - der Drucker bleibt bis zur Wartung selbst
-        uneingeschränkt nutzbar.
+        Störung → <strong>Admin/Techniker</strong> terminiert kurzfristig
+        eine Wartung in OneUptime → <strong>Nutzer</strong> sehen die
+        Ankündigung auf der Statusseite und per E-Mail.<br>
+        <strong>Zeigt:</strong> die zwei Rollen nebeneinander - der
+        Drucker bleibt bis zur Wartung selbst uneingeschränkt nutzbar.
       </p>
       <div class="links">
-        <a href="http://localhost" target="_blank">OneUptime</a>
-        <a href="/mockups/index.html" target="_blank">Benachrichtigungs-Mockups</a>
+        <span class="role-label">Admin</span>
+        <a class="disabled" id="link-printer-admin" href="#" target="_blank">Wartung planen (OneUptime)</a>
+        <span class="role-label">Nutzer</span>
+        <a class="disabled" id="link-printer-statuspage" href="#" target="_blank">Statusseite</a>
+        <a href="/mockups/benachrichtigung-email.html#drucker" target="_blank">E-Mail-Mockup</a>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-printer', 'printer')">Wartung ankündigen</button>
         <button class="btn-fix" onclick="run('fix-printer', 'printer')">Abschließen</button>
+      </div>
+    </div>
+
+    <div class="card" style="--accent:#b0266f; --accent-bg:#fbf0f6;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b0266f"/>
+          <circle cx="24" cy="12" r="4" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <circle cx="12" cy="34" r="4" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <circle cx="36" cy="34" r="4" fill="#fff"/>
+          <path d="M24 16 L24 24 M24 24 L14 30 M24 24 L34 30" fill="none" stroke="#fff" stroke-width="2.2"/>
+        </svg>
+        <div>
+          <h2>Standort Leipzig – Netzwerk-Vorfall</h2>
+          <span class="status unknown" id="status-leipzig-network"><span class="dot"></span>wird geprüft…</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Passiert:</strong> Access-Switch Vertrieb-2 verliert den
+        Uplink zum Core-Switch.<br>
+        <strong>Zeigt:</strong> Netzwerk-Topologie live im Node-Graph -
+        betroffener Knoten und Kante springen auf Rot, "Geräte offline"
+        auf 1. Bewusst nur Grafana - reine Facility-IT-Beobachtung ohne
+        OneUptime-Incident.
+      </p>
+      <div class="links">
+        <span class="role-label">Admin</span>
+        <a href="http://localhost:3000/d/leipzig-network-topology" target="_blank">Grafana-Dashboard</a>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-leipzig-network', 'leipzig-network')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-leipzig-network', 'leipzig-network')">Beheben</button>
       </div>
     </div>
 
@@ -439,7 +507,7 @@
       try {
         const res = await fetch("/api/status");
         const data = await res.json();
-        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer"]) {
+        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer", "leipzig-network"]) {
           const el = document.getElementById("status-" + key);
           const state = data[key] || "unknown";
           el.className = "status " + state;
@@ -478,6 +546,40 @@
           rolesLink.style.display = "";
         } else {
           rolesLink.style.display = "none";
+        }
+
+        // Same disabled-until-seeded pattern as the hub cards above, for
+        // the per-scenario Admin-/Nutzer-Sublinks - all derived from ids
+        // that are stable across reseeds (status pages, the On-Call
+        // policy), unlike the roles link above which tracks a
+        // currently-active incident and so needs the show/hide handling.
+        const statusPageLinks = {
+          "link-demo-statuspage": data.statusPageId,
+          "link-docuware-disk-statuspage": data.itServiceStatusPageId,
+          "link-security-statuspage": data.itServiceStatusPageId,
+          "link-printer-statuspage": data.leipzigStatusPageId,
+        };
+        for (const [elId, pageId] of Object.entries(statusPageLinks)) {
+          const a = document.getElementById(elId);
+          if (pageId) {
+            a.href = `${base}/status-page/${pageId}`;
+            a.classList.remove("disabled");
+          }
+        }
+
+        const directLinks = {
+          "link-printer-admin": data.scheduledMaintenanceEventsUrl,
+          "link-oncall-escalation-1": data.onCallEscalationUrl,
+          "link-oncall-escalation-2": data.onCallEscalationUrl,
+          "link-oncall-logs-1": data.onCallExecutionLogsUrl,
+          "link-oncall-logs-2": data.onCallExecutionLogsUrl,
+        };
+        for (const [elId, url] of Object.entries(directLinks)) {
+          const a = document.getElementById(elId);
+          if (url) {
+            a.href = url;
+            a.classList.remove("disabled");
+          }
         }
       } catch (e) {
         // Kontrollserver kurz nicht erreichbar - Karten bleiben deaktiviert, kein Absturz.

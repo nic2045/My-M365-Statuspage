@@ -47,6 +47,8 @@ ACTIONS = {
     "fix-security": ("fix-security.sh", "Sicherheits-Vorfall beheben"),
     "break-printer": ("break-printer.sh", "Druckerwartung ankündigen"),
     "fix-printer": ("fix-printer.sh", "Druckerwartung abschließen"),
+    "break-leipzig-network": ("break-leipzig-network.sh", "Leipzig-Netzwerk-Vorfall auslösen"),
+    "fix-leipzig-network": ("fix-leipzig-network.sh", "Leipzig-Netzwerk-Vorfall beheben"),
 }
 
 
@@ -88,12 +90,33 @@ def get_links():
     except (FileNotFoundError, json.JSONDecodeError):
         disk_incident = {}
 
+    base = summary.get("base", "http://localhost")
+    project_id = summary.get("projectId")
+    on_call_policy_id = summary.get("onCallPolicyId")
+
+    # On-Call Duty is otherwise buried several clicks deep in OneUptime's
+    # own settings navigation - these two direct links (the configured
+    # escalation rule, and the log of every time it has actually fired,
+    # e.g. from break-security.sh/break-docuware-disk.sh) are what makes
+    # it demoable without hunting for it live.
+    on_call_escalation_url = (
+        f"{base}/dashboard/{project_id}/on-call-duty/policies/{on_call_policy_id}/escalation"
+        if project_id and on_call_policy_id else None)
+    on_call_execution_logs_url = (
+        f"{base}/dashboard/{project_id}/on-call-duty/policies/{on_call_policy_id}/execution-logs"
+        if project_id and on_call_policy_id else None)
+    scheduled_maintenance_events_url = (
+        f"{base}/dashboard/{project_id}/scheduled-maintenance-events" if project_id else None)
+
     return {
-        "oneuptimeBase": summary.get("base", "http://localhost"),
+        "oneuptimeBase": base,
         "statusPageId": summary.get("statusPageId"),
         "itServiceStatusPageId": summary.get("itServiceStatusPageId"),
         "leipzigStatusPageId": summary.get("leipzigStatusPageId"),
         "docuwareDiskIncidentRolesUrl": disk_incident.get("rolesUrl"),
+        "onCallEscalationUrl": on_call_escalation_url,
+        "onCallExecutionLogsUrl": on_call_execution_logs_url,
+        "scheduledMaintenanceEventsUrl": scheduled_maintenance_events_url,
     }
 
 
@@ -213,6 +236,7 @@ def get_status():
     docuware_node2 = prom_query('docuware_mssql_cluster_node_up{node="db2"}')
     docuware_disk = prom_query('docuware_disk_usage_percent{volume="Dokumentenspeicher"}')
     cc_chemnitz = prom_query('cc_site_vpn_up{site="Chemnitz"}')
+    leipzig_switch = prom_query('net_uplink_up{device="Access-Switch Vertrieb-2"}')
 
     def state(value, healthy_fn):
         if value is None:
@@ -226,6 +250,7 @@ def get_status():
         "customer-care": state(cc_chemnitz, lambda v: v >= 1),
         "security": get_security_state(),
         "printer": get_printer_state(),
+        "leipzig-network": state(leipzig_switch, lambda v: v >= 1),
     }
 
 

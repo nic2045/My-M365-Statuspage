@@ -197,6 +197,11 @@
           <div class="subject">[Statusseite IT-Services (Mitarbeiter)] Wartung: Patchday Server Gruppe 3</div>
           <div class="preview">Geplante Wartung hat begonnen...</div>
         </div>
+        <div class="mail-item" data-mail="drucker">
+          <div class="from">OneUptime Statuspage</div>
+          <div class="subject">[Standort Leipzig] Wartung: Drucker (Hauptgebäude)</div>
+          <div class="preview">Der Drucker im Hauptgebäude hat eine Störung gemeldet. Die IT hat...</div>
+        </div>
         <div class="list-header">Diese Woche</div>
         <div class="mail-item" data-mail="firewall">
           <div class="from">OneUptime Statuspage</div>
@@ -284,6 +289,35 @@
           </div>
         </article>
 
+        <article class="mail-content" id="mail-drucker" hidden>
+          <span class="badge" style="background:#fff4ce;color:#7a5b00;border-color:#f4dd8c;">Wartung</span>
+          <h1>[Standort Leipzig] Wartung: Drucker (Hauptgebäude)</h1>
+          <div class="meta">
+            <div class="avatar">OU</div>
+            <div class="who">
+              <div class="name">OneUptime Statuspage</div>
+              <div class="addr">notifications@statuspage.pyur.com</div>
+            </div>
+            <div class="when">Heute, 15:32 Uhr</div>
+          </div>
+          <div class="card" style="border-left-color:#e8b800;">
+            <h2>Kurzfristige Wartung – Drucker (Hauptgebäude)</h2>
+            <div class="status-line">Status: <strong>Scheduled</strong></div>
+            <p>Der Drucker im Hauptgebäude hat eine Störung gemeldet. Die IT hat daraufhin kurzfristig
+               ein Wartungsfenster eingeplant: <strong>17:32–20:32 Uhr</strong>.
+               <strong>Der Drucker funktioniert bis zum Beginn der Wartung ganz normal weiter</strong> -
+               erst während des Wartungsfensters bitte auf den Drucker im 2. OG (Raum 214) oder den
+               Farbdrucker in der Teeküche ausweichen. Bei dringenden Druckaufträgen wendet euch an
+               den IT-Helpdesk (Ext. 4242).</p>
+            <a class="cta" href="#">Statusseite öffnen →</a>
+          </div>
+          <div class="signoff">
+            Diese Benachrichtigung wurde automatisch von der Statusseite „Standort Leipzig“
+            verschickt, weil diese Mailbox den Dienst „Drucker (Hauptgebäude)“ abonniert hat.<br>
+            Abo verwalten · Abmelden
+          </div>
+        </article>
+
         <article class="mail-content" id="mail-firewall" hidden>
           <span class="badge" style="background:#eff6fc;color:#0f6cbd;border-color:#c7e0f4;">Ankündigung</span>
           <h1>[Standort Leipzig] Ankündigung: Firewall-Upgrade</h1>
@@ -312,14 +346,26 @@
     </div>
   </div>
   <script>
+    function selectMail(name) {
+      var item = document.querySelector('.mail-item[data-mail="' + name + '"]');
+      var content = document.getElementById("mail-" + name);
+      if (!item || !content) return;
+      document.querySelectorAll(".mail-item").forEach(function (i) { i.classList.remove("active"); });
+      item.classList.add("active");
+      document.querySelectorAll(".mail-content").forEach(function (c) { c.hidden = true; });
+      content.hidden = false;
+    }
+
     document.querySelectorAll(".mail-item").forEach(function (item) {
-      item.addEventListener("click", function () {
-        document.querySelectorAll(".mail-item").forEach(function (i) { i.classList.remove("active"); });
-        item.classList.add("active");
-        document.querySelectorAll(".mail-content").forEach(function (c) { c.hidden = true; });
-        document.getElementById("mail-" + item.dataset.mail).hidden = false;
-      });
+      item.addEventListener("click", function () { selectMail(item.dataset.mail); });
     });
+
+    // Deep-linked from the control panel (e.g. benachrichtigung-email.html#drucker)
+    // so a specific scenario's notification opens directly instead of making
+    // the presenter click through the inbox during a live demo.
+    if (location.hash) {
+      selectMail(location.hash.slice(1));
+    }
   </script>
 </body>
 </html>
