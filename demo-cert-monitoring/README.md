@@ -254,9 +254,31 @@ getrennt statt eine Seite mit allem):
    steht statt sie zu überschreiben (`scripts/printer_maintenance.py`,
    kein Import von `seed_oneuptime.py`, siehe dortige Begründung). Auch im
    Demo-Kontrollzentrum (`./control-panel.sh`) als Karte "Druckerwartung
-   (Prozess)" auslösbar, inkl. Link zu den Benachrichtigungs-Mockups, in
-   denen sich die Statuspage-Info für Mitarbeitende manuell durchklicken
-   lässt.
+   (Prozess)" auslösbar - **mit expliziter Admin-/Nutzer-Trennung**, damit
+   die Demo die beiden Rollen nebeneinander zeigt statt nur eine Seite:
+   "Admin" verlinkt direkt auf OneUptimes Scheduled-Maintenance-Liste
+   (`/scheduled-maintenance-events`, wo Techniker die Wartung tatsächlich
+   anlegen), "Nutzer" auf die Standort-Leipzig-Statusseite selbst sowie
+   auf `mockups/benachrichtigung-email.html#drucker` - ein URL-Hash, der
+   das E-Mail-Mockup direkt auf die Druckerwartungs-Nachricht springen
+   lässt (`selectMail()` im Mockup wertet `location.hash` aus), statt dass
+   in der Vorführung erst durch den Posteingang geklickt werden muss.
+
+**Kontrollzentrum-Review, alle Karten:** bei der Gelegenheit auch die
+übrigen sechs Karten in `./control-panel.sh` auf fehlende Sublinks
+durchgesehen - Zertifikats-Karte bekam einen direkten Link zur
+Zertifikate-Statusseite (Nutzer-Sicht, vorher nur Grafana/Prometheus/
+Mailpit), Customer-Care-Karte einen Link zum neuen
+Avaya-Callcenter-Dashboard (das Szenario lässt live auch dessen
+Warteschlange volllaufen, war aber nirgends verlinkt), und Security-Karte
+einen direkten Statusseiten-Link statt nur des generischen
+OneUptime-Logins. Jede Karte gruppiert ihre Links jetzt zusätzlich unter
+"Admin"/"Nutzer"-Labels statt einer undifferenzierten Liste. **Farblich
+unterscheidbar:** jede Karte hat eine eigene Akzentfarbe (farbiger oberer
+Rand + leicht eingefärbter Hintergrund, nicht nur das kleine Icon wie
+vorher) - sieben klar unterscheidbare Farbtöne, damit man während einer
+Vorführung nicht erst den Kartentitel lesen muss, um die richtige Karte
+zu finden.
 
 **Alle Termine werden bei jedem Lauf neu relativ zu "heute" berechnet**
 (Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen
@@ -357,6 +379,21 @@ Demo-Story statt isoliert):
   Beispielen. Ohne echten Push-/SMS-/E-Mail-Provider in diesem lokalen
   Stack bleibt der Effekt visuell (Eskalationskette auf der
   Incident-Detailseite), keine echte Benachrichtigung.
+
+  **Direkt verlinkt statt gesucht:** die Eskalationsregel selbst und ihr
+  tatsächliches Auslösen liegen in OneUptime mehrere Klicks tief in den
+  On-Call-Duty-Einstellungen vergraben - für eine Vorführung zu langsam
+  zu finden. `seed_oneuptime.py` schreibt die (über Reseeds hinweg
+  stabile) Policy-ID deshalb in `.oneuptime-demo-summary`;
+  `control_panel_server.py` baut daraus zwei Direktlinks, die auf den
+  Sicherheits- und DocuWare-Festplatte-Karten im Kontrollzentrum
+  erscheinen: **"On-Call-Eskalation"** (`.../on-call-duty/policies/<id>/escalation`
+  - zeigt die konfigurierte 5-Minuten-Regel) und **"On-Call-Protokoll"**
+  (`.../on-call-duty/policies/<id>/execution-logs` - zeigt jedes
+  tatsächliche Auslösen der Regel, live nachvollziehbar nach jedem
+  `break-security.sh`/`break-docuware-disk.sh`). Beide Routen aus dem
+  echten OneUptime-Quellcode bestätigt (`RouteMap.ts`,
+  `ON_CALL_DUTY_POLICY_VIEW_ESCALATION`/`_EXECUTION_LOGS`), nicht geraten.
 - **Service Catalog**: drei `Service`-Einträge (DocuWare, Customer Care,
   Standort Leipzig – Netzwerk) mit Beschreibung, Farbe und Owner-Team
   "Owners" - dieselben Komponenten, die die Demo an anderer Stelle schon
@@ -498,6 +535,15 @@ im Keller, 10 Access-Switches über 4 Bereiche auf einer Etage
 zeigt ihn rot, "Geräte offline" springt auf 1. `./fix-leipzig-network.sh`
 macht es rückgängig. Live durchgetestet (`net_device_up`/`net_uplink_up`
 vor/nach dem Break bestätigt).
+
+**Jetzt auch im Demo-Kontrollzentrum:** dieses Szenario hatte trotz
+fertigem Break/Fix-Skript und Dashboard bislang keine eigene Karte in
+`./control-panel.sh` - beim Review aller Kontrollzentrum-Karten
+aufgefallen und als siebte Karte "Standort Leipzig – Netzwerk-Vorfall"
+ergänzt (`net_uplink_up{device="Access-Switch Vertrieb-2"}` als
+Live-Status, gleiches Prinzip wie bei den anderen Prometheus-Karten).
+Bewusst Grafana-only wie die DocuWare-Cluster- und Customer-Care-Karten -
+reine Facility-IT-Beobachtung ohne OneUptime-Incident.
 
 ## Website & Zertifikats-Dashboard (Grafana, App-Owner)
 
