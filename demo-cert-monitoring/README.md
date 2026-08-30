@@ -1046,26 +1046,42 @@ Von Anfang an mit der korrekten `labelsToFields`+gescopetem-`merge`
 +`joinByField`-Transformation gebaut. Alle neuen Metriken live gegen
 Prometheus verifiziert.
 
-## shop.pyur.com – Dashboard-Gruppe (Marketing, Frontend, Infra, Datenbank, Web-Traffic)
+## shop.pyur.com – zwei Teams, zwei Dashboards auf denselben Metriken
 
 Fiktiver Webshop `shop.pyur.com` (nur ein Label, keine echte Domain -
 dasselbe Fixture-Prinzip wie `docuware.pyur.com`/`llm.pyur.com`
-anderswo in dieser Demo). Anders als jedes andere Dashboard oben, die
-alle für **eine** Zielgruppe gebaut sind (App-Owner, Callcenter-Manager,
-Facility-IT, ...): hier sind es bewusst **fünf verlinkte Dashboards für
-fünf verschiedene Rollen**, weil ein Webshop genau so im echten Betrieb
-überwacht wird - orientiert an einem typischen produktiven
-Observability-Stack für E-Commerce (Shopware-Health-Dashboard,
-Frontend-RUM via Faro, Node-Exporter-Infra, MySQL/PostgreSQL-DB-
-Dashboard, NGINX/Loki-Logs), hier alle fünf mit **einem** synthetischen
-Exporter (`scripts/webshop-metrics-exporter.py`, 95 Kennzahlen-Serien,
-Port 9500) nachgebildet statt fünf echten Integrationen. Gleiches
-"gesund mit sichtbarer Bewegung, ein STATE_FILE schaltet einen echten
-Vorfall"-Muster wie bei Customer-Care/Leipzig-Netzwerk. Im
-Kontrollzentrum als eigene Hub-Gruppe "shop.pyur.com –
-Dashboard-Gruppe", in Grafana selbst über eine Perspektiven-Link-Kachel
-auf dem ersten Dashboard verlinkt (gleiches Muster wie beim
-IT-Ops-Gesamtübersicht-Dashboard oben).
+anderswo in dieser Demo). Bewusst **beide** Varianten nebeneinander
+stehen gelassen, nicht die eine durch die andere ersetzt - ein
+realistisches Bild, wie zwei Teams am selben System arbeiten:
+
+- **"Webshop – Cross-funktional"** (`webshop-overview.json`, im
+  normalen "Dashboards"-Hub-Bereich) - **ein** Dashboard, das alle vier
+  Perspektiven (Marketing, Website-Betrieb, Middleware, Infra) auf einer
+  Seite zusammenfasst, wie schon jedes andere Dashboard in dieser Demo.
+- **"shop.pyur.com – Dashboard-Gruppe (eigenes Team)"** (eigener
+  Hub-Bereich im Kontrollzentrum) - **fünf** eigenständige, verlinkte
+  Dashboards, orientiert an einem typischen produktiven
+  Observability-Stack für E-Commerce (Shopware-Health-Dashboard,
+  Frontend/RUM-Observability, Node-Exporter-Infra, MySQL/PostgreSQL-
+  DB-Dashboard, Web-Server-Traffic/Statuscodes) - so, wie ein
+  spezialisiertes Platform-/SRE-Team dieselben Daten aufteilen würde,
+  sobald ein einzelnes Dashboard zu voll wird.
+
+Beide lesen **dieselben** Prometheus-Metriken von **einem** Exporter
+(`scripts/webshop-metrics-exporter.py`, 95 Kennzahlen-Serien, Port
+9500) - kein doppelter Datenbestand, nur zwei verschiedene
+Zusammenstellungen derselben Wahrheit, genau der Punkt der
+Gegenüberstellung. Gleiches "gesund mit sichtbarer Bewegung, ein
+STATE_FILE schaltet einen echten Vorfall"-Muster wie bei
+Customer-Care/Leipzig-Netzwerk. Die 5er-Gruppe verlinkt sich in Grafana
+selbst über eine Perspektiven-Link-Kachel auf dem ersten Dashboard
+("Health & Business", gleiches Muster wie beim
+IT-Ops-Gesamtübersicht-Dashboard oben) - bewusst **ohne Grafana
+Cloud**: alles unten sind eigenständige Panels auf demselben
+selbst-gehosteten OSS-Grafana wie jedes andere Dashboard in dieser
+Demo, keine Cloud-spezifische Integration nötig.
+
+Die fünf Dashboards der Gruppe im Einzelnen:
 
 **1. Health & Business** (`webshop-health-business.json` -
 Shopware-6-Health-Dashboard-Äquivalent, "360-Grad-Sicht, die
@@ -1078,8 +1094,9 @@ Payment-Erfolgsquote, Bestell-Warteschlange, Fehlerrate je
 Downstream-Integration (Payment/Inventory/Shipping/ERP).
 
 **2. Frontend Observability** (`webshop-frontend-observability.json` -
-Äquivalent zu Grafana Cloud Frontend Observability/Faro Web SDK: echte
-Nutzerinteraktionen, Seitenladezeiten, Fehler): alle drei **Core Web
+echte Nutzerinteraktionen, Seitenladezeiten, Fehler; bewusst ohne
+Grafana Cloud/Faro Web SDK gebaut - reine Prometheus-Metriken auf
+eigenständigen Panels, kein Cloud-Produkt nötig): alle drei **Core Web
 Vitals** (LCP, INP, CLS - mit den offiziellen Google-Schwellenwerten als
 Ampel-Farben), Seitenladezeit je Seitentyp, JS-Fehlerrate,
 Suche-Trefferquote - **und der eigentliche Auftrag dieser Gruppe: der
