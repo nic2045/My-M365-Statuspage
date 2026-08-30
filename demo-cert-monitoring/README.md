@@ -318,6 +318,29 @@ vier mit echter Mitarbeiter-Sichtbarkeit) und ein Satz zum konkreten
 Nutzen für diese Zielgruppe(n) - eine schnelle Übersicht, welcher
 Prozess wem was bringt, statt nur wo welche Karte im Raster sitzt.
 
+**Später umgestellt: Farbe nach Kategorie statt pro Karte.** Mit zehn
+Karten wurde die anfängliche "jede Karte ihre eigene Akzentfarbe"-Idee
+selbst zum Suchproblem - zehn beliebige Töne muss man erst auswendig
+lernen. Jetzt fällt jede Karte zuerst in eine von drei Kategorien -
+**Ungeplante Störung** (rot, acht Karten: Zertifikat, DocuWare-Cluster,
+Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant,
+Jira-Anhänge), **Wartung** (amber, eine Karte: Druckerwartung) und
+**Prozessdemo** (blau, eine Karte: DocuWare-Festplatte - zeigt bewusst
+die volle Eskalationskette statt primär eine Störung) - und trägt
+zusätzlich ein kleines Kategorie-Label direkt neben dem Live-Status, um
+innerhalb einer Farbe noch zu unterscheiden.
+
+**Legende ganz entfernt, Kartenraster stattdessen umstrukturiert.** Erst
+auf drei Farben mit Kurzerklärung reduziert (siehe oben), dann komplett
+gestrichen - das Kategorie-Label auf jeder Karte erklärt die Farbe schon
+selbst, eine separate Legende war doppelt. Damit trotzdem auf einen
+Blick klar bleibt, wofür Rot/Amber/Blau stehen, bleiben nur drei
+"Hauptkacheln" (je eine pro Kategorie: Zertifikats-Vorfall/rot,
+Druckerwartung/amber, DocuWare-Festplatte/blau) direkt sichtbar - sie
+sind zugleich die Legende. Die übrigen sieben Karten liegen unter einem
+eingeklappten `<details>`-Block "Weitere Szenarien anzeigen (7)"
+darunter, ganz ohne JavaScript aufklappbar.
+
 **Alle Termine werden bei jedem Lauf neu relativ zu "heute" berechnet**
 (Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen
 immer 6-10 Tage in der Vergangenheit, die Druckerwartung immer am
@@ -488,6 +511,23 @@ Demo-Story statt isoliert):
   > `lastMatchAt: null` bestätigt). Fix: Zeitstempel auf nahezu "jetzt"
   > gesetzt - danach hat der allererste Auswertungszyklus sofort
   > gematcht.
+
+**Direkt verlinkt statt gesucht, auch diese fünf Bereiche:** Service
+Catalog, Telemetry/Logs, Security Events, Detection Rules und die zwei
+Monitor-Gruppen (Infrastruktur-Monitoring, AI/LLM Observability) waren
+alle oben beschrieben und live nachweisbar, aber bislang nur über
+OneUptimes eigene Navigation erreichbar - während einer Vorführung zu
+langsam zu finden, dasselbe Problem wie beim On-Call Duty oben.
+`control_panel_server.py` baut jetzt auch für diese fünf Direktlinks
+(braucht anders als On-Call-Eskalation/DocuWare-Festplatten-Rollen keine
+zusätzliche ID, alle fünf sind projektweite Übersichtsseiten - nur die
+ohnehin schon bekannte `projectId`). Neuer eigener Hub-Bereich
+"OneUptime – weitere Bereiche" im Kontrollzentrum, fünf weitere Karten.
+Routen aus dem echten OneUptime-Quellcode bestätigt (`RouteMap.ts`:
+`PageMap.SERVICES` → `/service`, `LOGS` → `/logs`, `SECURITY_EVENTS` →
+`/security-events`, `SECURITY_EVENTS_DETECTION_RULES` →
+`/security-events/detection-rules`, `MONITOR_GROUPS` →
+`/monitor-groups`), nicht geraten.
 
 Das Skript ist idempotent und konvergent - ein erneuter Lauf verwendet
 vorhandenen Account, Projekt, Monitore und Statuspage weiter (statt

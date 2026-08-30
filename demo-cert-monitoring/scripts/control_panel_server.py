@@ -114,6 +114,22 @@ def get_links():
     scheduled_maintenance_events_url = (
         f"{base}/dashboard/{project_id}/scheduled-maintenance-events" if project_id else None)
 
+    # Five more OneUptime areas seed_oneuptime.py already builds (Service
+    # Catalog, Telemetry Logs, Security Events/Detection Rules, both
+    # Monitor Groups) but that otherwise sit unlinked - same "buried
+    # several clicks deep" problem as On-Call Duty above. All five are
+    # project-scoped list pages, not a specific item, so - unlike the
+    # on-call/disk-incident links above - they need no extra id beyond
+    # project_id. Routes confirmed against the real OneUptime dashboard
+    # source (RouteMap.ts: PageMap.SERVICES, LOGS, SECURITY_EVENTS,
+    # SECURITY_EVENTS_DETECTION_RULES, MONITOR_GROUPS), not guessed.
+    service_catalog_url = f"{base}/dashboard/{project_id}/service" if project_id else None
+    telemetry_logs_url = f"{base}/dashboard/{project_id}/logs" if project_id else None
+    security_events_url = f"{base}/dashboard/{project_id}/security-events" if project_id else None
+    security_detection_rules_url = (
+        f"{base}/dashboard/{project_id}/security-events/detection-rules" if project_id else None)
+    monitor_groups_url = f"{base}/dashboard/{project_id}/monitor-groups" if project_id else None
+
     return {
         "oneuptimeBase": base,
         "statusPageId": summary.get("statusPageId"),
@@ -123,6 +139,11 @@ def get_links():
         "onCallEscalationUrl": on_call_escalation_url,
         "onCallExecutionLogsUrl": on_call_execution_logs_url,
         "scheduledMaintenanceEventsUrl": scheduled_maintenance_events_url,
+        "serviceCatalogUrl": service_catalog_url,
+        "telemetryLogsUrl": telemetry_logs_url,
+        "securityEventsUrl": security_events_url,
+        "securityDetectionRulesUrl": security_detection_rules_url,
+        "monitorGroupsUrl": monitor_groups_url,
     }
 
 
