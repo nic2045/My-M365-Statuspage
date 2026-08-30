@@ -1046,6 +1046,64 @@ Von Anfang an mit der korrekten `labelsToFields`+gescopetem-`merge`
 +`joinByField`-Transformation gebaut. Alle neuen Metriken live gegen
 Prometheus verifiziert.
 
+## Webshop – cross-funktionale Übersicht (Marketing, Website-Betrieb, Middleware, Infra)
+
+Anders als jedes andere Dashboard oben, die alle für **eine** Zielgruppe
+gebaut sind (App-Owner, Callcenter-Manager, Facility-IT, ...):
+`grafana/dashboards/webshop-overview.json` ist bewusst **eine** Seite für
+**vier** verschiedene Rollen gleichzeitig, weil ein Webshop genau so im
+echten Betrieb überwacht wird - dieselbe Störung sieht aus jeder
+Perspektive anders aus, und alle vier müssen dieselbe Wahrheit sehen,
+nicht vier getrennte Tools mit potenziell abweichenden Zahlen. Vier
+Abschnitte (Grafana-`row`-Panels als Trenner, wie schon im
+IT-Ops-Gesamtübersicht-Dashboard), 27 Panels, neuer synthetischer
+Exporter `scripts/webshop-metrics-exporter.py` (52 Kennzahlen-Serien,
+Port 9500, gleiches "gesund mit sichtbarer Bewegung, ein STATE_FILE
+schaltet einen echten Vorfall"-Muster wie bei Customer-Care/
+Leipzig-Netzwerk):
+
+- **Marketing**: Besucher aktuell, Conversion-Rate, Ø Bestellwert,
+  Warenkorbabbruch-Rate, Umsatz & Bestellungen pro Minute, Bounce-Rate,
+  Traffic-Anteil je Akquisitionskanal (organisch/bezahlt/direkt/
+  Referral/Social)
+- **Website-Betrieb: Performance & Verfügbarkeit**: Verfügbarkeit, alle
+  drei **Core Web Vitals** (LCP, INP, CLS - mit den offiziellen
+  Google-Schwellenwerten als Ampel-Farben), Seitenladezeit je Seitentyp
+  (Startseite/Kategorie/Produkt/Warenkorb/Checkout), HTTP-Fehlerrate
+  (4xx/5xx getrennt), Suche-Trefferquote
+- **Middleware**: Checkout-API-Latenz, Payment-Gateway-Erfolgsquote
+  &-Latenz, Inventory-API-Latenz & Sync-Verzögerung,
+  Bestell-Warteschlangentiefe, Fehlerrate je Downstream-Integration
+  (Payment/Inventory/Shipping/ERP)
+- **Infra**: Services online (frontend/checkout/catalog/search),
+  CPU/Memory je Service, Request-Rate, DB-Connection-Auslastung,
+  CDN-Cache-Hit-Rate & -Bandbreite
+
+**Ein Vorfall, sichtbar aus allen vier Perspektiven zugleich:** der
+Exporter modelliert bewusst nur eine einzige Story ("Checkout ist
+kaputt") statt vier unabhängiger - `STATE_FILE=unhealthy` lässt
+gleichzeitig die Conversion-Rate einbrechen (Marketing sieht das
+Symptom), die 5xx-Fehlerrate hochschnellen (Website-Betrieb sieht die
+Fehlerklasse), Checkout-API-Latenz und Payment-Gateway-Erfolgsquote
+kollabieren (Middleware sieht die Ursache) und den Checkout-Service auf
+hoher CPU/Memory mit `shop_service_up{service="checkout"}=0` laufen
+(Infra sieht den betroffenen Dienst) - derselbe Vorfall, vier
+Blickwinkel, keine widersprüchlichen Zahlen. Noch **kein**
+live-auslösbares `break-webshop.sh`/`fix-webshop.sh` verdrahtet (bewusst
+außerhalb dieser ersten Fassung) - der Exporter ist dafür bereits
+bereit, falls gewünscht.
+
+Barchart-Panel ("Traffic nach Kanal") von Anfang an mit derselben
+korrekten `labelsToFields`+`merge`+`organize`-Transformation gebaut wie
+das bereits einmal gefundene Avaya-Bug-Muster oben - keine
+rohe `legendFormat`-Vorlage, die bei einem Ein-Metrik-Balkendiagramm
+nicht die Balken pro Label erzeugt hätte. Live gegen den Exporter
+verifiziert (`curl localhost:9500/metrics`, 52 Serien im gesunden und im
+`unhealthy`-Zustand geprüft); Live-Rendering in Grafana selbst nicht
+möglich (Docker-Hub-Pulls in dieser Sandbox blockiert, siehe oben) -
+JSON-Schema, Panel-IDs, Grid-Layout und Transformationen stattdessen
+statisch gegen den funktionierenden Vorgänger abgeglichen.
+
 ## DocuWare-Cluster: App-Owner-Tiefe + einfache Nutzeransicht
 
 Zeigt beide Zielgruppen eines Monitoring-Stacks am selben Beispiel: **tief

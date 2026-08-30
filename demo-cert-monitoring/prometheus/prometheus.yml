@@ -109,3 +109,11 @@ scrape_configs:
       - targets: ["leipzig-network-metrics-exporter:9400"]
         labels:
           instance: "leipzig-lan"
+
+  # Webshop: cross-funktionale Übersicht (Marketing, Website-Betrieb,
+  # Middleware, Infra) - siehe scripts/webshop-metrics-exporter.py.
+  - job_name: "webshop"
+    static_configs:
+      - targets: ["webshop-metrics-exporter:9500"]
+        labels:
+          instance: "webshop"
