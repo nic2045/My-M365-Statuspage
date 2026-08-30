@@ -55,6 +55,8 @@ ACTIONS = {
     "fix-blueant": ("fix-blueant.sh", "Blueant-Vorfall beheben"),
     "break-jira-attachments": ("break-jira-attachments.sh", "Jira-Anhänge-Vorfall auslösen"),
     "fix-jira-attachments": ("fix-jira-attachments.sh", "Jira-Anhänge-Vorfall beheben"),
+    "break-leipzig-cascade": ("break-leipzig-cascade.sh", "Kettenreaktion auslösen"),
+    "fix-leipzig-cascade": ("fix-leipzig-cascade.sh", "Kettenreaktion beheben"),
 }
 
 
@@ -286,6 +288,10 @@ def get_status():
         "cognigy": state(cognigy_intent_success, lambda v: v >= 90),
         "blueant": get_monitor_state("Blueant"),
         "jira-attachments": get_monitor_state("Anhänge & Dateien"),
+        # Three monitors, one incident - polling just the root cause
+        # (Internet-Anbindung) is enough to reflect the whole scenario:
+        # it's the first to flip and the last to recover.
+        "leipzig-cascade": get_monitor_state("Internet-Anbindung"),
     }
 
 

@@ -929,6 +929,28 @@ Demo-Kontrollzentrum als neunte und zehnte Karte "Blueant-Ausfall
 (ungeplant)" und "Jira: Datei-Uploads gestört", beide mit
 Admin-/Nutzer-Sublinks (OneUptime bzw. IT-Services-Statusseite).
 
+**Elftes Szenario - echte Kettenreaktion statt Einzelvorfall:**
+`./break-leipzig-cascade.sh` / `./fix-leipzig-cascade.sh` (Skript:
+`scripts/cascading_incident.py`) sind bewusst anders als jedes andere
+Szenario in dieser Demo - alle anderen sind genau ein Monitor, eine
+Ursache. Hier fällt zuerst "Internet-Anbindung" am Standort Leipzig aus
+(Root Cause, Monitor auf Offline), ~15 Sekunden später - live sichtbar,
+nicht nur ein Vorher/Nachher-Snapshot - degradieren zusätzlich "Netzwerk
+(LAN)" und "WLAN", weil WLAN-Controller und Teile der internen
+Netzwerk-Dienste cloud-verwaltet sind. Ein einziger Incident
+("Internetausfall mit Kettenreaktion (Standort Leipzig)") wird am Ende
+mit allen drei Monitoren verknüpft - "Impact Grouping": eine
+Benachrichtigung mit klar benanntem Root Cause statt drei getrennter
+Alarme. Nutzt drei bisher in keinem live-triggerbaren Skript verwendete
+Leipzig-Monitore (vorher nur in der statischen Scheduled-Maintenance-
+Seed-Daten berührt), kollidiert also mit nichts Bestehendem. `fix`
+resolved den Incident und setzt alle drei Monitore in einem Schritt
+zurück - passend zur Beschreibung im Incident, dass die Folgeschäden
+sich automatisch erholen, sobald die Internet-Anbindung wieder da ist.
+Im Demo-Kontrollzentrum als elfte Karte "Internetausfall mit
+Kettenreaktion", Break-Button mit "(~15s)"-Hinweis, damit die kurze
+Wartezeit beim Klick nicht wie ein Hänger wirkt.
+
 ## Avaya Call Center – Betriebsansicht (Grafana, Callcenter-Optimierung)
 
 `grafana/dashboards/avaya-callcenter-operations.json` - fokussierte
