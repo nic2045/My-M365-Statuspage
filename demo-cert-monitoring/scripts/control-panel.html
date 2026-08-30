@@ -73,18 +73,20 @@
 
   .story { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
 
-  .links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; }
+  /* One row per role ("Admin"/"Nutzer") stacked vertically, not a single
+     wrapping line - a scenario with two audiences (see the printer card)
+     should read as two clearly separated short lists, not one run-on row
+     that only visually splits when the browser happens to wrap it. */
+  .links { display: flex; flex-direction: column; gap: 7px; font-size: 12px; }
+  .link-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
   .links a { color: var(--accent, #0f6cbd); text-decoration: none; font-weight: 600; }
   .links a:hover { text-decoration: underline; }
   .links a.disabled { color: var(--muted); pointer-events: none; text-decoration: none; font-weight: 400; }
-  /* Role labels ("Admin:"/"Nutzer:") group the links that follow them so a
-     scenario with distinct audiences (see the printer card) reads as two
-     short lists instead of one undifferentiated row. */
   .links .role-label {
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
     color: var(--muted); background: rgba(0,0,0,0.05); padding: 2px 7px; border-radius: 999px;
+    flex-shrink: 0;
   }
-  .links .role-label:not(:first-child) { margin-left: 4px; }
 
   .actions { display: flex; gap: 10px; margin-top: auto; }
   .actions button {
@@ -261,12 +263,16 @@
         E-Mail (Grafana, OneUptime, Mailpit). Guter Einstieg.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000" target="_blank">Grafana</a>
-        <a href="http://localhost:9090/alerts" target="_blank">Prometheus-Alerts</a>
-        <span class="role-label">Nutzer</span>
-        <a class="disabled" id="link-demo-statuspage" href="#" target="_blank">Statusseite</a>
-        <a href="http://localhost:8025" target="_blank">Mailpit</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000" target="_blank">Grafana</a>
+          <a href="http://localhost:9090/alerts" target="_blank">Prometheus-Alerts</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-demo-statuspage" href="#" target="_blank">Statusseite</a>
+          <a href="http://localhost:8025" target="_blank">Mailpit</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-demo', 'demo')">Vorfall auslösen</button>
@@ -295,8 +301,10 @@
         Grafana - kein Nutzer sieht hiervon etwas.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-docuware', 'docuware')">Vorfall auslösen</button>
@@ -325,14 +333,18 @@
         Vorfallsrollen und echter On-Call-Eskalation.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
-        <a href="/mockups/backend-bmc-itsm.html" target="_blank">BMC-Ticket-Mockup</a>
-        <a id="link-docuware-disk-roles" href="#" target="_blank" style="display:none">Vorfallsrollen</a>
-        <a class="disabled" id="link-oncall-escalation-1" href="#" target="_blank">On-Call-Eskalation</a>
-        <a class="disabled" id="link-oncall-logs-1" href="#" target="_blank">On-Call-Protokoll</a>
-        <span class="role-label">Nutzer</span>
-        <a class="disabled" id="link-docuware-disk-statuspage" href="#" target="_blank">Statusseite</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+          <a href="/mockups/backend-bmc-itsm.html" target="_blank">BMC-Ticket-Mockup</a>
+          <a id="link-docuware-disk-roles" href="#" target="_blank" style="display:none">Vorfallsrollen</a>
+          <a class="disabled" id="link-oncall-escalation-1" href="#" target="_blank">On-Call-Eskalation</a>
+          <a class="disabled" id="link-oncall-logs-1" href="#" target="_blank">On-Call-Protokoll</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-docuware-disk-statuspage" href="#" target="_blank">Statusseite</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-docuware-disk', 'docuware-disk')">Vorfall auslösen</button>
@@ -359,9 +371,11 @@
         verortet - Karte + Warteschlange laufen synchron mit.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000/d/customer-care-overview" target="_blank">Grafana-Dashboard</a>
-        <a href="http://localhost:3000/d/avaya-callcenter-operations" target="_blank">Avaya-Dashboard</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/customer-care-overview" target="_blank">Grafana-Dashboard</a>
+          <a href="http://localhost:3000/d/avaya-callcenter-operations" target="_blank">Avaya-Dashboard</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-customer-care', 'customer-care')">Vorfall auslösen</button>
@@ -387,13 +401,17 @@
         Sicherheitskommunikation statt Fachjargon.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost" target="_blank">OneUptime</a>
-        <a class="disabled" id="link-oncall-escalation-2" href="#" target="_blank">On-Call-Eskalation</a>
-        <a class="disabled" id="link-oncall-logs-2" href="#" target="_blank">On-Call-Protokoll</a>
-        <span class="role-label">Nutzer</span>
-        <a class="disabled" id="link-security-statuspage" href="#" target="_blank">Statusseite</a>
-        <a href="http://localhost:8025" target="_blank">Mailpit</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost" target="_blank">OneUptime</a>
+          <a class="disabled" id="link-oncall-escalation-2" href="#" target="_blank">On-Call-Eskalation</a>
+          <a class="disabled" id="link-oncall-logs-2" href="#" target="_blank">On-Call-Protokoll</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-security-statuspage" href="#" target="_blank">Statusseite</a>
+          <a href="http://localhost:8025" target="_blank">Mailpit</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-security', 'security')">Vorfall auslösen</button>
@@ -423,11 +441,15 @@
         Drucker bleibt bis zur Wartung selbst uneingeschränkt nutzbar.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a class="disabled" id="link-printer-admin" href="#" target="_blank">Wartung planen (OneUptime)</a>
-        <span class="role-label">Nutzer</span>
-        <a class="disabled" id="link-printer-statuspage" href="#" target="_blank">Statusseite</a>
-        <a href="/mockups/benachrichtigung-email.html#drucker" target="_blank">E-Mail-Mockup</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a class="disabled" id="link-printer-admin" href="#" target="_blank">Wartung planen (OneUptime)</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-printer-statuspage" href="#" target="_blank">Statusseite</a>
+          <a href="/mockups/benachrichtigung-email.html#drucker" target="_blank">E-Mail-Mockup</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-printer', 'printer')">Wartung ankündigen</button>
@@ -457,8 +479,10 @@
         OneUptime-Incident.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000/d/leipzig-network-topology" target="_blank">Grafana-Dashboard</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/leipzig-network-topology" target="_blank">Grafana-Dashboard</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-leipzig-network', 'leipzig-network')">Vorfall auslösen</button>
