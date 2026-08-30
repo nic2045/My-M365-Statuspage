@@ -988,6 +988,33 @@ der Zusammenhang einmal hergestellt ist - das Herstellen selbst ist
 (noch) Menschenarbeit". Auch als Talking Point direkt auf der Karte
 ("Kein Alert-/ITSM-Spam") hinterlegt.
 
+**Die Lücke selbst geschlossen: echte OTel-Trace-Korrelation statt nur
+Skript-Behauptung.** Der Absatz oben endete mit "Korrelation kommt
+inzwischen ausschließlich aus echten OpenTelemetry-Trace-Spans" - das
+war noch die Einschränkung. Jetzt sendet Phase 2 von
+`cascading_incident.py` genau das: einen echten Trace über
+`POST /otlp/v1/traces` (dieselbe Ingestion-Key-Authentifizierung wie die
+`docuware-login`-Logs weiter oben, `x-oneuptime-token`-Header), mit
+einem Root-Span für "Internet-Anbindung" und zwei Child-Spans für "WLAN"
+und "Netzwerk (LAN)" - dieselbe `traceId`, `parentSpanId` beider
+Child-Spans zeigt auf die `spanId` des Root-Spans, alle drei mit
+`status.code: STATUS_CODE_ERROR`. Im echten OneUptime-Quellcode
+nachvollzogen (nicht geraten): `OtelTracesIngestService.ts` verarbeitet
+Standard-OTLP/HTTP-JSON (Trace-/Span-/Parent-Span-IDs als Base64 auf der
+Leitung, serverseitig zu Hex dekodiert; `resource.attributes` mit
+`service.name` legt - wie schon bei den Logs - bei Bedarf automatisch
+einen neuen Service-Catalog-Eintrag an), und `TraceServiceMap.tsx` baut
+seine Abhängigkeits-Kanten explizit aus "cross-service parent/child span
+pairs" innerhalb eines Trace. Das heißt: Traces → Service Map zeigt
+"Internet-Anbindung → WLAN" und "Internet-Anbindung → Netzwerk (LAN)"
+als echte, aus Telemetriedaten hergeleitete Kanten - unabhängig von der
+Incident-Beschreibung, die dasselbe nur behauptet. Bewusst best-effort:
+fehlt der Ingestion-Key oder schlägt der Versand fehl, wird das geloggt
+und übersprungen, ohne den Incident-/Monitor-Teil von `break`
+abzubrechen. Direktlink "Trace Service Map" auf der Karte sowie ein
+neuer sechster Hub-Eintrag "Traces" unter "OneUptime – weitere Bereiche"
+(`PageMap.TRACES` → `/traces`, aus `RouteMap.ts` bestätigt).
+
 ## Avaya Call Center – Betriebsansicht (Grafana, Callcenter-Optimierung)
 
 `grafana/dashboards/avaya-callcenter-operations.json` - fokussierte

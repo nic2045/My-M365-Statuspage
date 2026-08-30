@@ -131,6 +131,11 @@ def get_links():
     security_detection_rules_url = (
         f"{base}/dashboard/{project_id}/security-events/detection-rules" if project_id else None)
     monitor_groups_url = f"{base}/dashboard/{project_id}/monitor-groups" if project_id else None
+    # Same project-scoped-list pattern as the five above (PageMap.TRACES ->
+    # RouteMap.ts confirmed, not guessed) - where cascading_incident.py's
+    # synthetic OTel trace (Internet-Anbindung -> WLAN/Netzwerk (LAN)) shows
+    # up as a real dependency edge in the Trace Service Map.
+    traces_url = f"{base}/dashboard/{project_id}/traces" if project_id else None
 
     return {
         "oneuptimeBase": base,
@@ -146,6 +151,7 @@ def get_links():
         "securityEventsUrl": security_events_url,
         "securityDetectionRulesUrl": security_detection_rules_url,
         "monitorGroupsUrl": monitor_groups_url,
+        "tracesUrl": traces_url,
     }
 
 

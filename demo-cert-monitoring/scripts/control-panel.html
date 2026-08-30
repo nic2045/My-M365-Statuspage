@@ -339,6 +339,10 @@
       <div class="hub-icon" style="background:#5b5fc7;">M</div>
       <div class="hub-text"><div class="t">Monitor-Gruppen</div><div class="d">Infrastruktur (Admin) &amp; AI/LLM Observability</div></div>
     </a>
+    <a class="hub-card disabled" id="hub-traces" href="#" target="_blank">
+      <div class="hub-icon" style="background:#5b5fc7;">T</div>
+      <div class="hub-text"><div class="t">Traces</div><div class="d">Service Map der Kettenreaktion (Leipzig)</div></div>
+    </a>
   </div>
 
   <div class="section-title">Vorfall- &amp; Prozess-Szenarien</div>
@@ -733,12 +737,18 @@
         (LAN) demselben Incident zugeordnet sind, pausiert OneUptime
         selbst deren aktives Monitoring
         (<code>disableActiveMonitoringBecauseOfManualIncident</code>) -
-        sie können keinen eigenen, konkurrierenden Alarm mehr auslösen.
+        sie können keinen eigenen, konkurrierenden Alarm mehr auslösen.<br>
+        <strong>Echte Abhängigkeit, nicht nur behauptet:</strong> Phase 2
+        sendet zusätzlich einen echten OpenTelemetry-Trace (Internet-
+        Anbindung → WLAN / Netzwerk (LAN) als Parent-/Child-Spans) - die
+        Trace Service Map zeigt die Kette dadurch als unabhängig
+        hergeleitete Kante, nicht nur als Text im Incident.
       </p>
       <div class="links">
         <div class="link-row">
           <span class="role-label">Admin</span>
           <a href="http://localhost" target="_blank">OneUptime</a>
+          <a class="disabled" id="link-leipzig-cascade-traces" href="#" target="_blank">Trace Service Map</a>
         </div>
         <div class="link-row">
           <span class="role-label">Nutzer</span>
@@ -871,6 +881,8 @@
           "hub-security-events": data.securityEventsUrl,
           "hub-security-detection-rules": data.securityDetectionRulesUrl,
           "hub-monitor-groups": data.monitorGroupsUrl,
+          "hub-traces": data.tracesUrl,
+          "link-leipzig-cascade-traces": data.tracesUrl,
         };
         for (const [elId, url] of Object.entries(directLinks)) {
           const a = document.getElementById(elId);
