@@ -73,18 +73,20 @@
 
   .story { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
 
-  .links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; }
+  /* One row per role ("Admin"/"Nutzer") stacked vertically, not a single
+     wrapping line - a scenario with two audiences (see the printer card)
+     should read as two clearly separated short lists, not one run-on row
+     that only visually splits when the browser happens to wrap it. */
+  .links { display: flex; flex-direction: column; gap: 7px; font-size: 12px; }
+  .link-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
   .links a { color: var(--accent, #0f6cbd); text-decoration: none; font-weight: 600; }
   .links a:hover { text-decoration: underline; }
   .links a.disabled { color: var(--muted); pointer-events: none; text-decoration: none; font-weight: 400; }
-  /* Role labels ("Admin:"/"Nutzer:") group the links that follow them so a
-     scenario with distinct audiences (see the printer card) reads as two
-     short lists instead of one undifferentiated row. */
   .links .role-label {
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
     color: var(--muted); background: rgba(0,0,0,0.05); padding: 2px 7px; border-radius: 999px;
+    flex-shrink: 0;
   }
-  .links .role-label:not(:first-child) { margin-left: 4px; }
 
   .actions { display: flex; gap: 10px; margin-top: auto; }
   .actions button {
@@ -140,6 +142,36 @@
   .hub-group { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--muted);
     text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 -2px; }
   .hub-group:first-child { margin-top: 0; }
+
+  /* Prozess-Legende über den Szenario-Karten: nicht nur Farbe -> Name,
+     sondern Farbe -> Prozess -> Zielgruppe -> Mehrwert, als Übersicht vor
+     dem eigentlichen Kartenraster. Jede Zeile springt per Klick zur
+     zugehörigen Karte. */
+  .legend-panel {
+    max-width: 1080px;
+    margin: 0 auto 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .legend-panel h3 { margin: 0 0 2px; font-size: 13px; }
+  .legend-panel .legend-sub { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+  .legend-scroll { overflow-x: auto; }
+  .legend-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .legend-table td { padding: 8px 10px; vertical-align: top; border-top: 1px solid var(--border); }
+  .legend-table tr:first-child td { border-top: none; }
+  .legend-table .dot-cell { width: 14px; padding-right: 0; }
+  .legend-table .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .legend-table a { font-weight: 600; color: var(--text); text-decoration: none; white-space: nowrap; }
+  .legend-table a:hover { text-decoration: underline; }
+  .legend-table .value { color: var(--muted); line-height: 1.5; }
+  .audience {
+    display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .audience.both { background: #eaf3fc; color: #0f6cbd; }
+  .audience.it { background: #eef0f2; color: #5b616b; }
   a.hub-card {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -242,9 +274,59 @@
   </div>
 
   <div class="section-title">Vorfall- &amp; Prozess-Szenarien</div>
+  <div class="legend-panel">
+    <h3>Wer hat den Mehrwert?</h3>
+    <p class="legend-sub">Je Prozess: Zielgruppe (wer sieht/erlebt ihn) und der konkrete Nutzen für sie - Klick auf den Namen springt zur Karte.</p>
+    <div class="legend-scroll">
+      <table class="legend-table">
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#0f6cbd;"></span></td>
+          <td><a href="#card-demo">Zertifikats-Vorfall</a></td>
+          <td><span class="audience both">IT + Nutzer</span></td>
+          <td class="value">Nutzer erfährt früh &amp; verständlich von der Störung statt selbst zu rätseln; IT sieht die technische Ursache sofort in Grafana.</td>
+        </tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#0e7a4d;"></span></td>
+          <td><a href="#card-docuware">DocuWare-Cluster-Vorfall</a></td>
+          <td><span class="audience it">Nur IT</span></td>
+          <td class="value">Reine interne Fehlerdiagnose - zeigt, dass ein Infrastruktur-Defekt nicht zwangsläufig bis zum Kunden durchschlägt.</td>
+        </tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#b8860b;"></span></td>
+          <td><a href="#card-docuware-disk">DocuWare-Festplatte läuft voll</a></td>
+          <td><span class="audience both">IT + Nutzer</span></td>
+          <td class="value">Nutzer wird informiert, bevor es zum Ausfall kommt; IT bekommt die volle Prozesskette inkl. Vorfallsrollen und On-Call-Eskalation.</td>
+        </tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#c25a00;"></span></td>
+          <td><a href="#card-customer-care">Customer-Care-Vorfall (Chemnitz)</a></td>
+          <td><span class="audience it">Nur IT</span></td>
+          <td class="value">Technischer Betrieb erkennt den Standortausfall geografisch verortet, bevor der Kundenservice spürbar leidet.</td>
+        </tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#6b2fb3;"></span></td>
+          <td><a href="#card-security">Sicherheits-Vorfall (Anmeldung)</a></td>
+          <td><span class="audience both">IT + Nutzer</span></td>
+          <td class="value">Nutzer bekommt transparente, jargon-freie Sicherheitskommunikation; IT eskaliert intern über On-Call.</td>
+        </tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#0e7490;"></span></td>
+          <td><a href="#card-printer">Druckerwartung (Prozess)</a></td>
+          <td><span class="audience both">IT + Nutzer</span></td>
+          <td class="value">Zeigt die Rollentrennung selbst: Admin plant die Wartung, Nutzer wird informiert - der Service bleibt bis dahin ungestört.</td>
+        </tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#b0266f;"></span></td>
+          <td><a href="#card-leipzig-network">Standort Leipzig – Netzwerk-Vorfall</a></td>
+          <td><span class="audience it">Nur IT</span></td>
+          <td class="value">Facility-IT sieht den Netzwerkausfall sofort im Node-Graph - rein interne Beobachtung ohne Nutzer-Auswirkung.</td>
+        </tr>
+      </table>
+    </div>
+  </div>
   <div class="grid">
 
-    <div class="card" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
+    <div class="card" id="card-demo" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f6cbd"/>
           <path d="M24 10 L36 14 V24 C36 32 30 39 24 42 C18 39 12 32 12 24 V14 Z" fill="none" stroke="#fff" stroke-width="2.5"/>
@@ -261,12 +343,16 @@
         E-Mail (Grafana, OneUptime, Mailpit). Guter Einstieg.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000" target="_blank">Grafana</a>
-        <a href="http://localhost:9090/alerts" target="_blank">Prometheus-Alerts</a>
-        <span class="role-label">Nutzer</span>
-        <a class="disabled" id="link-demo-statuspage" href="#" target="_blank">Statusseite</a>
-        <a href="http://localhost:8025" target="_blank">Mailpit</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000" target="_blank">Grafana</a>
+          <a href="http://localhost:9090/alerts" target="_blank">Prometheus-Alerts</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-demo-statuspage" href="#" target="_blank">Statusseite</a>
+          <a href="http://localhost:8025" target="_blank">Mailpit</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-demo', 'demo')">Vorfall auslösen</button>
@@ -274,7 +360,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#0e7a4d; --accent-bg:#f1f9f4;">
+    <div class="card" id="card-docuware" style="--accent:#0e7a4d; --accent-bg:#f1f9f4;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0e7a4d"/>
           <rect x="13" y="12" width="16" height="20" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -295,8 +381,10 @@
         Grafana - kein Nutzer sieht hiervon etwas.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-docuware', 'docuware')">Vorfall auslösen</button>
@@ -304,7 +392,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#b8860b; --accent-bg:#fbf7ec;">
+    <div class="card" id="card-docuware-disk" style="--accent:#b8860b; --accent-bg:#fbf7ec;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b8860b"/>
           <ellipse cx="24" cy="14" rx="11" ry="4" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -325,14 +413,18 @@
         Vorfallsrollen und echter On-Call-Eskalation.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
-        <a href="/mockups/backend-bmc-itsm.html" target="_blank">BMC-Ticket-Mockup</a>
-        <a id="link-docuware-disk-roles" href="#" target="_blank" style="display:none">Vorfallsrollen</a>
-        <a class="disabled" id="link-oncall-escalation-1" href="#" target="_blank">On-Call-Eskalation</a>
-        <a class="disabled" id="link-oncall-logs-1" href="#" target="_blank">On-Call-Protokoll</a>
-        <span class="role-label">Nutzer</span>
-        <a class="disabled" id="link-docuware-disk-statuspage" href="#" target="_blank">Statusseite</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+          <a href="/mockups/backend-bmc-itsm.html" target="_blank">BMC-Ticket-Mockup</a>
+          <a id="link-docuware-disk-roles" href="#" target="_blank" style="display:none">Vorfallsrollen</a>
+          <a class="disabled" id="link-oncall-escalation-1" href="#" target="_blank">On-Call-Eskalation</a>
+          <a class="disabled" id="link-oncall-logs-1" href="#" target="_blank">On-Call-Protokoll</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-docuware-disk-statuspage" href="#" target="_blank">Statusseite</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-docuware-disk', 'docuware-disk')">Vorfall auslösen</button>
@@ -340,7 +432,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#c25a00; --accent-bg:#fdf5ee;">
+    <div class="card" id="card-customer-care" style="--accent:#c25a00; --accent-bg:#fdf5ee;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c25a00"/>
           <path d="M24 10 C18 10 13 15 13 21 C13 30 24 38 24 38 C24 38 35 30 35 21 C35 15 30 10 24 10 Z" fill="#fff"/>
@@ -359,9 +451,11 @@
         verortet - Karte + Warteschlange laufen synchron mit.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000/d/customer-care-overview" target="_blank">Grafana-Dashboard</a>
-        <a href="http://localhost:3000/d/avaya-callcenter-operations" target="_blank">Avaya-Dashboard</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/customer-care-overview" target="_blank">Grafana-Dashboard</a>
+          <a href="http://localhost:3000/d/avaya-callcenter-operations" target="_blank">Avaya-Dashboard</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-customer-care', 'customer-care')">Vorfall auslösen</button>
@@ -369,7 +463,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#6b2fb3; --accent-bg:#f7f2fc;">
+    <div class="card" id="card-security" style="--accent:#6b2fb3; --accent-bg:#f7f2fc;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#6b2fb3"/>
           <path d="M24 9 L38 15 V23 C38 32 32 39 24 41 C16 39 10 32 10 23 V15 Z" fill="none" stroke="#fff" stroke-width="2.3"/>
@@ -387,13 +481,17 @@
         Sicherheitskommunikation statt Fachjargon.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost" target="_blank">OneUptime</a>
-        <a class="disabled" id="link-oncall-escalation-2" href="#" target="_blank">On-Call-Eskalation</a>
-        <a class="disabled" id="link-oncall-logs-2" href="#" target="_blank">On-Call-Protokoll</a>
-        <span class="role-label">Nutzer</span>
-        <a class="disabled" id="link-security-statuspage" href="#" target="_blank">Statusseite</a>
-        <a href="http://localhost:8025" target="_blank">Mailpit</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost" target="_blank">OneUptime</a>
+          <a class="disabled" id="link-oncall-escalation-2" href="#" target="_blank">On-Call-Eskalation</a>
+          <a class="disabled" id="link-oncall-logs-2" href="#" target="_blank">On-Call-Protokoll</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-security-statuspage" href="#" target="_blank">Statusseite</a>
+          <a href="http://localhost:8025" target="_blank">Mailpit</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-security', 'security')">Vorfall auslösen</button>
@@ -401,7 +499,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#0e7490; --accent-bg:#eff8fa;">
+    <div class="card" id="card-printer" style="--accent:#0e7490; --accent-bg:#eff8fa;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0e7490"/>
           <rect x="12" y="10" width="24" height="10" rx="1.5" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -423,11 +521,15 @@
         Drucker bleibt bis zur Wartung selbst uneingeschränkt nutzbar.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a class="disabled" id="link-printer-admin" href="#" target="_blank">Wartung planen (OneUptime)</a>
-        <span class="role-label">Nutzer</span>
-        <a class="disabled" id="link-printer-statuspage" href="#" target="_blank">Statusseite</a>
-        <a href="/mockups/benachrichtigung-email.html#drucker" target="_blank">E-Mail-Mockup</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a class="disabled" id="link-printer-admin" href="#" target="_blank">Wartung planen (OneUptime)</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-printer-statuspage" href="#" target="_blank">Statusseite</a>
+          <a href="/mockups/benachrichtigung-email.html#drucker" target="_blank">E-Mail-Mockup</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-printer', 'printer')">Wartung ankündigen</button>
@@ -435,7 +537,7 @@
       </div>
     </div>
 
-    <div class="card" style="--accent:#b0266f; --accent-bg:#fbf0f6;">
+    <div class="card" id="card-leipzig-network" style="--accent:#b0266f; --accent-bg:#fbf0f6;">
       <div class="card-head">
         <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b0266f"/>
           <circle cx="24" cy="12" r="4" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -457,8 +559,10 @@
         OneUptime-Incident.
       </p>
       <div class="links">
-        <span class="role-label">Admin</span>
-        <a href="http://localhost:3000/d/leipzig-network-topology" target="_blank">Grafana-Dashboard</a>
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/leipzig-network-topology" target="_blank">Grafana-Dashboard</a>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-break" onclick="run('break-leipzig-network', 'leipzig-network')">Vorfall auslösen</button>
