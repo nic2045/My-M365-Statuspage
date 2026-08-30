@@ -171,27 +171,26 @@
     text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 -2px; }
   .hub-group:first-child { margin-top: 0; }
 
-  /* Prozess-Legende über den Szenario-Karten: nicht nur Farbe -> Name,
-     sondern Farbe -> Prozess -> Zielgruppe -> Mehrwert, als Übersicht vor
-     dem eigentlichen Kartenraster. Jede Zeile springt per Klick zur
-     zugehörigen Karte. */
-  .legend-panel {
+  /* Scenario grid split into three always-visible flagship cards (one
+     per category, doubling as the color legend now that the separate
+     legend panel is gone - the reader learns "red/amber/blue" from
+     these three) plus a collapsed <details> holding the rest. */
+  .scenario-more {
     max-width: 1080px;
-    margin: 0 auto 20px;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 20px;
+    margin: 20px auto 0;
   }
-  .legend-panel h3 { margin: 0 0 12px; font-size: 13px; }
-  /* Legend explains only the three colors themselves, not each card - a
-     per-card table duplicated what the grid below already shows, and
-     with ten cards it had become a second thing to scan through. */
-  .legend-colors { display: flex; flex-wrap: wrap; gap: 20px; }
-  .legend-color-item { display: flex; align-items: flex-start; gap: 8px; max-width: 320px; }
-  .legend-color-item .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
-  .legend-color-item strong { display: block; font-size: 13px; }
-  .legend-color-item span { display: block; font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 2px; }
+  .scenario-more > summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    padding: 4px 0;
+    list-style: none;
+  }
+  .scenario-more > summary::-webkit-details-marker { display: none; }
+  .scenario-more > summary::before { content: "▸ "; color: var(--muted); }
+  .scenario-more[open] > summary::before { content: "▾ "; }
+  .scenario-more .grid { margin-top: 16px; }
   a.hub-card {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -322,23 +321,6 @@
   </div>
 
   <div class="section-title">Vorfall- &amp; Prozess-Szenarien</div>
-  <div class="legend-panel">
-    <h3>Was die Farben bedeuten</h3>
-    <div class="legend-colors">
-      <div class="legend-color-item">
-        <span class="dot" style="background:#c4314b;"></span>
-        <div><strong>Ungeplante Störung</strong><span>Unangekündigter technischer Ausfall - IT erkennt, kommuniziert und behebt live.</span></div>
-      </div>
-      <div class="legend-color-item">
-        <span class="dot" style="background:#b8860b;"></span>
-        <div><strong>Wartung</strong><span>Angekündigte, geplante Arbeiten - kein Überraschungsmoment für den Nutzer.</span></div>
-      </div>
-      <div class="legend-color-item">
-        <span class="dot" style="background:#0f6cbd;"></span>
-        <div><strong>Prozessdemo</strong><span>Zeigt eine Plattform-Fähigkeit (z.B. Eskalationskette) statt primär eine Störung.</span></div>
-      </div>
-    </div>
-  </div>
   <div class="grid">
 
     <div class="card" id="card-demo" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
@@ -376,36 +358,42 @@
       </div>
     </div>
 
-    <div class="card" id="card-docuware" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
+    <div class="card" id="card-printer" style="--accent:#b8860b; --accent-bg:#fbf7ec;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
-          <rect x="13" y="12" width="16" height="20" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
-          <rect x="19" y="18" width="16" height="20" rx="2" fill="#c4314b" stroke="#fff" stroke-width="2.2"/>
-          <line x1="23" y1="24" x2="31" y2="24" stroke="#fff" stroke-width="1.6"/>
-          <line x1="23" y1="28" x2="31" y2="28" stroke="#fff" stroke-width="1.6"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b8860b"/>
+          <rect x="12" y="10" width="24" height="10" rx="1.5" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <rect x="10" y="20" width="28" height="14" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <rect x="16" y="30" width="16" height="9" fill="#fff"/>
+          <circle cx="32" cy="25" r="1.6" fill="#fff"/>
         </svg>
         <div>
-          <h2>DocuWare-Cluster-Vorfall</h2>
-          <span class="status unknown" id="status-docuware"><span class="dot"></span>wird geprüft…</span>
-          <span class="cat-badge incident">Ungeplante Störung</span>
+          <h2>Druckerwartung (Prozess)</h2>
+          <span class="status unknown" id="status-printer"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge maintenance">Wartung</span>
         </div>
       </div>
       <p class="story">
-        <strong>Passiert:</strong> MSSQL-Knoten fällt aus, WAF-Blocks &amp;
-        Antwortzeiten steigen (App-Owner-Dashboard).<br>
-        <strong>Zeigt:</strong> Infrastruktur-Vorfall betrifft nicht
-        zwangsläufig Kunden - Kundenportal bleibt grün. Bewusst nur
-        Grafana - kein Nutzer sieht hiervon etwas.
+        <strong>Passiert:</strong> Drucker im Hauptgebäude meldet eine
+        Störung → <strong>Admin/Techniker</strong> terminiert kurzfristig
+        eine Wartung in OneUptime → <strong>Nutzer</strong> sehen die
+        Ankündigung auf der Statusseite und per E-Mail.<br>
+        <strong>Zeigt:</strong> die zwei Rollen nebeneinander - der
+        Drucker bleibt bis zur Wartung selbst uneingeschränkt nutzbar.
       </p>
       <div class="links">
         <div class="link-row">
           <span class="role-label">Admin</span>
-          <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+          <a class="disabled" id="link-printer-admin" href="#" target="_blank">Wartung planen (OneUptime)</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-printer-statuspage" href="#" target="_blank">Statusseite</a>
+          <a href="/mockups/benachrichtigung-email.html#drucker" target="_blank">E-Mail-Mockup</a>
         </div>
       </div>
       <div class="actions">
-        <button class="btn-break" onclick="run('break-docuware', 'docuware')">Vorfall auslösen</button>
-        <button class="btn-fix" onclick="run('fix-docuware', 'docuware')">Beheben</button>
+        <button class="btn-break" onclick="run('break-printer', 'printer')">Wartung ankündigen</button>
+        <button class="btn-fix" onclick="run('fix-printer', 'printer')">Abschließen</button>
       </div>
     </div>
 
@@ -447,6 +435,45 @@
       <div class="actions">
         <button class="btn-break" onclick="run('break-docuware-disk', 'docuware-disk')">Vorfall auslösen</button>
         <button class="btn-fix" onclick="run('fix-docuware-disk', 'docuware-disk')">Beheben</button>
+      </div>
+    </div>
+
+  </div>
+
+  <details class="scenario-more">
+    <summary>Weitere Szenarien anzeigen (7)</summary>
+    <div class="grid">
+
+    <div class="card" id="card-docuware" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
+          <rect x="13" y="12" width="16" height="20" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <rect x="19" y="18" width="16" height="20" rx="2" fill="#c4314b" stroke="#fff" stroke-width="2.2"/>
+          <line x1="23" y1="24" x2="31" y2="24" stroke="#fff" stroke-width="1.6"/>
+          <line x1="23" y1="28" x2="31" y2="28" stroke="#fff" stroke-width="1.6"/>
+        </svg>
+        <div>
+          <h2>DocuWare-Cluster-Vorfall</h2>
+          <span class="status unknown" id="status-docuware"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Passiert:</strong> MSSQL-Knoten fällt aus, WAF-Blocks &amp;
+        Antwortzeiten steigen (App-Owner-Dashboard).<br>
+        <strong>Zeigt:</strong> Infrastruktur-Vorfall betrifft nicht
+        zwangsläufig Kunden - Kundenportal bleibt grün. Bewusst nur
+        Grafana - kein Nutzer sieht hiervon etwas.
+      </p>
+      <div class="links">
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-docuware', 'docuware')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-docuware', 'docuware')">Beheben</button>
       </div>
     </div>
 
@@ -516,45 +543,6 @@
       <div class="actions">
         <button class="btn-break" onclick="run('break-security', 'security')">Vorfall auslösen</button>
         <button class="btn-fix" onclick="run('fix-security', 'security')">Beheben</button>
-      </div>
-    </div>
-
-    <div class="card" id="card-printer" style="--accent:#b8860b; --accent-bg:#fbf7ec;">
-      <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b8860b"/>
-          <rect x="12" y="10" width="24" height="10" rx="1.5" fill="none" stroke="#fff" stroke-width="2.2"/>
-          <rect x="10" y="20" width="28" height="14" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
-          <rect x="16" y="30" width="16" height="9" fill="#fff"/>
-          <circle cx="32" cy="25" r="1.6" fill="#fff"/>
-        </svg>
-        <div>
-          <h2>Druckerwartung (Prozess)</h2>
-          <span class="status unknown" id="status-printer"><span class="dot"></span>wird geprüft…</span>
-          <span class="cat-badge maintenance">Wartung</span>
-        </div>
-      </div>
-      <p class="story">
-        <strong>Passiert:</strong> Drucker im Hauptgebäude meldet eine
-        Störung → <strong>Admin/Techniker</strong> terminiert kurzfristig
-        eine Wartung in OneUptime → <strong>Nutzer</strong> sehen die
-        Ankündigung auf der Statusseite und per E-Mail.<br>
-        <strong>Zeigt:</strong> die zwei Rollen nebeneinander - der
-        Drucker bleibt bis zur Wartung selbst uneingeschränkt nutzbar.
-      </p>
-      <div class="links">
-        <div class="link-row">
-          <span class="role-label">Admin</span>
-          <a class="disabled" id="link-printer-admin" href="#" target="_blank">Wartung planen (OneUptime)</a>
-        </div>
-        <div class="link-row">
-          <span class="role-label">Nutzer</span>
-          <a class="disabled" id="link-printer-statuspage" href="#" target="_blank">Statusseite</a>
-          <a href="/mockups/benachrichtigung-email.html#drucker" target="_blank">E-Mail-Mockup</a>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn-break" onclick="run('break-printer', 'printer')">Wartung ankündigen</button>
-        <button class="btn-fix" onclick="run('fix-printer', 'printer')">Abschließen</button>
       </div>
     </div>
 
@@ -696,7 +684,8 @@
       </div>
     </div>
 
-  </div>
+    </div>
+  </details>
 
   <div class="log-section">
     <h2>Letzte Aktion</h2>

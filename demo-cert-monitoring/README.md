@@ -330,13 +330,16 @@ die volle Eskalationskette statt primär eine Störung) - und trägt
 zusätzlich ein kleines Kategorie-Label direkt neben dem Live-Status, um
 innerhalb einer Farbe noch zu unterscheiden.
 
-**Legende nochmal vereinfacht: nur die drei Farben, nicht mehr jede
-Karte einzeln.** Die Tabelle mit einer Zeile pro Szenario (Zielgruppe +
-Mehrwert je Karte) duplizierte, was ohnehin schon auf jeder Karte selbst
-steht, und wurde mit zehn Zeilen selbst wieder zu einer zweiten Liste
-zum Durchscannen. Die Legende erklärt jetzt nur noch, wofür die drei
-Farben stehen (ein kurzer Satz je Kategorie), nichts Kartenspezifisches
-mehr.
+**Legende ganz entfernt, Kartenraster stattdessen umstrukturiert.** Erst
+auf drei Farben mit Kurzerklärung reduziert (siehe oben), dann komplett
+gestrichen - das Kategorie-Label auf jeder Karte erklärt die Farbe schon
+selbst, eine separate Legende war doppelt. Damit trotzdem auf einen
+Blick klar bleibt, wofür Rot/Amber/Blau stehen, bleiben nur drei
+"Hauptkacheln" (je eine pro Kategorie: Zertifikats-Vorfall/rot,
+Druckerwartung/amber, DocuWare-Festplatte/blau) direkt sichtbar - sie
+sind zugleich die Legende. Die übrigen sieben Karten liegen unter einem
+eingeklappten `<details>`-Block "Weitere Szenarien anzeigen (7)"
+darunter, ganz ohne JavaScript aufklappbar.
 
 **Alle Termine werden bei jedem Lauf neu relativ zu "heute" berechnet**
 (Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen
