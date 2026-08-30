@@ -110,10 +110,12 @@ scrape_configs:
         labels:
           instance: "leipzig-lan"
 
-  # Webshop: cross-funktionale Übersicht (Marketing, Website-Betrieb,
-  # Middleware, Infra) - siehe scripts/webshop-metrics-exporter.py.
+  # shop.pyur.com: Gruppe aus fünf Dashboards (Health & Business, Frontend
+  # Observability inkl. Vertragsabschluss-Funnel, Infrastruktur, Datenbank-
+  # Performance, Web-Traffic & Fehlercodes) - siehe
+  # scripts/webshop-metrics-exporter.py.
   - job_name: "webshop"
     static_configs:
       - targets: ["webshop-metrics-exporter:9500"]
         labels:
-          instance: "webshop"
+          instance: "shop.pyur.com"

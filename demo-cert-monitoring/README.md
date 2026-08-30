@@ -1046,63 +1046,111 @@ Von Anfang an mit der korrekten `labelsToFields`+gescopetem-`merge`
 +`joinByField`-Transformation gebaut. Alle neuen Metriken live gegen
 Prometheus verifiziert.
 
-## Webshop – cross-funktionale Übersicht (Marketing, Website-Betrieb, Middleware, Infra)
+## shop.pyur.com – Dashboard-Gruppe (Marketing, Frontend, Infra, Datenbank, Web-Traffic)
 
-Anders als jedes andere Dashboard oben, die alle für **eine** Zielgruppe
-gebaut sind (App-Owner, Callcenter-Manager, Facility-IT, ...):
-`grafana/dashboards/webshop-overview.json` ist bewusst **eine** Seite für
-**vier** verschiedene Rollen gleichzeitig, weil ein Webshop genau so im
-echten Betrieb überwacht wird - dieselbe Störung sieht aus jeder
-Perspektive anders aus, und alle vier müssen dieselbe Wahrheit sehen,
-nicht vier getrennte Tools mit potenziell abweichenden Zahlen. Vier
-Abschnitte (Grafana-`row`-Panels als Trenner, wie schon im
-IT-Ops-Gesamtübersicht-Dashboard), 27 Panels, neuer synthetischer
-Exporter `scripts/webshop-metrics-exporter.py` (52 Kennzahlen-Serien,
-Port 9500, gleiches "gesund mit sichtbarer Bewegung, ein STATE_FILE
-schaltet einen echten Vorfall"-Muster wie bei Customer-Care/
-Leipzig-Netzwerk):
+Fiktiver Webshop `shop.pyur.com` (nur ein Label, keine echte Domain -
+dasselbe Fixture-Prinzip wie `docuware.pyur.com`/`llm.pyur.com`
+anderswo in dieser Demo). Anders als jedes andere Dashboard oben, die
+alle für **eine** Zielgruppe gebaut sind (App-Owner, Callcenter-Manager,
+Facility-IT, ...): hier sind es bewusst **fünf verlinkte Dashboards für
+fünf verschiedene Rollen**, weil ein Webshop genau so im echten Betrieb
+überwacht wird - orientiert an einem typischen produktiven
+Observability-Stack für E-Commerce (Shopware-Health-Dashboard,
+Frontend-RUM via Faro, Node-Exporter-Infra, MySQL/PostgreSQL-DB-
+Dashboard, NGINX/Loki-Logs), hier alle fünf mit **einem** synthetischen
+Exporter (`scripts/webshop-metrics-exporter.py`, 95 Kennzahlen-Serien,
+Port 9500) nachgebildet statt fünf echten Integrationen. Gleiches
+"gesund mit sichtbarer Bewegung, ein STATE_FILE schaltet einen echten
+Vorfall"-Muster wie bei Customer-Care/Leipzig-Netzwerk. Im
+Kontrollzentrum als eigene Hub-Gruppe "shop.pyur.com –
+Dashboard-Gruppe", in Grafana selbst über eine Perspektiven-Link-Kachel
+auf dem ersten Dashboard verlinkt (gleiches Muster wie beim
+IT-Ops-Gesamtübersicht-Dashboard oben).
 
-- **Marketing**: Besucher aktuell, Conversion-Rate, Ø Bestellwert,
-  Warenkorbabbruch-Rate, Umsatz & Bestellungen pro Minute, Bounce-Rate,
-  Traffic-Anteil je Akquisitionskanal (organisch/bezahlt/direkt/
-  Referral/Social)
-- **Website-Betrieb: Performance & Verfügbarkeit**: Verfügbarkeit, alle
-  drei **Core Web Vitals** (LCP, INP, CLS - mit den offiziellen
-  Google-Schwellenwerten als Ampel-Farben), Seitenladezeit je Seitentyp
-  (Startseite/Kategorie/Produkt/Warenkorb/Checkout), HTTP-Fehlerrate
-  (4xx/5xx getrennt), Suche-Trefferquote
-- **Middleware**: Checkout-API-Latenz, Payment-Gateway-Erfolgsquote
-  &-Latenz, Inventory-API-Latenz & Sync-Verzögerung,
-  Bestell-Warteschlangentiefe, Fehlerrate je Downstream-Integration
-  (Payment/Inventory/Shipping/ERP)
-- **Infra**: Services online (frontend/checkout/catalog/search),
-  CPU/Memory je Service, Request-Rate, DB-Connection-Auslastung,
-  CDN-Cache-Hit-Rate & -Bandbreite
+**1. Health & Business** (`webshop-health-business.json` -
+Shopware-6-Health-Dashboard-Äquivalent, "360-Grad-Sicht, die
+Server-Performance mit Business-Bottlenecks verbindet"): Marketing-KPIs
+(Besucher, Conversion-Rate, Ø Bestellwert, Warenkorbabbruch, Umsatz &
+Bestellungen pro Minute, Bounce-Rate, Traffic je Akquisitionskanal) plus
+Middleware - die tatsächliche Brücke zwischen Backend-Performance und
+Geschäftskennzahlen: Checkout-/Payment-/Inventory-API-Latenz,
+Payment-Erfolgsquote, Bestell-Warteschlange, Fehlerrate je
+Downstream-Integration (Payment/Inventory/Shipping/ERP).
 
-**Ein Vorfall, sichtbar aus allen vier Perspektiven zugleich:** der
-Exporter modelliert bewusst nur eine einzige Story ("Checkout ist
-kaputt") statt vier unabhängiger - `STATE_FILE=unhealthy` lässt
-gleichzeitig die Conversion-Rate einbrechen (Marketing sieht das
-Symptom), die 5xx-Fehlerrate hochschnellen (Website-Betrieb sieht die
-Fehlerklasse), Checkout-API-Latenz und Payment-Gateway-Erfolgsquote
-kollabieren (Middleware sieht die Ursache) und den Checkout-Service auf
-hoher CPU/Memory mit `shop_service_up{service="checkout"}=0` laufen
-(Infra sieht den betroffenen Dienst) - derselbe Vorfall, vier
-Blickwinkel, keine widersprüchlichen Zahlen. Noch **kein**
+**2. Frontend Observability** (`webshop-frontend-observability.json` -
+Äquivalent zu Grafana Cloud Frontend Observability/Faro Web SDK: echte
+Nutzerinteraktionen, Seitenladezeiten, Fehler): alle drei **Core Web
+Vitals** (LCP, INP, CLS - mit den offiziellen Google-Schwellenwerten als
+Ampel-Farben), Seitenladezeit je Seitentyp, JS-Fehlerrate,
+Suche-Trefferquote - **und der eigentliche Auftrag dieser Gruppe: der
+Vertragsabschluss-Funnel (Internet)**. Fünf Schritte
+(Tarifauswahl → Verfügbarkeitsprüfung → Persönliche Daten →
+Vertragsübersicht → Bestätigung), je Schritt zwei Metriken:
+`shop_funnel_step_entries_total` (wie viele Besucher diesen Schritt noch
+erreichen - als Balkendiagramm mit abnehmender Höhe zeigt das direkt,
+**an welchem Schritt** die meisten abbrechen) und
+`shop_funnel_step_avg_duration_seconds` (wie lange sie dort bleiben).
+Bewusst realistisch modelliert: "Persönliche Daten" hat sowohl die
+größte Abbruchquote (Formular mit Adresse/IBAN - der Punkt mit der
+höchsten gefühlten Verbindlichkeit) als auch die längste Verweildauer
+(~95s, ein Formular zum Ausfüllen statt ein Klick) - kein Zufallsrauschen,
+sondern dieselbe Reihenfolge, die ein echter Vertragsabschluss-Funnel
+zeigen würde. Eine "Gesamt-Abschlussquote"-Kachel (Bestätigung ÷
+Tarifauswahl) fasst das Ergebnis in einer Zahl zusammen.
+
+**3. Infrastruktur** (`webshop-infrastructure.json` - Node-Exporter-
+Äquivalent, orientiert am "Node Exporter Full", ID 1860): CPU/Memory/
+Disk/Netzwerk je Service (frontend/checkout/catalog/search),
+Load Average, Request-Rate, CDN-Cache-Hit-Rate & -Bandbreite.
+
+**4. Datenbank-Performance** (`webshop-database.json` - Äquivalent zum
+MySQL-Dashboard ID 7362/PostgreSQL-Pendant, "Datenbank-Latenz wirkt sich
+direkt auf die Checkout-Conversion aus"): Query-Latenz nach Typ (SELECT/
+INSERT/UPDATE), Connection-Pool-Auslastung, Slow-Query-Rate,
+Replikations-Lag, Deadlocks.
+
+**5. Web-Traffic & Fehlercodes** (`webshop-web-traffic.json` -
+**bewusst kein echtes Loki+NGINX-Log-Dashboard**, sondern das
+Prometheus-native Äquivalent dazu, im Dashboard selbst als Hinweis
+vermerkt: eine neue Loki-Instanz plus Log-Pipeline wäre ein spürbarer
+Infrastruktur-Zubau für diese eine Perspektive gewesen, während
+Request-Rate/Statuscode-Verteilung/Fehler-Pfade als Metriken dieselbe
+Kernaussage ohne zusätzlichen Dienst liefern. Für echte, durchsuchbare
+Logzeilen existiert in dieser Demo bereits **Telemetry → Logs** in
+OneUptime, siehe die DocuWare-Login-Story weiter oben): Request-Rate,
+Requests nach Statuscode-Klasse über Zeit (2xx/3xx/4xx/5xx), Fehlerrate
+je Pfad (`/checkout`, `/vertrag/abschluss`, ...).
+
+**Ein Vorfall, sichtbar aus allen fünf Perspektiven zugleich:** der
+Exporter modelliert bewusst eine einzige Story - die Datenbank ist die
+eigentliche Ursache - statt fünf unabhängiger. `STATE_FILE=unhealthy`
+lässt gleichzeitig Query-Latenz und Replikations-Lag einbrechen
+(**Datenbank-Performance** zeigt die Ursache), was sich als
+Checkout-API-Latenz/Payment-Ausfälle zeigt (**Health & Business** sieht
+das Symptom auf Geschäftsebene), als Abbruch konzentriert genau am
+Schritt "Vertragsübersicht" (dort ruft das Frontend die Checkout-API
+auf) plus steigende JS-Fehlerrate (**Frontend Observability**), als
+hohe CPU/hoher Netzwerk-Traffic auf dem Checkout-Service
+(**Infrastruktur**) und als 5xx-Spitze speziell auf `/checkout` und
+`/vertrag/abschluss` (**Web-Traffic & Fehlercodes**) - derselbe Vorfall,
+fünf Blickwinkel, keine widersprüchlichen Zahlen. Noch **kein**
 live-auslösbares `break-webshop.sh`/`fix-webshop.sh` verdrahtet (bewusst
 außerhalb dieser ersten Fassung) - der Exporter ist dafür bereits
 bereit, falls gewünscht.
 
-Barchart-Panel ("Traffic nach Kanal") von Anfang an mit derselben
-korrekten `labelsToFields`+`merge`+`organize`-Transformation gebaut wie
-das bereits einmal gefundene Avaya-Bug-Muster oben - keine
-rohe `legendFormat`-Vorlage, die bei einem Ein-Metrik-Balkendiagramm
-nicht die Balken pro Label erzeugt hätte. Live gegen den Exporter
-verifiziert (`curl localhost:9500/metrics`, 52 Serien im gesunden und im
-`unhealthy`-Zustand geprüft); Live-Rendering in Grafana selbst nicht
-möglich (Docker-Hub-Pulls in dieser Sandbox blockiert, siehe oben) -
-JSON-Schema, Panel-IDs, Grid-Layout und Transformationen stattdessen
-statisch gegen den funktionierenden Vorgänger abgeglichen.
+Beide Balkendiagramm-Panels ("Traffic nach Kanal", "Nutzer je Schritt
+(Funnel)", "Fehlerrate je Pfad") von Anfang an mit derselben korrekten
+`labelsToFields`+`merge`+`organize`-Transformation gebaut wie das bereits
+einmal gefundene Avaya-Bug-Muster oben - keine rohe
+`legendFormat`-Vorlage, die bei einem Ein-Metrik-Balkendiagramm nicht die
+Balken pro Label erzeugt hätte. Live gegen den Exporter verifiziert
+(`curl localhost:9500/metrics`, 95 Serien im gesunden und im
+`unhealthy`-Zustand geprüft, inkl. Funnel-Verweildauer-Anstieg am
+richtigen Schritt); Live-Rendering in Grafana selbst nicht möglich
+(Docker-Hub-Pulls in dieser Sandbox blockiert, siehe oben) - JSON-Schema,
+Panel-IDs, Grid-Layout und Transformationen aller fünf Dashboards
+stattdessen statisch geprüft (eindeutige IDs, keine Grid-Überlappung,
+jedes Panel mit Datasource/Targets/eindeutigen refIds).
 
 ## DocuWare-Cluster: App-Owner-Tiefe + einfache Nutzeransicht
 

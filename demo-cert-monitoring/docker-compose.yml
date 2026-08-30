@@ -133,9 +133,11 @@ services:
       - "${LEIPZIG_NETWORK_METRICS_PORT:-9400}:9400"
 
   webshop-metrics-exporter:
-    # Synthetic Prometheus exporter for the webshop - a cross-functional
-    # overview (Marketing, Website-Betrieb, Middleware, Infra) rather than
-    # a single team's dashboard, see scripts/webshop-metrics-exporter.py.
+    # Synthetic Prometheus exporter for shop.pyur.com - feeds a group of
+    # five dashboards (Health & Business, Frontend Observability incl.
+    # the Vertragsabschluss-Funnel, Infrastruktur, Datenbank-Performance,
+    # Web-Traffic & Fehlercodes) rather than one, see
+    # scripts/webshop-metrics-exporter.py.
     image: python:3.12-alpine
     container_name: cert-demo-webshop-metrics
     restart: unless-stopped
