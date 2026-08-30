@@ -463,8 +463,8 @@
 
   <details class="scenario-more">
     <summary>
-      <span class="more-icon">+7</span>
-      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge</span></span>
+      <span class="more-icon">+8</span>
+      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge, Kettenreaktion Leipzig</span></span>
       <span class="more-arrow">⌄</span>
     </summary>
     <div class="grid">
@@ -709,6 +709,43 @@
       </div>
     </div>
 
+    <div class="card" id="card-leipzig-cascade" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
+          <rect x="9" y="18" width="17" height="12" rx="6" fill="none" stroke="#fff" stroke-width="2.4"/>
+          <rect x="22" y="18" width="17" height="12" rx="6" fill="none" stroke="#fff" stroke-width="2.4"/>
+        </svg>
+        <div>
+          <h2>Internetausfall mit Kettenreaktion</h2>
+          <span class="status unknown" id="status-leipzig-cascade"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Passiert:</strong> Die Internet-Anbindung am Standort
+        Leipzig fällt aus (Root Cause) - weil WLAN-Controller und Teile
+        der internen Netzwerk-Dienste cloud-verwaltet sind, ziehen WLAN
+        und Netzwerk (LAN) zeitversetzt nach (~15s).<br>
+        <strong>Zeigt:</strong> eine echte Kettenreaktion aus einer
+        einzigen Ursache - ein Incident mit drei betroffenen Diensten und
+        klar benanntem Root Cause statt drei getrennten Alarmen.
+      </p>
+      <div class="links">
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost" target="_blank">OneUptime</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-leipzig-cascade-statuspage" href="#" target="_blank">Statusseite</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-leipzig-cascade', 'leipzig-cascade')">Vorfall auslösen (~15s)</button>
+        <button class="btn-fix" onclick="run('fix-leipzig-cascade', 'leipzig-cascade')">Beheben</button>
+      </div>
+    </div>
+
     </div>
   </details>
 
@@ -755,7 +792,7 @@
       try {
         const res = await fetch("/api/status");
         const data = await res.json();
-        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer", "leipzig-network", "cognigy", "blueant", "jira-attachments"]) {
+        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer", "leipzig-network", "cognigy", "blueant", "jira-attachments", "leipzig-cascade"]) {
           const el = document.getElementById("status-" + key);
           const state = data[key] || "unknown";
           el.className = "status " + state;
@@ -808,6 +845,7 @@
           "link-printer-statuspage": data.leipzigStatusPageId,
           "link-blueant-statuspage": data.itServiceStatusPageId,
           "link-jira-attachments-statuspage": data.itServiceStatusPageId,
+          "link-leipzig-cascade-statuspage": data.leipzigStatusPageId,
         };
         for (const [elId, pageId] of Object.entries(statusPageLinks)) {
           const a = document.getElementById(elId);
