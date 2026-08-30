@@ -328,10 +328,15 @@ Jira-Anhänge), **Wartung** (amber, eine Karte: Druckerwartung) und
 **Prozessdemo** (blau, eine Karte: DocuWare-Festplatte - zeigt bewusst
 die volle Eskalationskette statt primär eine Störung) - und trägt
 zusätzlich ein kleines Kategorie-Label direkt neben dem Live-Status, um
-innerhalb einer Farbe noch zu unterscheiden. Die Prozess-Legende ist
-entsprechend nach denselben drei Kategorien gruppiert (Abschnittsüberschrift
-je Kategorie, Punktfarbe = Kategoriefarbe), Zielgruppe/Mehrwert-Spalten
-unverändert.
+innerhalb einer Farbe noch zu unterscheiden.
+
+**Legende nochmal vereinfacht: nur die drei Farben, nicht mehr jede
+Karte einzeln.** Die Tabelle mit einer Zeile pro Szenario (Zielgruppe +
+Mehrwert je Karte) duplizierte, was ohnehin schon auf jeder Karte selbst
+steht, und wurde mit zehn Zeilen selbst wieder zu einer zweiten Liste
+zum Durchscannen. Die Legende erklärt jetzt nur noch, wofür die drei
+Farben stehen (ein kurzer Satz je Kategorie), nichts Kartenspezifisches
+mehr.
 
 **Alle Termine werden bei jedem Lauf neu relativ zu "heute" berechnet**
 (Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen

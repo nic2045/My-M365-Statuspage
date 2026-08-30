@@ -183,37 +183,15 @@
     border-radius: 12px;
     padding: 16px 20px;
   }
-  .legend-panel h3 { margin: 0 0 2px; font-size: 13px; }
-  .legend-panel .legend-sub { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
-  .legend-scroll { overflow-x: auto; }
-  .legend-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .legend-table td { padding: 8px 10px; vertical-align: top; border-top: 1px solid var(--border); }
-  .legend-table tr:first-child td { border-top: none; }
-  .legend-table .dot-cell { width: 14px; padding-right: 0; }
-  .legend-table .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .legend-table a { font-weight: 600; color: var(--text); text-decoration: none; white-space: nowrap; }
-  .legend-table a:hover { text-decoration: underline; }
-  .legend-table .value { color: var(--muted); line-height: 1.5; }
-  /* Section header row between the three category groups - rows within a
-     group already share a dot color, this just names the group once. */
-  .legend-table .cat-row td {
-    padding: 12px 10px 4px;
-    border-top: none;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .legend-table tr.cat-row:first-child td { padding-top: 0; }
-  .legend-table .cat-row.incident td { color: var(--cat-incident); }
-  .legend-table .cat-row.maintenance td { color: var(--cat-maintenance); }
-  .legend-table .cat-row.process td { color: var(--cat-process); }
-  .audience {
-    display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
-  }
-  .audience.both { background: #eaf3fc; color: #0f6cbd; }
-  .audience.it { background: #eef0f2; color: #5b616b; }
+  .legend-panel h3 { margin: 0 0 12px; font-size: 13px; }
+  /* Legend explains only the three colors themselves, not each card - a
+     per-card table duplicated what the grid below already shows, and
+     with ten cards it had become a second thing to scan through. */
+  .legend-colors { display: flex; flex-wrap: wrap; gap: 20px; }
+  .legend-color-item { display: flex; align-items: flex-start; gap: 8px; max-width: 320px; }
+  .legend-color-item .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+  .legend-color-item strong { display: block; font-size: 13px; }
+  .legend-color-item span { display: block; font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 2px; }
   a.hub-card {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -323,74 +301,20 @@
 
   <div class="section-title">Vorfall- &amp; Prozess-Szenarien</div>
   <div class="legend-panel">
-    <h3>Kategorie &amp; Mehrwert</h3>
-    <p class="legend-sub">Farbe zeigt zuerst die Art des Szenarios (ungeplante Störung, Wartung oder reine Prozessdemo), danach je Karte Zielgruppe und konkreter Nutzen - Klick auf den Namen springt zur Karte.</p>
-    <div class="legend-scroll">
-      <table class="legend-table">
-        <tr class="cat-row incident"><td colspan="4">Ungeplante Störung</td></tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
-          <td><a href="#card-demo">Zertifikats-Vorfall</a></td>
-          <td><span class="audience both">IT + Nutzer</span></td>
-          <td class="value">Nutzer erfährt früh &amp; verständlich von der Störung statt selbst zu rätseln; IT sieht die technische Ursache sofort in Grafana.</td>
-        </tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
-          <td><a href="#card-docuware">DocuWare-Cluster-Vorfall</a></td>
-          <td><span class="audience it">Nur IT</span></td>
-          <td class="value">Reine interne Fehlerdiagnose - zeigt, dass ein Infrastruktur-Defekt nicht zwangsläufig bis zum Kunden durchschlägt.</td>
-        </tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
-          <td><a href="#card-customer-care">Customer-Care-Vorfall (Chemnitz)</a></td>
-          <td><span class="audience it">Nur IT</span></td>
-          <td class="value">Technischer Betrieb erkennt den Standortausfall geografisch verortet, bevor der Kundenservice spürbar leidet.</td>
-        </tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
-          <td><a href="#card-security">Sicherheits-Vorfall (Anmeldung)</a></td>
-          <td><span class="audience both">IT + Nutzer</span></td>
-          <td class="value">Nutzer bekommt transparente, jargon-freie Sicherheitskommunikation; IT eskaliert intern über On-Call.</td>
-        </tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
-          <td><a href="#card-leipzig-network">Standort Leipzig – Netzwerk-Vorfall</a></td>
-          <td><span class="audience it">Nur IT</span></td>
-          <td class="value">Facility-IT sieht den Netzwerkausfall sofort im Node-Graph - rein interne Beobachtung ohne Nutzer-Auswirkung.</td>
-        </tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
-          <td><a href="#card-cognigy">Cognigy-Vorfall (Chat-/Voicebot)</a></td>
-          <td><span class="audience it">Nur IT</span></td>
-          <td class="value">Zeigt, dass nicht jeder Vorfall selbstverschuldet ist - Technical Owner sieht sofort, dass ein externer SaaS-Anbieter die Ursache ist, nicht die eigene Infra.</td>
-        </tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
-          <td><a href="#card-blueant">Blueant-Ausfall (ungeplant)</a></td>
-          <td><span class="audience both">IT + Nutzer</span></td>
-          <td class="value">Nutzer sieht auf einen Blick, dass Telefonie ungeplant gestört ist - klar getrennt von der bereits angekündigten Patchday-Wartung.</td>
-        </tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
-          <td><a href="#card-jira-attachments">Jira: Datei-Uploads gestört</a></td>
-          <td><span class="audience both">IT + Nutzer</span></td>
-          <td class="value">Nutzer erfährt präzise, was wirklich nicht funktioniert (nur Uploads), statt pauschal zu vermuten, Jira sei komplett down.</td>
-        </tr>
-        <tr class="cat-row maintenance"><td colspan="4">Wartung</td></tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#b8860b;"></span></td>
-          <td><a href="#card-printer">Druckerwartung (Prozess)</a></td>
-          <td><span class="audience both">IT + Nutzer</span></td>
-          <td class="value">Zeigt die Rollentrennung selbst: Admin plant die Wartung, Nutzer wird informiert - der Service bleibt bis dahin ungestört.</td>
-        </tr>
-        <tr class="cat-row process"><td colspan="4">Prozessdemo</td></tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#0f6cbd;"></span></td>
-          <td><a href="#card-docuware-disk">DocuWare-Festplatte läuft voll</a></td>
-          <td><span class="audience both">IT + Nutzer</span></td>
-          <td class="value">Nutzer wird informiert, bevor es zum Ausfall kommt; IT bekommt die volle Prozesskette inkl. Vorfallsrollen und On-Call-Eskalation.</td>
-        </tr>
-      </table>
+    <h3>Was die Farben bedeuten</h3>
+    <div class="legend-colors">
+      <div class="legend-color-item">
+        <span class="dot" style="background:#c4314b;"></span>
+        <div><strong>Ungeplante Störung</strong><span>Unangekündigter technischer Ausfall - IT erkennt, kommuniziert und behebt live.</span></div>
+      </div>
+      <div class="legend-color-item">
+        <span class="dot" style="background:#b8860b;"></span>
+        <div><strong>Wartung</strong><span>Angekündigte, geplante Arbeiten - kein Überraschungsmoment für den Nutzer.</span></div>
+      </div>
+      <div class="legend-color-item">
+        <span class="dot" style="background:#0f6cbd;"></span>
+        <div><strong>Prozessdemo</strong><span>Zeigt eine Plattform-Fähigkeit (z.B. Eskalationskette) statt primär eine Störung.</span></div>
+      </div>
     </div>
   </div>
   <div class="grid">
