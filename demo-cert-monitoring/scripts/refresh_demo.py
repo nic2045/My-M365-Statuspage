@@ -38,6 +38,9 @@ STATE_FILE = os.environ.get(
 
 MAX_ROTATING = 2  # how many auto-rotated incidents stay visible at once
 
+token = None
+project_id = None
+
 # (title, monitor name, description) - spans several already-seeded
 # IT-Services/Leipzig monitors so the rotation doesn't always land on the
 # same service. Kept short and low-drama (Minor, resolved within
