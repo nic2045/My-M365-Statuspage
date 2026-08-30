@@ -1553,6 +1553,20 @@ Vordergrund außerhalb von Docker** (Ctrl+C stoppt es) statt als weiterer
 `docker-compose.yml`-Service - `./start-demo.sh` weist am Ende auf
 diesen Befehl hin, startet ihn aber nicht automatisch mit.
 
+**Kleiner Fix: Karten, die auf `./seed-oneuptime.sh` warten, aktivieren
+sich jetzt von selbst.** Alle Links, die eine geseedete OneUptime-Instanz
+brauchen (die drei Statusseiten-Kacheln, die fünf Kacheln unter
+"OneUptime – weitere Bereiche", diverse Admin-/Nutzer-Sublinks auf den
+Szenario-Karten) starten deaktiviert und werden von `loadLinks()`
+freigeschaltet, sobald `/api/links` echte IDs liefert. Bisher lief
+`loadLinks()` nur einmal beim Laden der Seite - wer das Kontrollzentrum
+vor dem Seeding geöffnet hatte, musste die Seite manuell neu laden,
+damit die Kacheln den neuen Stand bemerken. `loadLinks()` ist rein
+additiv (setzt nur `href`/entfernt `.disabled`, nimmt nie etwas zurück),
+läuft jetzt deshalb im selben 5-Sekunden-Intervall wie `refreshStatus()`
+mit - eine Karte schaltet sich von selbst frei, sobald das Seeding
+durchgelaufen ist, ganz ohne Neuladen.
+
 ## Ruhigere Zeitreihen-Graphen
 
 Die Zeitreihen-Panels wirkten zu "spikig" für eine Management-Demo (alle
