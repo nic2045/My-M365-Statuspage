@@ -122,12 +122,14 @@ for name in all_monitor_names:
     monitor_ids[name] = m["_id"]
 
 statuses = get_list("monitor-status", select={
-    "_id": True, "isOperationalState": True, "isOfflineState": True, "isDegradedState": True})
+    "_id": True, "isOperationalState": True, "isOfflineState": True})
 operational_status_id = next(s["_id"] for s in statuses if s.get("isOperationalState"))
 offline_status_id = next(
     (s["_id"] for s in statuses if s.get("isOfflineState")), operational_status_id)
 degraded_status_id = next(
-    (s["_id"] for s in statuses if s.get("isDegradedState")), operational_status_id)
+    (s["_id"] for s in statuses
+     if not s.get("isOperationalState") and not s.get("isOfflineState")),
+    operational_status_id)
 
 
 def set_monitor_status(monitor_name, status_id):
