@@ -1,0 +1,330 @@
+{
+ "title": "IT-Ops – Gesamtübersicht (alle Bereiche)",
+ "uid": "it-ops-overview",
+ "timezone": "browser",
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "schemaVersion": 39,
+ "links": [
+  {
+   "title": "Website & Zertifikate (App-Owner)",
+   "type": "link",
+   "icon": "dashboard",
+   "url": "/d/website-cert-monitoring",
+   "targetBlank": false
+  },
+  {
+   "title": "DocuWare-Cluster (App-Owner)",
+   "type": "link",
+   "icon": "dashboard",
+   "url": "/d/docuware-cluster-status",
+   "targetBlank": false
+  },
+  {
+   "title": "Customer Care (Technical Owner)",
+   "type": "link",
+   "icon": "dashboard",
+   "url": "/d/customer-care-overview",
+   "targetBlank": false
+  },
+  {
+   "title": "Avaya Callcenter-Betrieb",
+   "type": "link",
+   "icon": "dashboard",
+   "url": "/d/avaya-callcenter-operations",
+   "targetBlank": false
+  },
+  {
+   "title": "Standort Leipzig – Netzwerk (Facility-IT)",
+   "type": "link",
+   "icon": "dashboard",
+   "url": "/d/leipzig-network-topology",
+   "targetBlank": false
+  }
+ ],
+ "templating": {
+  "list": [
+   {
+    "name": "oneuptime_url",
+    "type": "textbox",
+    "label": "OneUptime-URL (Endnutzer-Statuspage)",
+    "current": {
+     "text": "http://localhost/",
+     "value": "http://localhost/"
+    },
+    "query": "http://localhost/"
+   }
+  ]
+ },
+ "panels": [
+  {
+   "id": 100,
+   "type": "row",
+   "title": "Gesamtstatus je Bereich",
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "collapsed": false,
+   "panels": []
+  },
+  {
+   "id": 101,
+   "type": "stat",
+   "title": "Website & Zertifikate – Gesamtstatus (1 = gesund)",
+   "description": "Kein Website-Ausfall und kein abgelaufenes Zertifikat. Details im verlinkten Dashboard.",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 0,
+    "y": 1
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "(sum(probe_success{job=~\"website_probes|demo_broken_site\"} < bool 1) == bool 0) * (sum(((probe_ssl_earliest_cert_expiry{job=~\"website_probes|demo_broken_site\"} - time()) / 86400) < bool 0) == bool 0)",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Zum Website- & Zertifikats-Dashboard",
+     "url": "/d/website-cert-monitoring",
+     "targetBlank": false
+    }
+   ]
+  },
+  {
+   "id": 102,
+   "type": "stat",
+   "title": "DocuWare-Cluster – Gesamtstatus (1 = gesund)",
+   "description": "DB-Cluster-Knoten, Hardware und die Website selbst. Details im verlinkten Dashboard.",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 6,
+    "y": 1
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "min(docuware_mssql_cluster_node_up) * on() min(docuware_hardware_status) * on() probe_success{job=\"docuware_site\"}",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Zum DocuWare-Cluster-Dashboard",
+     "url": "/d/docuware-cluster-status",
+     "targetBlank": false
+    }
+   ]
+  },
+  {
+   "id": 103,
+   "type": "stat",
+   "title": "Customer Care – Gesamtstatus (1 = gesund)",
+   "description": "Standort-VPNs und Avaya-SIP-Registrierung. Details im verlinkten Dashboard.",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 12,
+    "y": 1
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "min(cc_site_vpn_up) * on() cc_avaya_sip_registration_status",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Zum Customer-Care-Dashboard",
+     "url": "/d/customer-care-overview",
+     "targetBlank": false
+    }
+   ]
+  },
+  {
+   "id": 104,
+   "type": "stat",
+   "title": "Standort Leipzig – Gesamtstatus (1 = gesund)",
+   "description": "Kein Netzwerkgerät offline. Details im verlinkten Dashboard.",
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 18,
+    "y": 1
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "sum(net_device_up < bool 1) == bool 0",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Zum Leipzig-Netzwerk-Dashboard",
+     "url": "/d/leipzig-network-topology",
+     "targetBlank": false
+    }
+   ]
+  },
+  {
+   "id": 110,
+   "type": "row",
+   "title": "Weitere Perspektiven",
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 7
+   },
+   "collapsed": false,
+   "panels": []
+  },
+  {
+   "id": 111,
+   "type": "text",
+   "title": "Dieselben Daten, andere Zielgruppe",
+   "gridPos": {
+    "h": 14,
+    "w": 24,
+    "x": 0,
+    "y": 8
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "Ein und dieselben Prometheus-Metriken sehen je nach Zielgruppe komplett anders aus. Diese Seite ist die **IT-Ops-Perspektive** (Gesamtstatus über alle Bereiche); von hier aus geht es zu den anderen:\n\n### Technische Sicht (Grafana) – App-Owner / Technical Owner / Facility-IT\n\n- [Website & Zertifikate](/d/website-cert-monitoring) – Verfügbarkeit + TLS-Ablauf, App-Owner-Sicht\n- [DocuWare-Cluster](/d/docuware-cluster-status) – App-, DB-, Loadbalancer- und Hardware-Ebene\n- [Customer Care – Standortübersicht](/d/customer-care-overview) – VPNs, Citrix, Cognigy, Netzwerk-Topologie\n- [Avaya Callcenter-Betrieb](/d/avaya-callcenter-operations) – Warteschlange, Service Level, ACHT\n- [Standort Leipzig – Netzwerk](/d/leipzig-network-topology) – Switches/Router, Facility-IT-Sicht\n\n### Endnutzer-Sicht – öffentliche Statuspage\n\n- [OneUptime-Statuspage](${oneuptime_url}) – dieselben Vorfälle, aber ohne technische Details: nur \"betroffen / nicht betroffen\" plus Incident-Updates. URL oben im Dashboard-Variablenfeld anpassbar, falls OneUptime nicht auf dem Standardport läuft.\n\n### Weitere Werkzeuge\n\n- [Demo-Kontrollzentrum](http://localhost:7100/) – alle Seiten, Dashboards und Vorfall-Skripte an einem Ort\n- [Prometheus](http://localhost:9090/alerts) – Rohdaten & Alert-Regeln, die einzige Quelle der Wahrheit hinter allen Dashboards\n- [Mailpit](http://localhost:8025) – echte Benachrichtigungs-E-Mails, die OneUptime bei einem Vorfall verschickt\n- [Benachrichtigungs-Mockups](http://localhost:7100/mockups/index.html) – wie derselbe Vorfall in E-Mail/Teams/mobil/BMC aussehen würde"
+   }
+  }
+ ]
+}
