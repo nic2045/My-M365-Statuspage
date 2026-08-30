@@ -916,6 +916,35 @@ Szenario **komplett durch** - Grafana ist hier nur der Anfang:
   (Delete-und-Neuanlegen aus dem Resolved-Zustand) und ein fest
   verdrahteter Link sonst sofort veralten würde.
 
+## IT-Ops – Gesamtübersicht (Grafana, alle Bereiche)
+
+`grafana/dashboards/it-ops-overview.json` - die sechste Dashboard-Perspektive,
+diesmal nicht pro Bereich, sondern **quer über alle**: eine Ampel-Kachel je
+Bereich (Website & Zertifikate, DocuWare-Cluster, Customer Care, Standort
+Leipzig - jede grün/rot nach demselben "Gesamtstatus (1 = gesund)"-Muster,
+das die Einzeldashboards schon verwenden) und ein Klick auf eine Kachel
+springt direkt ins zugehörige Detail-Dashboard (Grafanas Panel-`links`).
+
+Der eigentliche Punkt dieses Dashboards: **dieselben Prometheus-Metriken
+sehen aus jeder Perspektive anders aus.** Ein großes Markdown-Textpanel
+("Weitere Perspektiven") verlinkt explizit gruppiert nach Zielgruppe:
+
+- **Technische Sicht (Grafana)** - die anderen 5 Dashboards, je mit ihrer
+  Zielgruppe (App-Owner/Technical Owner/Facility-IT)
+- **Endnutzer-Sicht** - die öffentliche OneUptime-Statuspage über die
+  Dashboard-Variable `$oneuptime_url` (Default `http://localhost/`, im
+  Dashboard selbst änderbar, ohne die JSON-Datei zu editieren - passend zum
+  selben Muster wie in `mockups/index.html`)
+- **Weitere Werkzeuge** - Demo-Kontrollzentrum, Prometheus (die eigentliche
+  Quelle der Wahrheit hinter allen Dashboards), Mailpit, Benachrichtigungs-
+  Mockups
+
+Zusätzlich verlinkt das Dashboard selbst (Grafanas Dashboard-`links`, oben
+im Toolbar-Dropdown) zu den anderen 5 - Navigation geht also sowohl über
+das sichtbare Textpanel als auch nativ über Grafana. Im
+[Demo-Kontrollzentrum](#demo-kontrollzentrum) taucht es als erste Karte
+unter "Dashboards" auf.
+
 ## Test-Incident live durchspielen: "Zertifikat abgelaufen, IT arbeitet an Behebung"
 
 `demo-broken-site` startet **gesund** (gültiges Zertifikat,
