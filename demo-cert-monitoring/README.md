@@ -7,6 +7,35 @@
 > App-Owner (technisches Grafana-Dashboard) und Endnutzer (öffentliche
 > OneUptime-Statuspage).
 
+**Link zum echten Produkt.** Alle sieben Vorfall-Szenarien hier sind eigens
+für die Demo gebaute Infrastruktur (DocuWare, Standort Leipzig, Customer
+Care, ...) - keines davon ist die eigentliche M365-Statuspage-App aus
+diesem Repo-Root. Damit eine Vorführung trotzdem beim echten Produkt landen
+kann, hat das Demo-Kontrollzentrum (`./control-panel.sh`) jetzt eine eigene
+Karte **"M365 Dienststatus"** ganz oben, die auf `http://localhost:8000`
+verlinkt - die echte App, kein Fixture. Sie läuft **unabhängig vom
+Docker-Stack hier** direkt über `uv`, kein Docker nötig (der Haupt-App-Build
+zieht `python:3.12-slim` von Docker Hub, was in dieser Sandbox blockiert
+war - `uv run uvicorn` umgeht das komplett):
+
+```bash
+cd .. # zurück ins Repo-Root
+cp .env.example .env   # falls noch nicht geschehen
+# DISABLE_AUTH=true setzen für lokale Vorführungen ohne echten Entra-ID-Login
+uv sync
+make dev   # http://localhost:8000
+```
+
+Ohne echte `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`
+(Vorführung ohne eigenen Tenant) startet die App trotzdem und ist mit
+`DISABLE_AUTH=true` ohne Login erreichbar - der Graph-API-Poll läuft dann
+aber ins Leere (kein echter Tenant, live bestätigt:
+`AADSTS90002: Tenant 'demo-tenant' not found`, sauber abgefangen, kein
+Absturz) und die Dienste zeigen entsprechend keine echten Daten. Für einen
+Auftritt mit echten M365-Statusdaten braucht es die echten Werte aus der
+Entra-ID-App-Registrierung (siehe Haupt-README, Abschnitt "Entra ID
+App-Registrierung").
+
 ## Architektur
 
 ```
@@ -817,6 +846,48 @@ MOS-Score, Bandbreiten-Kollaps) und die Avaya-Warteschlange
 volllaufen; `./fix-customer-care.sh` macht es rückgängig. Live
 verifiziert: Chemnitz-VPN ging auf 0, "Standorte mit VPN-Störung"
 sprang auf 1, die Warteschlange auf 39 Anrufe.
+
+**Drittes, unabhängiges Vorfall-Szenario - Cognigy-Vendor-Ausfall:**
+`./break-cognigy.sh` lässt gezielt die Cognigy-API (Panel "Cognigy (Cloud)
+– API-Latenz & Bot-Sessions") einbrechen - Latenz springt auf
+2,2-4,8 Sekunden, Bot-Sessions kollabieren Richtung 0, die
+Intent-Erfolgsquote fällt auf 12-30 % (Panel-Schwellenwert bei <90 % bereits
+rot, kein Dashboard-Umbau nötig). `./fix-cognigy.sh` macht es rückgängig.
+Eigener State-File (`COGNIGY_STATE_FILE`, Default `/tmp/cognigy-state` im
+Container) unabhängig von `STATE_FILE` oben, gleiches Prinzip wie bei
+`break-docuware-disk.sh` - beide Szenarien einzeln oder zusammen vorführbar.
+Bewusst als **dritter Vorfall-Typ** neben "eigene Infra kaputt" (Chemnitz-VPN
+oben, DocuWare-Cluster) und "Sicherheitsvorfall": ein externer
+SaaS-Anbieter, von dem der Bot abhängt, hat selbst ein Problem - Telefonie,
+Agenten-Desktops und die Standort-VPNs bleiben davon unberührt, exakt die
+gleiche Blast-Radius-Erzählung wie bei den anderen isolierten Szenarien,
+nur mit einer Ursache außerhalb der eigenen Infrastruktur. Auch im
+Demo-Kontrollzentrum als achte Karte "Cognigy-Vorfall (Chat-/Voicebot)".
+
+**Kleinere Lücken - zwei zusätzliche, echte OneUptime-Vorfälle:**
+`./break-blueant.sh` / `./fix-blueant.sh` (Skript:
+`scripts/blueant_incident.py`) simulieren einen **ungeplanten**
+Blueant-Ausfall - bewusst der Gegenpol zur bereits im Seeding
+enthaltenen, immer "gerade laufenden" Patchday-Wartung (die einzige
+andere Blueant-Störung in dieser Demo, aber angekündigt und erwartet).
+Setzt den Monitor "Blueant" auf Offline und erzeugt einen echten
+Incident "Blueant nicht erreichbar" auf der IT-Services-Statusseite -
+unabhängig von Patchday einzeln auslösbar. `./break-jira-attachments.sh`
+/ `./fix-jira-attachments.sh` (Skript:
+`scripts/jira_attachments_incident.py`) zeigen eine eng abgegrenzte
+Teil-Störung statt "Jira ist komplett down": nur neue Datei-Uploads in
+Jira schlagen fehl, bereits vorhandene Anhänge bleiben abrufbar, Tickets,
+Kommentare und Suche sind nicht betroffen - Monitor "Anhänge & Dateien"
+auf Degraded, eigener Incident "Datei-Uploads in Jira schlagen fehl",
+bewusst getrennt vom "Benachrichtigungen"-Monitor, den der rotierende
+Vorfall-Pool in `refresh_demo.py` bereits nutzt. Beide folgen exakt dem
+gleichen break/fix-Muster wie `security_incident.py` (gleiches
+Login/Query-Vorgehen, gleiche Forward-Only-State-Transition-Behandlung
+bei bereits resolvten Incidents) und benötigen kein Docker-Rebuild - nur
+`./seed-oneuptime.sh` muss einmal gelaufen sein. Im
+Demo-Kontrollzentrum als neunte und zehnte Karte "Blueant-Ausfall
+(ungeplant)" und "Jira: Datei-Uploads gestört", beide mit
+Admin-/Nutzer-Sublinks (OneUptime bzw. IT-Services-Statusseite).
 
 ## Avaya Call Center – Betriebsansicht (Grafana, Callcenter-Optimierung)
 

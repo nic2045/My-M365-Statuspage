@@ -26,6 +26,11 @@ import time
 
 PORT = int(os.environ.get("METRICS_PORT", "9300"))
 STATE_FILE = os.environ.get("STATE_FILE", "/tmp/customer-care-state")
+# Separate state file for the Cognigy vendor-outage scenario (#break-cognigy.sh)
+# - independent of STATE_FILE above so the Chemnitz-VPN and Cognigy-vendor
+# scenarios can each be shown alone or together, same idea as
+# docuware-disk-state being separate from docuware-state.
+COGNIGY_STATE_FILE = os.environ.get("COGNIGY_STATE_FILE", "/tmp/cognigy-state")
 
 START = time.time()
 _calls_offered_total = 0.0
@@ -78,6 +83,14 @@ def is_unhealthy():
         return False
 
 
+def is_cognigy_unhealthy():
+    try:
+        with open(COGNIGY_STATE_FILE) as fh:
+            return fh.read().strip() == "unhealthy"
+    except FileNotFoundError:
+        return False
+
+
 def wave(period_s, low, high, phase=0.0):
     t = time.time() - START
     frac = (math.sin(2 * math.pi * (t / period_s) + phase) + 1) / 2
@@ -89,6 +102,7 @@ def render_metrics():
     global _calls_offered_total, _calls_abandoned_total
     global _cognigy_requests_total, _llm_requests_total
     unhealthy = is_unhealthy()
+    cognigy_unhealthy = is_cognigy_unhealthy()
 
     lines = []
 
@@ -234,18 +248,35 @@ def render_metrics():
     ]
 
     # ── Cognigy (cloud/SaaS - the one non-on-prem component) + LLM usage ──
+    # break-cognigy.sh: a vendor-side outage, not our own infrastructure -
+    # the API itself degrades (high latency, low intent success), sessions
+    # collapse as the bot becomes unusable, but requests keep arriving
+    # (customers/calls still try the bot, they just fail) - deliberately
+    # isolated from the Chemnitz-VPN/Avaya story above, on-prem telephony
+    # and agents are untouched, only the one cloud dependency is down.
     _cognigy_requests_total += random.uniform(3, 9)
-    _llm_requests_total += random.uniform(2, 7)
+    _llm_requests_from_bot_delta = random.uniform(2, 7)
+    if cognigy_unhealthy:
+        _llm_requests_from_bot_delta *= 0.1  # bot barely reaches intent stage, so barely calls the LLM
+    _llm_requests_total += _llm_requests_from_bot_delta
+    if cognigy_unhealthy:
+        cognigy_api_latency = wave(20, 2200, 4800, phase=0.6)
+        cognigy_sessions_active = wave(20, 0, 4, phase=0.9)
+        cognigy_intent_success = wave(20, 12, 30, phase=1.2)
+    else:
+        cognigy_api_latency = wave(45, 60, 180, phase=0.6)
+        cognigy_sessions_active = wave(40, 8, 35, phase=0.9)
+        cognigy_intent_success = wave(55, 91, 98, phase=1.2)
     cognigy_lines = [
         "# HELP cc_cognigy_api_latency_ms Latency of the Cognigy.AI cloud API (the one SaaS component - everything else on-prem).",
         "# TYPE cc_cognigy_api_latency_ms gauge",
-        f"cc_cognigy_api_latency_ms {wave(45, 60, 180, phase=0.6):.0f}",
+        f"cc_cognigy_api_latency_ms {cognigy_api_latency:.0f}",
         "# HELP cc_cognigy_bot_sessions_active Active voice-/chatbot sessions in Cognigy.",
         "# TYPE cc_cognigy_bot_sessions_active gauge",
-        f"cc_cognigy_bot_sessions_active {wave(40, 8, 35, phase=0.9):.0f}",
+        f"cc_cognigy_bot_sessions_active {cognigy_sessions_active:.0f}",
         "# HELP cc_cognigy_intent_success_rate_percent Share of bot turns where intent recognition succeeded.",
         "# TYPE cc_cognigy_intent_success_rate_percent gauge",
-        f"cc_cognigy_intent_success_rate_percent {wave(55, 91, 98, phase=1.2):.1f}",
+        f"cc_cognigy_intent_success_rate_percent {cognigy_intent_success:.1f}",
         "# HELP cc_cognigy_requests_total Requests handled by the Cognigy bot.",
         "# TYPE cc_cognigy_requests_total counter",
         f"cc_cognigy_requests_total {_cognigy_requests_total:.0f}",
