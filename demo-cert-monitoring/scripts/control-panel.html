@@ -297,6 +297,28 @@
       <div class="hub-icon" style="background:#8a8f98;">P</div>
       <div class="hub-text"><div class="t">Prometheus</div><div class="d">Rohdaten &amp; Alerts</div></div>
     </a>
+
+    <div class="hub-group">OneUptime – weitere Bereiche</div>
+    <a class="hub-card disabled" id="hub-service-catalog" href="#" target="_blank">
+      <div class="hub-icon" style="background:#5b5fc7;">S</div>
+      <div class="hub-text"><div class="t">Service Catalog</div><div class="d">DocuWare, Customer Care, Standort Leipzig</div></div>
+    </a>
+    <a class="hub-card disabled" id="hub-telemetry-logs" href="#" target="_blank">
+      <div class="hub-icon" style="background:#5b5fc7;">T</div>
+      <div class="hub-text"><div class="t">Telemetry – Logs</div><div class="d">Echte Log-Zeilen zur DocuWare-Story</div></div>
+    </a>
+    <a class="hub-card disabled" id="hub-security-events" href="#" target="_blank">
+      <div class="hub-icon" style="background:#5b5fc7;">E</div>
+      <div class="hub-text"><div class="t">Security Events</div><div class="d">SIEM-Events zur Anmeldeversuche-Story</div></div>
+    </a>
+    <a class="hub-card disabled" id="hub-security-detection-rules" href="#" target="_blank">
+      <div class="hub-icon" style="background:#5b5fc7;">D</div>
+      <div class="hub-text"><div class="t">Detection Rules</div><div class="d">Sigma-Regel "Credential Stuffing"</div></div>
+    </a>
+    <a class="hub-card disabled" id="hub-monitor-groups" href="#" target="_blank">
+      <div class="hub-icon" style="background:#5b5fc7;">M</div>
+      <div class="hub-text"><div class="t">Monitor-Gruppen</div><div class="d">Infrastruktur (Admin) &amp; AI/LLM Observability</div></div>
+    </a>
   </div>
 
   <div class="section-title">Vorfall- &amp; Prozess-Szenarien</div>
@@ -787,6 +809,11 @@
           "link-oncall-escalation-2": data.onCallEscalationUrl,
           "link-oncall-logs-1": data.onCallExecutionLogsUrl,
           "link-oncall-logs-2": data.onCallExecutionLogsUrl,
+          "hub-service-catalog": data.serviceCatalogUrl,
+          "hub-telemetry-logs": data.telemetryLogsUrl,
+          "hub-security-events": data.securityEventsUrl,
+          "hub-security-detection-rules": data.securityDetectionRulesUrl,
+          "hub-monitor-groups": data.monitorGroupsUrl,
         };
         for (const [elId, url] of Object.entries(directLinks)) {
           const a = document.getElementById(elId);

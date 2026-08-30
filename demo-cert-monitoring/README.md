@@ -509,6 +509,23 @@ Demo-Story statt isoliert):
   > gesetzt - danach hat der allererste Auswertungszyklus sofort
   > gematcht.
 
+**Direkt verlinkt statt gesucht, auch diese fünf Bereiche:** Service
+Catalog, Telemetry/Logs, Security Events, Detection Rules und die zwei
+Monitor-Gruppen (Infrastruktur-Monitoring, AI/LLM Observability) waren
+alle oben beschrieben und live nachweisbar, aber bislang nur über
+OneUptimes eigene Navigation erreichbar - während einer Vorführung zu
+langsam zu finden, dasselbe Problem wie beim On-Call Duty oben.
+`control_panel_server.py` baut jetzt auch für diese fünf Direktlinks
+(braucht anders als On-Call-Eskalation/DocuWare-Festplatten-Rollen keine
+zusätzliche ID, alle fünf sind projektweite Übersichtsseiten - nur die
+ohnehin schon bekannte `projectId`). Neuer eigener Hub-Bereich
+"OneUptime – weitere Bereiche" im Kontrollzentrum, fünf weitere Karten.
+Routen aus dem echten OneUptime-Quellcode bestätigt (`RouteMap.ts`:
+`PageMap.SERVICES` → `/service`, `LOGS` → `/logs`, `SECURITY_EVENTS` →
+`/security-events`, `SECURITY_EVENTS_DETECTION_RULES` →
+`/security-events/detection-rules`, `MONITOR_GROUPS` →
+`/monitor-groups`), nicht geraten.
+
 Das Skript ist idempotent und konvergent - ein erneuter Lauf verwendet
 vorhandenen Account, Projekt, Monitore und Statuspage weiter (statt
 Duplikate anzulegen) und zieht sie zugleich auf die aktuellen Texte und
