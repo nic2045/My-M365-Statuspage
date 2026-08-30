@@ -728,7 +728,12 @@
         und Netzwerk (LAN) zeitversetzt nach (~15s).<br>
         <strong>Zeigt:</strong> eine echte Kettenreaktion aus einer
         einzigen Ursache - ein Incident mit drei betroffenen Diensten und
-        klar benanntem Root Cause statt drei getrennten Alarmen.
+        klar benanntem Root Cause statt drei getrennten Alarmen.<br>
+        <strong>Kein Alert-/ITSM-Spam:</strong> sobald WLAN und Netzwerk
+        (LAN) demselben Incident zugeordnet sind, pausiert OneUptime
+        selbst deren aktives Monitoring
+        (<code>disableActiveMonitoringBecauseOfManualIncident</code>) -
+        sie können keinen eigenen, konkurrierenden Alarm mehr auslösen.
       </p>
       <div class="links">
         <div class="link-row">

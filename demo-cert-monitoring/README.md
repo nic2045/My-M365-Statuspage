@@ -951,6 +951,43 @@ Im Demo-Kontrollzentrum als elfte Karte "Internetausfall mit
 Kettenreaktion", Break-Button mit "(~15s)"-Hinweis, damit die kurze
 Wartezeit beim Klick nicht wie ein Hänger wirkt.
 
+**Wie das Szenario Alert-/ITSM-Spam verhindert - im echten
+OneUptime-Quellcode verifiziert, nicht nur behauptet:** Der naheliegende
+Einwand gegen eine Kettenreaktion ist, dass sie eigentlich drei Alarme
+statt einem erzeugen müsste. Passiert hier nicht, und zwar nicht durch
+einen Demo-Trick, sondern durch einen echten, bereits vorhandenen
+OneUptime-Mechanismus: Sobald ein Monitor einem manuell angelegten
+Incident zugeordnet wird (genau das tut `cascading_incident.py` mit
+`"monitors": [...]` in Phase 2), setzt `IncidentService.ts`
+serverseitig automatisch
+`disableActiveMonitoringBecauseOfManualIncident = true` auf diesem
+Monitor. `MonitorProbeService.ts` filtert Monitore mit diesem Flag
+explizit aus der Abfrage, die entscheidet, welche Monitore als Nächstes
+geprobt werden (`AND m."disableActiveMonitoringBecauseOfManualIncident"
+= false` in der WHERE-Klausel) - WLAN und Netzwerk (LAN) werden also
+schlicht nicht mehr aktiv überwacht, solange der gemeinsame Incident
+offen ist, und können deshalb keinen eigenen, konkurrierenden
+Incident/Alarm mehr auslösen. Bei `fix` (Incident Resolved) setzt
+derselbe Service das Flag automatisch zurück auf `false`. Genau dasselbe
+Feld (plus das Geschwisterfeld
+`disableActiveMonitoringBecauseOfScheduledMaintenanceEvent`) sorgt schon
+beim Druckerwartungs-Szenario dafür, dass eine angekündigte Wartung
+nicht gleichzeitig einen Vorfall meldet.
+
+**Ehrlich benannte Grenze dieses Mechanismus:** Er verhindert Spam erst,
+*nachdem* jemand - hier das Skript, im echten Betrieb ein
+On-Call-Engineer oder eine eigene Automation - die drei Monitore
+tatsächlich demselben Incident zugeordnet hat. OneUptime erkennt die
+Kettenreaktion nicht von sich aus über eine Abhängigkeitsgrafik; wie
+weiter oben bei Service Catalog bereits recherchiert, wurden
+`ServiceDependency`/`ServiceMonitor` aus dieser Version entfernt -
+Korrelation kommt inzwischen ausschließlich aus echten
+OpenTelemetry-Trace-Spans. Diese Lücke ist selbst Teil der
+Vorführungs-Story: "das System verhindert Folge-Spam zuverlässig, sobald
+der Zusammenhang einmal hergestellt ist - das Herstellen selbst ist
+(noch) Menschenarbeit". Auch als Talking Point direkt auf der Karte
+("Kein Alert-/ITSM-Spam") hinterlegt.
+
 ## Avaya Call Center – Betriebsansicht (Grafana, Callcenter-Optimierung)
 
 `grafana/dashboards/avaya-callcenter-operations.json` - fokussierte
