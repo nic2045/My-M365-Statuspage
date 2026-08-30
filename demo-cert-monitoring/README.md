@@ -280,9 +280,14 @@ Akzentfarbe (farbiger oberer Rand + leicht eingefärbter Hintergrund,
 nicht nur das kleine Icon wie vorher) - sieben klar unterscheidbare
 Farbtöne, damit man während einer Vorführung nicht erst den Kartentitel
 lesen muss, um die richtige Karte zu finden. Zusätzlich eine
-**Farb-Legende** direkt über dem Kartenraster (Punkt + Name je Szenario,
-anklickbar - springt zur jeweiligen Karte), als schnelle Übersicht statt
-das ganze Raster nach einer Farbe absuchen zu müssen.
+**Prozess-Legende** ("Wer hat den Mehrwert?") direkt über dem
+Kartenraster - keine reine Farb-zu-Name-Zuordnung mehr, sondern je
+Szenario Farbe, klickbarer Name (springt zur Karte), Zielgruppe
+("Nur IT" für die drei rein internen Beobachtungsszenarien
+DocuWare-Cluster/Customer-Care/Leipzig-Netzwerk, "IT + Nutzer" für die
+vier mit echter Mitarbeiter-Sichtbarkeit) und ein Satz zum konkreten
+Nutzen für diese Zielgruppe(n) - eine schnelle Übersicht, welcher
+Prozess wem was bringt, statt nur wo welche Karte im Raster sitzt.
 
 **Alle Termine werden bei jedem Lauf neu relativ zu "heute" berechnet**
 (Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen
