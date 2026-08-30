@@ -210,6 +210,12 @@
 
   <div class="section-title">Alle Seiten</div>
   <div class="hub" id="hub">
+    <div class="hub-group">Echtes Produkt (kein Demo-Fixture)</div>
+    <a class="hub-card" href="http://localhost:8000" target="_blank">
+      <div class="hub-icon" style="background:#005ea8;">M</div>
+      <div class="hub-text"><div class="t">M365 Dienststatus</div><div class="d">Das eigentliche Produkt - <code>make dev</code> im Repo-Root starten</div></div>
+    </a>
+
     <div class="hub-group">Statusseiten (Mitarbeiter/Kunden)</div>
     <a class="hub-card disabled" id="hub-cert" href="#" target="_blank">
       <div class="hub-icon" style="background:#0f6cbd;">Z</div>
@@ -320,6 +326,24 @@
           <td><a href="#card-leipzig-network">Standort Leipzig – Netzwerk-Vorfall</a></td>
           <td><span class="audience it">Nur IT</span></td>
           <td class="value">Facility-IT sieht den Netzwerkausfall sofort im Node-Graph - rein interne Beobachtung ohne Nutzer-Auswirkung.</td>
+        </tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#5b5fc7;"></span></td>
+          <td><a href="#card-cognigy">Cognigy-Vorfall (Chat-/Voicebot)</a></td>
+          <td><span class="audience it">Nur IT</span></td>
+          <td class="value">Zeigt, dass nicht jeder Vorfall selbstverschuldet ist - Technical Owner sieht sofort, dass ein externer SaaS-Anbieter die Ursache ist, nicht die eigene Infra.</td>
+        </tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#5c7a1e;"></span></td>
+          <td><a href="#card-blueant">Blueant-Ausfall (ungeplant)</a></td>
+          <td><span class="audience both">IT + Nutzer</span></td>
+          <td class="value">Nutzer sieht auf einen Blick, dass Telefonie ungeplant gestört ist - klar getrennt von der bereits angekündigten Patchday-Wartung.</td>
+        </tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#b0203f;"></span></td>
+          <td><a href="#card-jira-attachments">Jira: Datei-Uploads gestört</a></td>
+          <td><span class="audience both">IT + Nutzer</span></td>
+          <td class="value">Nutzer erfährt präzise, was wirklich nicht funktioniert (nur Uploads), statt pauschal zu vermuten, Jira sei komplett down.</td>
         </tr>
       </table>
     </div>
@@ -570,6 +594,107 @@
       </div>
     </div>
 
+    <div class="card" id="card-cognigy" style="--accent:#5b5fc7; --accent-bg:#f2f2fb;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#5b5fc7"/>
+          <path d="M15 30 C10 30 8 26.5 8 23.5 C8 20 11 17.5 14.5 17.8 C15.5 13.5 19.5 11 24 11.5 C29 12 32 16 31.5 20.2 C35.5 20.5 38.5 23.5 38.5 27 C38.5 30.5 35.5 33 32 33 L16 33 Z" fill="#fff"/>
+        </svg>
+        <div>
+          <h2>Cognigy-Vorfall (Chat-/Voicebot)</h2>
+          <span class="status unknown" id="status-cognigy"><span class="dot"></span>wird geprüft…</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Passiert:</strong> die Cognigy-Cloud-API wird langsam und
+        instabil, Bot-Sessions brechen weg - Telefonie, Agenten und die
+        Chemnitz-VPN bleiben unberührt.<br>
+        <strong>Zeigt:</strong> einen dritten Vorfall-Typ neben "eigene
+        Infra kaputt" und "Sicherheitsvorfall" - ein externer
+        SaaS-Anbieter, von dem wir abhängen, hat ein Problem.
+      </p>
+      <div class="links">
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/customer-care-overview" target="_blank">Grafana-Dashboard</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-cognigy', 'cognigy')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-cognigy', 'cognigy')">Beheben</button>
+      </div>
+    </div>
+
+    <div class="card" id="card-blueant" style="--accent:#5c7a1e; --accent-bg:#f5f8ec;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#5c7a1e"/>
+          <path d="M15 12 C15 10 17 9 18.5 10 L22 12.5 C23 13.2 23.2 14.6 22.4 15.5 L20.5 17.7 C22 21 25 24 28.3 25.5 L30.5 23.6 C31.4 22.8 32.8 23 33.5 24 L36 27.5 C37 29 36 31 34 31 C25.5 31 15 22 15 12 Z" fill="none" stroke="#fff" stroke-width="2.3" stroke-linejoin="round"/>
+          <path d="M31 15 L36 20 M36 15 L31 20" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <h2>Blueant-Ausfall (ungeplant)</h2>
+          <span class="status unknown" id="status-blueant"><span class="dot"></span>wird geprüft…</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Passiert:</strong> Blueant reagiert plötzlich nicht mehr -
+        unangekündigt und unabhängig von der geplanten Patchday-Wartung.
+        Anrufe und Chats sind nicht möglich, alle anderen Dienste laufen
+        normal.<br>
+        <strong>Zeigt:</strong> den Unterschied zwischen einer angekündigten
+        Wartung und einem echten, ungeplanten Ausfall - beide betreffen
+        Blueant, sind aber im System klar unterscheidbar und unabhängig
+        voneinander auslösbar.
+      </p>
+      <div class="links">
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost" target="_blank">OneUptime</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-blueant-statuspage" href="#" target="_blank">Statusseite</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-blueant', 'blueant')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-blueant', 'blueant')">Beheben</button>
+      </div>
+    </div>
+
+    <div class="card" id="card-jira-attachments" style="--accent:#b0203f; --accent-bg:#fbf0f3;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b0203f"/>
+          <path d="M18 26 L18 16 C18 12.5 21 10 24 10 C27 10 30 12.5 30 16 L30 30 C30 33 27.5 35 25 35 C22.5 35 20 33 20 30 L20 18 C20 16.5 21.5 15 23 15 C24.5 15 26 16.5 26 18 L26 28" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <h2>Jira: Datei-Uploads gestört</h2>
+          <span class="status unknown" id="status-jira-attachments"><span class="dot"></span>wird geprüft…</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Passiert:</strong> Neue Datei-Anhänge lassen sich in Jira
+        nicht mehr hochladen, bereits vorhandene Anhänge bleiben abrufbar.
+        Tickets, Kommentare und die Suche sind nicht betroffen.<br>
+        <strong>Zeigt:</strong> eine eng abgegrenzte Teil-Störung statt "Jira
+        ist komplett down" - wichtig für präzise, ehrliche
+        Nutzerkommunikation statt pauschaler Panik.
+      </p>
+      <div class="links">
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost" target="_blank">OneUptime</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-jira-attachments-statuspage" href="#" target="_blank">Statusseite</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-jira-attachments', 'jira-attachments')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-jira-attachments', 'jira-attachments')">Beheben</button>
+      </div>
+    </div>
+
   </div>
 
   <div class="log-section">
@@ -615,7 +740,7 @@
       try {
         const res = await fetch("/api/status");
         const data = await res.json();
-        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer", "leipzig-network"]) {
+        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer", "leipzig-network", "cognigy", "blueant", "jira-attachments"]) {
           const el = document.getElementById("status-" + key);
           const state = data[key] || "unknown";
           el.className = "status " + state;
@@ -666,6 +791,8 @@
           "link-docuware-disk-statuspage": data.itServiceStatusPageId,
           "link-security-statuspage": data.itServiceStatusPageId,
           "link-printer-statuspage": data.leipzigStatusPageId,
+          "link-blueant-statuspage": data.itServiceStatusPageId,
+          "link-jira-attachments-statuspage": data.itServiceStatusPageId,
         };
         for (const [elId, pageId] of Object.entries(statusPageLinks)) {
           const a = document.getElementById(elId);

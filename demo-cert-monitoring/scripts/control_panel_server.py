@@ -49,6 +49,12 @@ ACTIONS = {
     "fix-printer": ("fix-printer.sh", "Druckerwartung abschließen"),
     "break-leipzig-network": ("break-leipzig-network.sh", "Leipzig-Netzwerk-Vorfall auslösen"),
     "fix-leipzig-network": ("fix-leipzig-network.sh", "Leipzig-Netzwerk-Vorfall beheben"),
+    "break-cognigy": ("break-cognigy.sh", "Cognigy-Vorfall auslösen"),
+    "fix-cognigy": ("fix-cognigy.sh", "Cognigy-Vorfall beheben"),
+    "break-blueant": ("break-blueant.sh", "Blueant-Vorfall auslösen"),
+    "fix-blueant": ("fix-blueant.sh", "Blueant-Vorfall beheben"),
+    "break-jira-attachments": ("break-jira-attachments.sh", "Jira-Anhänge-Vorfall auslösen"),
+    "fix-jira-attachments": ("fix-jira-attachments.sh", "Jira-Anhänge-Vorfall beheben"),
 }
 
 
@@ -138,14 +144,18 @@ def _ou_login():
     return _ou_token
 
 
-def get_security_state():
-    """healthy/unhealthy/unknown for the security-incident scenario - this
-    one lives in OneUptime, not Prometheus (a Manual monitor + Incident,
-    no metric backs it), so it needs the OneUptime API instead of
-    prom_query(). The login token is cached at module level and reused
-    across polls (the panel polls /api/status every 5s) - OneUptime's
-    login endpoint is rate-limited (10 attempts/15min), so logging in on
-    every poll would lock the demo account out within seconds."""
+def get_monitor_state(monitor_name):
+    """healthy/unhealthy/unknown for a scenario whose truth lives in
+    OneUptime, not Prometheus (a Manual monitor + Incident, no metric
+    backs it), so it needs the OneUptime API instead of prom_query().
+    Shared by every scenario that just checks one monitor's operational
+    status (security, Blueant, Jira attachments, ...) - the printer
+    scenario is the one exception (checks a Scheduled Maintenance, not a
+    monitor, see get_printer_state()). The login token is cached at
+    module level and reused across polls (the panel polls /api/status
+    every 5s) - OneUptime's login endpoint is rate-limited (10
+    attempts/15min), so logging in on every poll would lock the demo
+    account out within seconds."""
     global _ou_token
     try:
         if not _ou_token and not _ou_login():
@@ -172,7 +182,7 @@ def get_security_state():
             else:
                 raise
         for m in body.get("data", []):
-            if m.get("name") == "Anmeldung (SSO)":
+            if m.get("name") == monitor_name:
                 op = (m.get("currentMonitorStatus") or {}).get("isOperationalState", True)
                 return "healthy" if op else "unhealthy"
         return "unknown"
@@ -229,14 +239,15 @@ def get_status():
     """healthy/unhealthy/unknown per scenario, read live from Prometheus -
     no separate state file invented here, Prometheus already is the
     stack's single source of truth (see docker-compose.yml header).
-    The security and printer scenarios are the exceptions (see
-    get_security_state()/get_printer_state()) - both live in OneUptime,
-    not Prometheus."""
+    Security, Blueant, Jira-attachments and printer are the exceptions
+    (see get_monitor_state()/get_printer_state()) - they live in
+    OneUptime, not Prometheus."""
     cert_days = prom_query('(probe_ssl_earliest_cert_expiry{demo_fixture="true"} - time()) / 86400')
     docuware_node2 = prom_query('docuware_mssql_cluster_node_up{node="db2"}')
     docuware_disk = prom_query('docuware_disk_usage_percent{volume="Dokumentenspeicher"}')
     cc_chemnitz = prom_query('cc_site_vpn_up{site="Chemnitz"}')
     leipzig_switch = prom_query('net_uplink_up{device="Access-Switch Vertrieb-2"}')
+    cognigy_intent_success = prom_query('cc_cognigy_intent_success_rate_percent')
 
     def state(value, healthy_fn):
         if value is None:
@@ -248,9 +259,12 @@ def get_status():
         "docuware": state(docuware_node2, lambda v: v >= 1),
         "docuware-disk": state(docuware_disk, lambda v: v < 90),
         "customer-care": state(cc_chemnitz, lambda v: v >= 1),
-        "security": get_security_state(),
+        "security": get_monitor_state("Anmeldung (SSO)"),
         "printer": get_printer_state(),
         "leipzig-network": state(leipzig_switch, lambda v: v >= 1),
+        "cognigy": state(cognigy_intent_success, lambda v: v >= 90),
+        "blueant": get_monitor_state("Blueant"),
+        "jira-attachments": get_monitor_state("Anhänge & Dateien"),
     }
 
 
