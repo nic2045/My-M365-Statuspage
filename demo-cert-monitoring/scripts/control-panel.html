@@ -924,7 +924,11 @@
 
     loadLinks();
     refreshStatus();
-    setInterval(refreshStatus, 5000);
+    // loadLinks() is idempotent (only ever adds hrefs/removes .disabled,
+    // never undoes anything) - polling it here too means a card enables
+    // itself the moment ./seed-oneuptime.sh finishes, without requiring a
+    // manual page reload in between.
+    setInterval(() => { refreshStatus(); loadLinks(); }, 5000);
   </script>
 </body>
 </html>
