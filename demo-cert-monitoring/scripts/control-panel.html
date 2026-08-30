@@ -16,6 +16,16 @@
     --bad-bg: #fdf2f4;
     --unknown: #8a8f98;
     --unknown-bg: #eef0f2;
+
+    /* Drei Kategorien statt zehn Einzelfarben: die Karte fällt zuerst in
+       eine Art (Störung/Wartung/Prozessdemo), erst dann in ihr Thema -
+       schneller zu scannen als zehn optisch beliebige Töne. */
+    --cat-incident: #c4314b;
+    --cat-incident-bg: #fdf2f4;
+    --cat-maintenance: #b8860b;
+    --cat-maintenance-bg: #fbf7ec;
+    --cat-process: #0f6cbd;
+    --cat-process-bg: #f2f8fd;
   }
   * { box-sizing: border-box; }
   body {
@@ -38,9 +48,10 @@
   }
   .card {
     /* Each scenario card sets --accent/--accent-bg inline (see the markup
-       below) so it's recognizable by color alone during a live demo, not
-       just by its small icon - a full grid of otherwise-identical white
-       cards was too slow to scan through under time pressure. */
+       below) to one of the three category colors (Ungeplante Störung /
+       Wartung / Prozessdemo), so the card's KIND is recognizable by color
+       alone during a live demo - a category badge next to the status pill
+       then disambiguates within that color. */
     background: var(--accent-bg, var(--card-bg));
     border: 1px solid var(--border);
     border-top: 4px solid var(--accent, var(--border));
@@ -70,6 +81,23 @@
   .status.unhealthy .dot { background: var(--bad); }
   .status.unknown { background: var(--unknown-bg); color: var(--unknown); }
   .status.unknown .dot { background: var(--unknown); }
+
+  /* Sits right next to the status pill: names the category the accent
+     color stands for, so cards sharing a color (e.g. all "Ungeplante
+     Störung") stay distinguishable at a glance. */
+  .cat-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-top: 4px;
+    margin-left: 6px;
+  }
+  .cat-badge.incident { background: var(--cat-incident-bg); color: var(--cat-incident); }
+  .cat-badge.maintenance { background: var(--cat-maintenance-bg); color: var(--cat-maintenance); }
+  .cat-badge.process { background: var(--cat-process-bg); color: var(--cat-process); }
 
   .story { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
 
@@ -166,6 +194,20 @@
   .legend-table a { font-weight: 600; color: var(--text); text-decoration: none; white-space: nowrap; }
   .legend-table a:hover { text-decoration: underline; }
   .legend-table .value { color: var(--muted); line-height: 1.5; }
+  /* Section header row between the three category groups - rows within a
+     group already share a dot color, this just names the group once. */
+  .legend-table .cat-row td {
+    padding: 12px 10px 4px;
+    border-top: none;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .legend-table tr.cat-row:first-child td { padding-top: 0; }
+  .legend-table .cat-row.incident td { color: var(--cat-incident); }
+  .legend-table .cat-row.maintenance td { color: var(--cat-maintenance); }
+  .legend-table .cat-row.process td { color: var(--cat-process); }
   .audience {
     display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
@@ -281,84 +323,88 @@
 
   <div class="section-title">Vorfall- &amp; Prozess-Szenarien</div>
   <div class="legend-panel">
-    <h3>Wer hat den Mehrwert?</h3>
-    <p class="legend-sub">Je Prozess: Zielgruppe (wer sieht/erlebt ihn) und der konkrete Nutzen für sie - Klick auf den Namen springt zur Karte.</p>
+    <h3>Kategorie &amp; Mehrwert</h3>
+    <p class="legend-sub">Farbe zeigt zuerst die Art des Szenarios (ungeplante Störung, Wartung oder reine Prozessdemo), danach je Karte Zielgruppe und konkreter Nutzen - Klick auf den Namen springt zur Karte.</p>
     <div class="legend-scroll">
       <table class="legend-table">
+        <tr class="cat-row incident"><td colspan="4">Ungeplante Störung</td></tr>
         <tr>
-          <td class="dot-cell"><span class="dot" style="background:#0f6cbd;"></span></td>
+          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
           <td><a href="#card-demo">Zertifikats-Vorfall</a></td>
           <td><span class="audience both">IT + Nutzer</span></td>
           <td class="value">Nutzer erfährt früh &amp; verständlich von der Störung statt selbst zu rätseln; IT sieht die technische Ursache sofort in Grafana.</td>
         </tr>
         <tr>
-          <td class="dot-cell"><span class="dot" style="background:#0e7a4d;"></span></td>
+          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
           <td><a href="#card-docuware">DocuWare-Cluster-Vorfall</a></td>
           <td><span class="audience it">Nur IT</span></td>
           <td class="value">Reine interne Fehlerdiagnose - zeigt, dass ein Infrastruktur-Defekt nicht zwangsläufig bis zum Kunden durchschlägt.</td>
         </tr>
         <tr>
-          <td class="dot-cell"><span class="dot" style="background:#b8860b;"></span></td>
-          <td><a href="#card-docuware-disk">DocuWare-Festplatte läuft voll</a></td>
-          <td><span class="audience both">IT + Nutzer</span></td>
-          <td class="value">Nutzer wird informiert, bevor es zum Ausfall kommt; IT bekommt die volle Prozesskette inkl. Vorfallsrollen und On-Call-Eskalation.</td>
-        </tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#c25a00;"></span></td>
+          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
           <td><a href="#card-customer-care">Customer-Care-Vorfall (Chemnitz)</a></td>
           <td><span class="audience it">Nur IT</span></td>
           <td class="value">Technischer Betrieb erkennt den Standortausfall geografisch verortet, bevor der Kundenservice spürbar leidet.</td>
         </tr>
         <tr>
-          <td class="dot-cell"><span class="dot" style="background:#6b2fb3;"></span></td>
+          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
           <td><a href="#card-security">Sicherheits-Vorfall (Anmeldung)</a></td>
           <td><span class="audience both">IT + Nutzer</span></td>
           <td class="value">Nutzer bekommt transparente, jargon-freie Sicherheitskommunikation; IT eskaliert intern über On-Call.</td>
         </tr>
         <tr>
-          <td class="dot-cell"><span class="dot" style="background:#0e7490;"></span></td>
-          <td><a href="#card-printer">Druckerwartung (Prozess)</a></td>
-          <td><span class="audience both">IT + Nutzer</span></td>
-          <td class="value">Zeigt die Rollentrennung selbst: Admin plant die Wartung, Nutzer wird informiert - der Service bleibt bis dahin ungestört.</td>
-        </tr>
-        <tr>
-          <td class="dot-cell"><span class="dot" style="background:#b0266f;"></span></td>
+          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
           <td><a href="#card-leipzig-network">Standort Leipzig – Netzwerk-Vorfall</a></td>
           <td><span class="audience it">Nur IT</span></td>
           <td class="value">Facility-IT sieht den Netzwerkausfall sofort im Node-Graph - rein interne Beobachtung ohne Nutzer-Auswirkung.</td>
         </tr>
         <tr>
-          <td class="dot-cell"><span class="dot" style="background:#5b5fc7;"></span></td>
+          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
           <td><a href="#card-cognigy">Cognigy-Vorfall (Chat-/Voicebot)</a></td>
           <td><span class="audience it">Nur IT</span></td>
           <td class="value">Zeigt, dass nicht jeder Vorfall selbstverschuldet ist - Technical Owner sieht sofort, dass ein externer SaaS-Anbieter die Ursache ist, nicht die eigene Infra.</td>
         </tr>
         <tr>
-          <td class="dot-cell"><span class="dot" style="background:#5c7a1e;"></span></td>
+          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
           <td><a href="#card-blueant">Blueant-Ausfall (ungeplant)</a></td>
           <td><span class="audience both">IT + Nutzer</span></td>
           <td class="value">Nutzer sieht auf einen Blick, dass Telefonie ungeplant gestört ist - klar getrennt von der bereits angekündigten Patchday-Wartung.</td>
         </tr>
         <tr>
-          <td class="dot-cell"><span class="dot" style="background:#b0203f;"></span></td>
+          <td class="dot-cell"><span class="dot" style="background:#c4314b;"></span></td>
           <td><a href="#card-jira-attachments">Jira: Datei-Uploads gestört</a></td>
           <td><span class="audience both">IT + Nutzer</span></td>
           <td class="value">Nutzer erfährt präzise, was wirklich nicht funktioniert (nur Uploads), statt pauschal zu vermuten, Jira sei komplett down.</td>
+        </tr>
+        <tr class="cat-row maintenance"><td colspan="4">Wartung</td></tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#b8860b;"></span></td>
+          <td><a href="#card-printer">Druckerwartung (Prozess)</a></td>
+          <td><span class="audience both">IT + Nutzer</span></td>
+          <td class="value">Zeigt die Rollentrennung selbst: Admin plant die Wartung, Nutzer wird informiert - der Service bleibt bis dahin ungestört.</td>
+        </tr>
+        <tr class="cat-row process"><td colspan="4">Prozessdemo</td></tr>
+        <tr>
+          <td class="dot-cell"><span class="dot" style="background:#0f6cbd;"></span></td>
+          <td><a href="#card-docuware-disk">DocuWare-Festplatte läuft voll</a></td>
+          <td><span class="audience both">IT + Nutzer</span></td>
+          <td class="value">Nutzer wird informiert, bevor es zum Ausfall kommt; IT bekommt die volle Prozesskette inkl. Vorfallsrollen und On-Call-Eskalation.</td>
         </tr>
       </table>
     </div>
   </div>
   <div class="grid">
 
-    <div class="card" id="card-demo" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
+    <div class="card" id="card-demo" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f6cbd"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
           <path d="M24 10 L36 14 V24 C36 32 30 39 24 42 C18 39 12 32 12 24 V14 Z" fill="none" stroke="#fff" stroke-width="2.5"/>
           <circle cx="24" cy="24" r="4" fill="#fff"/>
         </svg>
         <div>
           <h2>Zertifikats-Vorfall</h2>
           <span class="status unknown" id="status-demo"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
         </div>
       </div>
       <p class="story">
@@ -384,17 +430,18 @@
       </div>
     </div>
 
-    <div class="card" id="card-docuware" style="--accent:#0e7a4d; --accent-bg:#f1f9f4;">
+    <div class="card" id="card-docuware" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0e7a4d"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
           <rect x="13" y="12" width="16" height="20" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
-          <rect x="19" y="18" width="16" height="20" rx="2" fill="#0e7a4d" stroke="#fff" stroke-width="2.2"/>
+          <rect x="19" y="18" width="16" height="20" rx="2" fill="#c4314b" stroke="#fff" stroke-width="2.2"/>
           <line x1="23" y1="24" x2="31" y2="24" stroke="#fff" stroke-width="1.6"/>
           <line x1="23" y1="28" x2="31" y2="28" stroke="#fff" stroke-width="1.6"/>
         </svg>
         <div>
           <h2>DocuWare-Cluster-Vorfall</h2>
           <span class="status unknown" id="status-docuware"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
         </div>
       </div>
       <p class="story">
@@ -416,9 +463,9 @@
       </div>
     </div>
 
-    <div class="card" id="card-docuware-disk" style="--accent:#b8860b; --accent-bg:#fbf7ec;">
+    <div class="card" id="card-docuware-disk" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b8860b"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f6cbd"/>
           <ellipse cx="24" cy="14" rx="11" ry="4" fill="none" stroke="#fff" stroke-width="2.2"/>
           <path d="M13 14 L13 34 C13 36.2 18 38 24 38 C30 38 35 36.2 35 34 L35 14" fill="none" stroke="#fff" stroke-width="2.2"/>
           <path d="M13 24 C13 26.2 18 28 24 28 C30 28 35 26.2 35 24" fill="none" stroke="#fff" stroke-width="2.2"/>
@@ -426,6 +473,7 @@
         <div>
           <h2>DocuWare-Festplatte läuft voll</h2>
           <span class="status unknown" id="status-docuware-disk"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge process">Prozessdemo</span>
         </div>
       </div>
       <p class="story">
@@ -456,15 +504,16 @@
       </div>
     </div>
 
-    <div class="card" id="card-customer-care" style="--accent:#c25a00; --accent-bg:#fdf5ee;">
+    <div class="card" id="card-customer-care" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c25a00"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
           <path d="M24 10 C18 10 13 15 13 21 C13 30 24 38 24 38 C24 38 35 30 35 21 C35 15 30 10 24 10 Z" fill="#fff"/>
-          <circle cx="24" cy="21" r="5" fill="#c25a00"/>
+          <circle cx="24" cy="21" r="5" fill="#c4314b"/>
         </svg>
         <div>
           <h2>Customer-Care-Vorfall (Chemnitz)</h2>
           <span class="status unknown" id="status-customer-care"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
         </div>
       </div>
       <p class="story">
@@ -487,15 +536,16 @@
       </div>
     </div>
 
-    <div class="card" id="card-security" style="--accent:#6b2fb3; --accent-bg:#f7f2fc;">
+    <div class="card" id="card-security" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#6b2fb3"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
           <path d="M24 9 L38 15 V23 C38 32 32 39 24 41 C16 39 10 32 10 23 V15 Z" fill="none" stroke="#fff" stroke-width="2.3"/>
           <path d="M19 24 L23 28 L30 19" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div>
           <h2>Sicherheits-Vorfall (Anmeldung)</h2>
           <span class="status unknown" id="status-security"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
         </div>
       </div>
       <p class="story">
@@ -523,9 +573,9 @@
       </div>
     </div>
 
-    <div class="card" id="card-printer" style="--accent:#0e7490; --accent-bg:#eff8fa;">
+    <div class="card" id="card-printer" style="--accent:#b8860b; --accent-bg:#fbf7ec;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0e7490"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b8860b"/>
           <rect x="12" y="10" width="24" height="10" rx="1.5" fill="none" stroke="#fff" stroke-width="2.2"/>
           <rect x="10" y="20" width="28" height="14" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
           <rect x="16" y="30" width="16" height="9" fill="#fff"/>
@@ -534,6 +584,7 @@
         <div>
           <h2>Druckerwartung (Prozess)</h2>
           <span class="status unknown" id="status-printer"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge maintenance">Wartung</span>
         </div>
       </div>
       <p class="story">
@@ -561,9 +612,9 @@
       </div>
     </div>
 
-    <div class="card" id="card-leipzig-network" style="--accent:#b0266f; --accent-bg:#fbf0f6;">
+    <div class="card" id="card-leipzig-network" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b0266f"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
           <circle cx="24" cy="12" r="4" fill="none" stroke="#fff" stroke-width="2.2"/>
           <circle cx="12" cy="34" r="4" fill="none" stroke="#fff" stroke-width="2.2"/>
           <circle cx="36" cy="34" r="4" fill="#fff"/>
@@ -572,6 +623,7 @@
         <div>
           <h2>Standort Leipzig – Netzwerk-Vorfall</h2>
           <span class="status unknown" id="status-leipzig-network"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
         </div>
       </div>
       <p class="story">
@@ -594,14 +646,15 @@
       </div>
     </div>
 
-    <div class="card" id="card-cognigy" style="--accent:#5b5fc7; --accent-bg:#f2f2fb;">
+    <div class="card" id="card-cognigy" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#5b5fc7"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
           <path d="M15 30 C10 30 8 26.5 8 23.5 C8 20 11 17.5 14.5 17.8 C15.5 13.5 19.5 11 24 11.5 C29 12 32 16 31.5 20.2 C35.5 20.5 38.5 23.5 38.5 27 C38.5 30.5 35.5 33 32 33 L16 33 Z" fill="#fff"/>
         </svg>
         <div>
           <h2>Cognigy-Vorfall (Chat-/Voicebot)</h2>
           <span class="status unknown" id="status-cognigy"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
         </div>
       </div>
       <p class="story">
@@ -624,15 +677,16 @@
       </div>
     </div>
 
-    <div class="card" id="card-blueant" style="--accent:#5c7a1e; --accent-bg:#f5f8ec;">
+    <div class="card" id="card-blueant" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#5c7a1e"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
           <path d="M15 12 C15 10 17 9 18.5 10 L22 12.5 C23 13.2 23.2 14.6 22.4 15.5 L20.5 17.7 C22 21 25 24 28.3 25.5 L30.5 23.6 C31.4 22.8 32.8 23 33.5 24 L36 27.5 C37 29 36 31 34 31 C25.5 31 15 22 15 12 Z" fill="none" stroke="#fff" stroke-width="2.3" stroke-linejoin="round"/>
           <path d="M31 15 L36 20 M36 15 L31 20" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
         </svg>
         <div>
           <h2>Blueant-Ausfall (ungeplant)</h2>
           <span class="status unknown" id="status-blueant"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
         </div>
       </div>
       <p class="story">
@@ -661,14 +715,15 @@
       </div>
     </div>
 
-    <div class="card" id="card-jira-attachments" style="--accent:#b0203f; --accent-bg:#fbf0f3;">
+    <div class="card" id="card-jira-attachments" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
       <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#b0203f"/>
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
           <path d="M18 26 L18 16 C18 12.5 21 10 24 10 C27 10 30 12.5 30 16 L30 30 C30 33 27.5 35 25 35 C22.5 35 20 33 20 30 L20 18 C20 16.5 21.5 15 23 15 C24.5 15 26 16.5 26 18 L26 28" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
         </svg>
         <div>
           <h2>Jira: Datei-Uploads gestört</h2>
           <span class="status unknown" id="status-jira-attachments"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
         </div>
       </div>
       <p class="story">

@@ -318,6 +318,21 @@ vier mit echter Mitarbeiter-Sichtbarkeit) und ein Satz zum konkreten
 Nutzen für diese Zielgruppe(n) - eine schnelle Übersicht, welcher
 Prozess wem was bringt, statt nur wo welche Karte im Raster sitzt.
 
+**Später umgestellt: Farbe nach Kategorie statt pro Karte.** Mit zehn
+Karten wurde die anfängliche "jede Karte ihre eigene Akzentfarbe"-Idee
+selbst zum Suchproblem - zehn beliebige Töne muss man erst auswendig
+lernen. Jetzt fällt jede Karte zuerst in eine von drei Kategorien -
+**Ungeplante Störung** (rot, acht Karten: Zertifikat, DocuWare-Cluster,
+Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant,
+Jira-Anhänge), **Wartung** (amber, eine Karte: Druckerwartung) und
+**Prozessdemo** (blau, eine Karte: DocuWare-Festplatte - zeigt bewusst
+die volle Eskalationskette statt primär eine Störung) - und trägt
+zusätzlich ein kleines Kategorie-Label direkt neben dem Live-Status, um
+innerhalb einer Farbe noch zu unterscheiden. Die Prozess-Legende ist
+entsprechend nach denselben drei Kategorien gruppiert (Abschnittsüberschrift
+je Kategorie, Punktfarbe = Kategoriefarbe), Zielgruppe/Mehrwert-Spalten
+unverändert.
+
 **Alle Termine werden bei jedem Lauf neu relativ zu "heute" berechnet**
 (Patchday 3 läuft immer gerade jetzt, abgeschlossene Wartungen liegen
 immer 6-10 Tage in der Vergangenheit, die Druckerwartung immer am
