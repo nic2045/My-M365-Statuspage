@@ -19,10 +19,23 @@ Uses three Leipzig monitors no other live scenario in this demo touches
 scheduled-maintenance seed data before this), so it can't collide with
 anything else.
 
+Phase 2 also sends one real OpenTelemetry trace (POST /otlp/v1/traces,
+same ingestion key as the docuware-login logs in seed_oneuptime.py) with
+a root span for "Internet-Anbindung" and two child spans - same traceId,
+parentSpanId set to the root span's spanId - for "WLAN" and "Netzwerk
+(LAN)". OneUptime's Trace Service Map builds its dependency edges from
+exactly that: cross-service parent/child span pairs within one trace
+(confirmed against TraceServiceMap.tsx, not guessed) - so this is a real,
+independently-derived confirmation of the same dependency the Incident
+already claims in its description, not just narration. Best-effort: if
+the telemetry key isn't found or the ingest call fails, this is logged
+and skipped - it must never abort the incident/monitor part of `break`.
+
 Usage: python3 cascading_incident.py break|fix
 Invoked by ../break-leipzig-cascade.sh / ../fix-leipzig-cascade.sh, which
 set OU_BASE.
 """
+import base64
 import json
 import os
 import sys
@@ -123,6 +136,85 @@ def set_monitor_status(monitor_name, status_id):
     }}, method="PUT")
 
 
+TELEMETRY_KEY_NAME = "Demo Log Ingest"  # created once by seed_oneuptime.py, reused here
+
+
+def random_hex_id(num_bytes):
+    """OTLP JSON encodes trace/span ids as base64 bytes on the wire, but
+    OtelTracesIngestService.convertBase64ToHexSafe() decodes them straight
+    back to hex - only the wire encoding is base64, ids themselves are
+    plain random bytes."""
+    return base64.b64encode(os.urandom(num_bytes)).decode()
+
+
+def send_cascade_trace():
+    """Best-effort: sends one real OTel trace (root span "Internet-
+    Anbindung", two child spans "WLAN"/"Netzwerk (LAN)", same traceId,
+    parentSpanId pointing at the root) so OneUptime's Trace Service Map
+    (builds edges from cross-service parent/child span pairs - see
+    TraceServiceMap.tsx) shows the same dependency the Incident
+    description claims, independently derived from real telemetry.
+    Never raises - a missing telemetry key or a failed ingest call must
+    not abort the incident/monitor part of `break`."""
+    try:
+        key = find_by_name("telemetry-ingestion-key", TELEMETRY_KEY_NAME,
+                            select={"_id": True, "name": True, "secretKey": True})
+        if not key:
+            print(f"    (kein Trace gesendet - Ingestion-Key '{TELEMETRY_KEY_NAME}' "
+                  f"nicht gefunden; ./seed-oneuptime.sh erzeugt ihn beim ersten Lauf)")
+            return
+        secret_key = (key.get("secretKey") or {}).get("value")
+        if not secret_key:
+            print(f"    (kein Trace gesendet - '{TELEMETRY_KEY_NAME}' hat keinen secretKey)")
+            return
+
+        trace_id = random_hex_id(16)
+        root_span_id = random_hex_id(8)
+        now_ns = int(time.time() * 1e9)
+
+        def resource_spans(service_name, span_id, parent_span_id, kind, name, message, start_offset_ns):
+            span = {
+                "traceId": trace_id, "spanId": span_id,
+                "name": name, "kind": kind,
+                "startTimeUnixNano": str(now_ns - start_offset_ns),
+                "endTimeUnixNano": str(now_ns - start_offset_ns + 50_000_000),
+                "status": {"code": "STATUS_CODE_ERROR", "message": message},
+            }
+            if parent_span_id:
+                span["parentSpanId"] = parent_span_id
+            return {
+                "resource": {"attributes": [
+                    {"key": "service.name", "value": {"stringValue": service_name}}]},
+                "scopeSpans": [{"scope": {"name": "demo-seed"}, "spans": [span]}],
+            }
+
+        payload = {"resourceSpans": [
+            resource_spans(ROOT_CAUSE_MONITOR, root_span_id, None, 3,
+                            "check-downstream-dependents",
+                            "Internet-Anbindung nicht erreichbar", 200_000_000),
+            resource_spans("WLAN", random_hex_id(8), root_span_id, 2,
+                            "wlan-controller-heartbeat",
+                            "WLAN-Controller nicht erreichbar (Cloud-Verbindung fehlt)", 100_000_000),
+            resource_spans("Netzwerk (LAN)", random_hex_id(8), root_span_id, 2,
+                            "lan-cloud-service-heartbeat",
+                            "Interner Netzwerk-Dienst nicht erreichbar (Cloud-Verbindung fehlt)", 50_000_000),
+        ]}
+        req = urllib.request.Request(
+            f"{BASE}/otlp/v1/traces", data=json.dumps(payload).encode(), method="POST")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("x-oneuptime-token", secret_key)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            resp.read()
+        print("    Trace gesendet: Internet-Anbindung -> WLAN / Netzwerk (LAN) "
+              "(Traces -> Service Map zeigt die Abhängigkeit als echte Kante)")
+    except (urllib.error.HTTPError, urllib.error.URLError, OSError, SystemExit) as exc:
+        # SystemExit included: find_by_name()/call() sys.exit() on an API
+        # error, which this function must swallow rather than propagate -
+        # a failed trace send is not allowed to abort break's incident/
+        # monitor part above.
+        print(f"    (Trace-Versand übersprungen - {exc})")
+
+
 mode = sys.argv[1] if len(sys.argv) > 1 else ""
 if mode == "break":
     severities = get_list("incident-severity")
@@ -194,6 +286,7 @@ if mode == "break":
 
     print(f"==> Phase 2: {', '.join(DOWNSTREAM_MONITORS)} jetzt ebenfalls betroffen (Folgeschäden).")
     print(f"    '{INCIDENT_TITLE}' verknüpft jetzt alle 3 Monitore (1 Root Cause + 2 Folgeschäden).")
+    send_cascade_trace()
 
 elif mode == "fix":
     incident = find_by_name("incident", INCIDENT_TITLE, name_field="title")

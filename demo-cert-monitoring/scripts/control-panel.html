@@ -295,6 +295,32 @@
       <div class="hub-icon" style="background:#f46800;">G</div>
       <div class="hub-text"><div class="t">Avaya Callcenter-Betrieb</div><div class="d">Grafana</div></div>
     </a>
+    <a class="hub-card" href="http://localhost:3000/d/webshop-overview" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">Webshop – Cross-funktional</div><div class="d">Grafana: Marketing, Web, Middleware, Infra</div></div>
+    </a>
+
+    <div class="hub-group">shop.pyur.com – Dashboard-Gruppe (eigenes Team)</div>
+    <a class="hub-card" href="http://localhost:3000/d/webshop-health-business" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">Health &amp; Business</div><div class="d">Marketing-KPIs + Middleware</div></div>
+    </a>
+    <a class="hub-card" href="http://localhost:3000/d/webshop-frontend-observability" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">Frontend Observability</div><div class="d">Core Web Vitals + Vertragsabschluss-Funnel</div></div>
+    </a>
+    <a class="hub-card" href="http://localhost:3000/d/webshop-infrastructure" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">Infrastruktur</div><div class="d">CPU/Memory/Disk/Netzwerk je Service</div></div>
+    </a>
+    <a class="hub-card" href="http://localhost:3000/d/webshop-database" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">Datenbank-Performance</div><div class="d">Query-Latenz, Connections, Replikation</div></div>
+    </a>
+    <a class="hub-card" href="http://localhost:3000/d/webshop-web-traffic" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">Web-Traffic &amp; Fehlercodes</div><div class="d">Request-Rate, HTTP-Statuscodes je Pfad</div></div>
+    </a>
 
     <div class="hub-group">Werkzeuge</div>
     <a class="hub-card" href="http://localhost" target="_blank">
@@ -338,6 +364,10 @@
     <a class="hub-card disabled" id="hub-monitor-groups" href="#" target="_blank">
       <div class="hub-icon" style="background:#5b5fc7;">M</div>
       <div class="hub-text"><div class="t">Monitor-Gruppen</div><div class="d">Infrastruktur (Admin) &amp; AI/LLM Observability</div></div>
+    </a>
+    <a class="hub-card disabled" id="hub-traces" href="#" target="_blank">
+      <div class="hub-icon" style="background:#5b5fc7;">T</div>
+      <div class="hub-text"><div class="t">Traces</div><div class="d">Service Map der Kettenreaktion (Leipzig)</div></div>
     </a>
   </div>
 
@@ -728,12 +758,23 @@
         und Netzwerk (LAN) zeitversetzt nach (~15s).<br>
         <strong>Zeigt:</strong> eine echte Kettenreaktion aus einer
         einzigen Ursache - ein Incident mit drei betroffenen Diensten und
-        klar benanntem Root Cause statt drei getrennten Alarmen.
+        klar benanntem Root Cause statt drei getrennten Alarmen.<br>
+        <strong>Kein Alert-/ITSM-Spam:</strong> sobald WLAN und Netzwerk
+        (LAN) demselben Incident zugeordnet sind, pausiert OneUptime
+        selbst deren aktives Monitoring
+        (<code>disableActiveMonitoringBecauseOfManualIncident</code>) -
+        sie können keinen eigenen, konkurrierenden Alarm mehr auslösen.<br>
+        <strong>Echte Abhängigkeit, nicht nur behauptet:</strong> Phase 2
+        sendet zusätzlich einen echten OpenTelemetry-Trace (Internet-
+        Anbindung → WLAN / Netzwerk (LAN) als Parent-/Child-Spans) - die
+        Trace Service Map zeigt die Kette dadurch als unabhängig
+        hergeleitete Kante, nicht nur als Text im Incident.
       </p>
       <div class="links">
         <div class="link-row">
           <span class="role-label">Admin</span>
           <a href="http://localhost" target="_blank">OneUptime</a>
+          <a class="disabled" id="link-leipzig-cascade-traces" href="#" target="_blank">Trace Service Map</a>
         </div>
         <div class="link-row">
           <span class="role-label">Nutzer</span>
@@ -866,6 +907,8 @@
           "hub-security-events": data.securityEventsUrl,
           "hub-security-detection-rules": data.securityDetectionRulesUrl,
           "hub-monitor-groups": data.monitorGroupsUrl,
+          "hub-traces": data.tracesUrl,
+          "link-leipzig-cascade-traces": data.tracesUrl,
         };
         for (const [elId, url] of Object.entries(directLinks)) {
           const a = document.getElementById(elId);

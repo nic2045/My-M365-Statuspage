@@ -951,6 +951,70 @@ Im Demo-Kontrollzentrum als elfte Karte "Internetausfall mit
 Kettenreaktion", Break-Button mit "(~15s)"-Hinweis, damit die kurze
 Wartezeit beim Klick nicht wie ein Hänger wirkt.
 
+**Wie das Szenario Alert-/ITSM-Spam verhindert - im echten
+OneUptime-Quellcode verifiziert, nicht nur behauptet:** Der naheliegende
+Einwand gegen eine Kettenreaktion ist, dass sie eigentlich drei Alarme
+statt einem erzeugen müsste. Passiert hier nicht, und zwar nicht durch
+einen Demo-Trick, sondern durch einen echten, bereits vorhandenen
+OneUptime-Mechanismus: Sobald ein Monitor einem manuell angelegten
+Incident zugeordnet wird (genau das tut `cascading_incident.py` mit
+`"monitors": [...]` in Phase 2), setzt `IncidentService.ts`
+serverseitig automatisch
+`disableActiveMonitoringBecauseOfManualIncident = true` auf diesem
+Monitor. `MonitorProbeService.ts` filtert Monitore mit diesem Flag
+explizit aus der Abfrage, die entscheidet, welche Monitore als Nächstes
+geprobt werden (`AND m."disableActiveMonitoringBecauseOfManualIncident"
+= false` in der WHERE-Klausel) - WLAN und Netzwerk (LAN) werden also
+schlicht nicht mehr aktiv überwacht, solange der gemeinsame Incident
+offen ist, und können deshalb keinen eigenen, konkurrierenden
+Incident/Alarm mehr auslösen. Bei `fix` (Incident Resolved) setzt
+derselbe Service das Flag automatisch zurück auf `false`. Genau dasselbe
+Feld (plus das Geschwisterfeld
+`disableActiveMonitoringBecauseOfScheduledMaintenanceEvent`) sorgt schon
+beim Druckerwartungs-Szenario dafür, dass eine angekündigte Wartung
+nicht gleichzeitig einen Vorfall meldet.
+
+**Ehrlich benannte Grenze dieses Mechanismus:** Er verhindert Spam erst,
+*nachdem* jemand - hier das Skript, im echten Betrieb ein
+On-Call-Engineer oder eine eigene Automation - die drei Monitore
+tatsächlich demselben Incident zugeordnet hat. OneUptime erkennt die
+Kettenreaktion nicht von sich aus über eine Abhängigkeitsgrafik; wie
+weiter oben bei Service Catalog bereits recherchiert, wurden
+`ServiceDependency`/`ServiceMonitor` aus dieser Version entfernt -
+Korrelation kommt inzwischen ausschließlich aus echten
+OpenTelemetry-Trace-Spans. Diese Lücke ist selbst Teil der
+Vorführungs-Story: "das System verhindert Folge-Spam zuverlässig, sobald
+der Zusammenhang einmal hergestellt ist - das Herstellen selbst ist
+(noch) Menschenarbeit". Auch als Talking Point direkt auf der Karte
+("Kein Alert-/ITSM-Spam") hinterlegt.
+
+**Die Lücke selbst geschlossen: echte OTel-Trace-Korrelation statt nur
+Skript-Behauptung.** Der Absatz oben endete mit "Korrelation kommt
+inzwischen ausschließlich aus echten OpenTelemetry-Trace-Spans" - das
+war noch die Einschränkung. Jetzt sendet Phase 2 von
+`cascading_incident.py` genau das: einen echten Trace über
+`POST /otlp/v1/traces` (dieselbe Ingestion-Key-Authentifizierung wie die
+`docuware-login`-Logs weiter oben, `x-oneuptime-token`-Header), mit
+einem Root-Span für "Internet-Anbindung" und zwei Child-Spans für "WLAN"
+und "Netzwerk (LAN)" - dieselbe `traceId`, `parentSpanId` beider
+Child-Spans zeigt auf die `spanId` des Root-Spans, alle drei mit
+`status.code: STATUS_CODE_ERROR`. Im echten OneUptime-Quellcode
+nachvollzogen (nicht geraten): `OtelTracesIngestService.ts` verarbeitet
+Standard-OTLP/HTTP-JSON (Trace-/Span-/Parent-Span-IDs als Base64 auf der
+Leitung, serverseitig zu Hex dekodiert; `resource.attributes` mit
+`service.name` legt - wie schon bei den Logs - bei Bedarf automatisch
+einen neuen Service-Catalog-Eintrag an), und `TraceServiceMap.tsx` baut
+seine Abhängigkeits-Kanten explizit aus "cross-service parent/child span
+pairs" innerhalb eines Trace. Das heißt: Traces → Service Map zeigt
+"Internet-Anbindung → WLAN" und "Internet-Anbindung → Netzwerk (LAN)"
+als echte, aus Telemetriedaten hergeleitete Kanten - unabhängig von der
+Incident-Beschreibung, die dasselbe nur behauptet. Bewusst best-effort:
+fehlt der Ingestion-Key oder schlägt der Versand fehl, wird das geloggt
+und übersprungen, ohne den Incident-/Monitor-Teil von `break`
+abzubrechen. Direktlink "Trace Service Map" auf der Karte sowie ein
+neuer sechster Hub-Eintrag "Traces" unter "OneUptime – weitere Bereiche"
+(`PageMap.TRACES` → `/traces`, aus `RouteMap.ts` bestätigt).
+
 ## Avaya Call Center – Betriebsansicht (Grafana, Callcenter-Optimierung)
 
 `grafana/dashboards/avaya-callcenter-operations.json` - fokussierte
@@ -981,6 +1045,129 @@ Von Anfang an mit der korrekten `labelsToFields`+gescopetem-`merge`
 (`byRefId`, nicht `byFrameRefID` - siehe Bug-Hinweis oben)
 +`joinByField`-Transformation gebaut. Alle neuen Metriken live gegen
 Prometheus verifiziert.
+
+## shop.pyur.com – zwei Teams, zwei Dashboards auf denselben Metriken
+
+Fiktiver Webshop `shop.pyur.com` (nur ein Label, keine echte Domain -
+dasselbe Fixture-Prinzip wie `docuware.pyur.com`/`llm.pyur.com`
+anderswo in dieser Demo). Bewusst **beide** Varianten nebeneinander
+stehen gelassen, nicht die eine durch die andere ersetzt - ein
+realistisches Bild, wie zwei Teams am selben System arbeiten:
+
+- **"Webshop – Cross-funktional"** (`webshop-overview.json`, im
+  normalen "Dashboards"-Hub-Bereich) - **ein** Dashboard, das alle vier
+  Perspektiven (Marketing, Website-Betrieb, Middleware, Infra) auf einer
+  Seite zusammenfasst, wie schon jedes andere Dashboard in dieser Demo.
+- **"shop.pyur.com – Dashboard-Gruppe (eigenes Team)"** (eigener
+  Hub-Bereich im Kontrollzentrum) - **fünf** eigenständige, verlinkte
+  Dashboards, orientiert an einem typischen produktiven
+  Observability-Stack für E-Commerce (Shopware-Health-Dashboard,
+  Frontend/RUM-Observability, Node-Exporter-Infra, MySQL/PostgreSQL-
+  DB-Dashboard, Web-Server-Traffic/Statuscodes) - so, wie ein
+  spezialisiertes Platform-/SRE-Team dieselben Daten aufteilen würde,
+  sobald ein einzelnes Dashboard zu voll wird.
+
+Beide lesen **dieselben** Prometheus-Metriken von **einem** Exporter
+(`scripts/webshop-metrics-exporter.py`, 95 Kennzahlen-Serien, Port
+9500) - kein doppelter Datenbestand, nur zwei verschiedene
+Zusammenstellungen derselben Wahrheit, genau der Punkt der
+Gegenüberstellung. Gleiches "gesund mit sichtbarer Bewegung, ein
+STATE_FILE schaltet einen echten Vorfall"-Muster wie bei
+Customer-Care/Leipzig-Netzwerk. Die 5er-Gruppe verlinkt sich in Grafana
+selbst über eine Perspektiven-Link-Kachel auf dem ersten Dashboard
+("Health & Business", gleiches Muster wie beim
+IT-Ops-Gesamtübersicht-Dashboard oben) - bewusst **ohne Grafana
+Cloud**: alles unten sind eigenständige Panels auf demselben
+selbst-gehosteten OSS-Grafana wie jedes andere Dashboard in dieser
+Demo, keine Cloud-spezifische Integration nötig.
+
+Die fünf Dashboards der Gruppe im Einzelnen:
+
+**1. Health & Business** (`webshop-health-business.json` -
+Shopware-6-Health-Dashboard-Äquivalent, "360-Grad-Sicht, die
+Server-Performance mit Business-Bottlenecks verbindet"): Marketing-KPIs
+(Besucher, Conversion-Rate, Ø Bestellwert, Warenkorbabbruch, Umsatz &
+Bestellungen pro Minute, Bounce-Rate, Traffic je Akquisitionskanal) plus
+Middleware - die tatsächliche Brücke zwischen Backend-Performance und
+Geschäftskennzahlen: Checkout-/Payment-/Inventory-API-Latenz,
+Payment-Erfolgsquote, Bestell-Warteschlange, Fehlerrate je
+Downstream-Integration (Payment/Inventory/Shipping/ERP).
+
+**2. Frontend Observability** (`webshop-frontend-observability.json` -
+echte Nutzerinteraktionen, Seitenladezeiten, Fehler; bewusst ohne
+Grafana Cloud/Faro Web SDK gebaut - reine Prometheus-Metriken auf
+eigenständigen Panels, kein Cloud-Produkt nötig): alle drei **Core Web
+Vitals** (LCP, INP, CLS - mit den offiziellen Google-Schwellenwerten als
+Ampel-Farben), Seitenladezeit je Seitentyp, JS-Fehlerrate,
+Suche-Trefferquote - **und der eigentliche Auftrag dieser Gruppe: der
+Vertragsabschluss-Funnel (Internet)**. Fünf Schritte
+(Tarifauswahl → Verfügbarkeitsprüfung → Persönliche Daten →
+Vertragsübersicht → Bestätigung), je Schritt zwei Metriken:
+`shop_funnel_step_entries_total` (wie viele Besucher diesen Schritt noch
+erreichen - als Balkendiagramm mit abnehmender Höhe zeigt das direkt,
+**an welchem Schritt** die meisten abbrechen) und
+`shop_funnel_step_avg_duration_seconds` (wie lange sie dort bleiben).
+Bewusst realistisch modelliert: "Persönliche Daten" hat sowohl die
+größte Abbruchquote (Formular mit Adresse/IBAN - der Punkt mit der
+höchsten gefühlten Verbindlichkeit) als auch die längste Verweildauer
+(~95s, ein Formular zum Ausfüllen statt ein Klick) - kein Zufallsrauschen,
+sondern dieselbe Reihenfolge, die ein echter Vertragsabschluss-Funnel
+zeigen würde. Eine "Gesamt-Abschlussquote"-Kachel (Bestätigung ÷
+Tarifauswahl) fasst das Ergebnis in einer Zahl zusammen.
+
+**3. Infrastruktur** (`webshop-infrastructure.json` - Node-Exporter-
+Äquivalent, orientiert am "Node Exporter Full", ID 1860): CPU/Memory/
+Disk/Netzwerk je Service (frontend/checkout/catalog/search),
+Load Average, Request-Rate, CDN-Cache-Hit-Rate & -Bandbreite.
+
+**4. Datenbank-Performance** (`webshop-database.json` - Äquivalent zum
+MySQL-Dashboard ID 7362/PostgreSQL-Pendant, "Datenbank-Latenz wirkt sich
+direkt auf die Checkout-Conversion aus"): Query-Latenz nach Typ (SELECT/
+INSERT/UPDATE), Connection-Pool-Auslastung, Slow-Query-Rate,
+Replikations-Lag, Deadlocks.
+
+**5. Web-Traffic & Fehlercodes** (`webshop-web-traffic.json` -
+**bewusst kein echtes Loki+NGINX-Log-Dashboard**, sondern das
+Prometheus-native Äquivalent dazu, im Dashboard selbst als Hinweis
+vermerkt: eine neue Loki-Instanz plus Log-Pipeline wäre ein spürbarer
+Infrastruktur-Zubau für diese eine Perspektive gewesen, während
+Request-Rate/Statuscode-Verteilung/Fehler-Pfade als Metriken dieselbe
+Kernaussage ohne zusätzlichen Dienst liefern. Für echte, durchsuchbare
+Logzeilen existiert in dieser Demo bereits **Telemetry → Logs** in
+OneUptime, siehe die DocuWare-Login-Story weiter oben): Request-Rate,
+Requests nach Statuscode-Klasse über Zeit (2xx/3xx/4xx/5xx), Fehlerrate
+je Pfad (`/checkout`, `/vertrag/abschluss`, ...).
+
+**Ein Vorfall, sichtbar aus allen fünf Perspektiven zugleich:** der
+Exporter modelliert bewusst eine einzige Story - die Datenbank ist die
+eigentliche Ursache - statt fünf unabhängiger. `STATE_FILE=unhealthy`
+lässt gleichzeitig Query-Latenz und Replikations-Lag einbrechen
+(**Datenbank-Performance** zeigt die Ursache), was sich als
+Checkout-API-Latenz/Payment-Ausfälle zeigt (**Health & Business** sieht
+das Symptom auf Geschäftsebene), als Abbruch konzentriert genau am
+Schritt "Vertragsübersicht" (dort ruft das Frontend die Checkout-API
+auf) plus steigende JS-Fehlerrate (**Frontend Observability**), als
+hohe CPU/hoher Netzwerk-Traffic auf dem Checkout-Service
+(**Infrastruktur**) und als 5xx-Spitze speziell auf `/checkout` und
+`/vertrag/abschluss` (**Web-Traffic & Fehlercodes**) - derselbe Vorfall,
+fünf Blickwinkel, keine widersprüchlichen Zahlen. Noch **kein**
+live-auslösbares `break-webshop.sh`/`fix-webshop.sh` verdrahtet (bewusst
+außerhalb dieser ersten Fassung) - der Exporter ist dafür bereits
+bereit, falls gewünscht.
+
+Beide Balkendiagramm-Panels ("Traffic nach Kanal", "Nutzer je Schritt
+(Funnel)", "Fehlerrate je Pfad") von Anfang an mit derselben korrekten
+`labelsToFields`+`merge`+`organize`-Transformation gebaut wie das bereits
+einmal gefundene Avaya-Bug-Muster oben - keine rohe
+`legendFormat`-Vorlage, die bei einem Ein-Metrik-Balkendiagramm nicht die
+Balken pro Label erzeugt hätte. Live gegen den Exporter verifiziert
+(`curl localhost:9500/metrics`, 95 Serien im gesunden und im
+`unhealthy`-Zustand geprüft, inkl. Funnel-Verweildauer-Anstieg am
+richtigen Schritt); Live-Rendering in Grafana selbst nicht möglich
+(Docker-Hub-Pulls in dieser Sandbox blockiert, siehe oben) - JSON-Schema,
+Panel-IDs, Grid-Layout und Transformationen aller fünf Dashboards
+stattdessen statisch geprüft (eindeutige IDs, keine Grid-Überlappung,
+jedes Panel mit Datasource/Targets/eindeutigen refIds).
 
 ## DocuWare-Cluster: App-Owner-Tiefe + einfache Nutzeransicht
 

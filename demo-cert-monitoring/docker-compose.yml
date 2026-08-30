@@ -132,6 +132,23 @@ services:
     ports:
       - "${LEIPZIG_NETWORK_METRICS_PORT:-9400}:9400"
 
+  webshop-metrics-exporter:
+    # Synthetic Prometheus exporter for shop.pyur.com - feeds a group of
+    # five dashboards (Health & Business, Frontend Observability incl.
+    # the Vertragsabschluss-Funnel, Infrastruktur, Datenbank-Performance,
+    # Web-Traffic & Fehlercodes) rather than one, see
+    # scripts/webshop-metrics-exporter.py.
+    image: python:3.12-alpine
+    container_name: cert-demo-webshop-metrics
+    restart: unless-stopped
+    environment:
+      METRICS_PORT: "9500"
+    volumes:
+      - ./scripts/webshop-metrics-exporter.py:/webshop-metrics-exporter.py:ro
+    entrypoint: ["python3", "/webshop-metrics-exporter.py"]
+    ports:
+      - "${WEBSHOP_METRICS_PORT:-9500}:9500"
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: cert-demo-prometheus
@@ -150,6 +167,8 @@ services:
       customer-care-metrics-exporter:
         condition: service_started
       leipzig-network-metrics-exporter:
+        condition: service_started
+      webshop-metrics-exporter:
         condition: service_started
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
