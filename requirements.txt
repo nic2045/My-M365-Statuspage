@@ -14,5 +14,5 @@ python-dotenv==1.2.3
 nh3==0.3.7
 mistune==3.3.4
 starlette==1.6.0
-cryptography>=49.0.0,<50
+cryptography>=50.0.1,<51
 aiosmtplib==5.1.2
