@@ -1151,9 +1151,38 @@ hohe CPU/hoher Netzwerk-Traffic auf dem Checkout-Service
 (**Infrastruktur**) und als 5xx-Spitze speziell auf `/checkout` und
 `/vertrag/abschluss` (**Web-Traffic & Fehlercodes**) - derselbe Vorfall,
 fünf Blickwinkel, keine widersprüchlichen Zahlen. Noch **kein**
-live-auslösbares `break-webshop.sh`/`fix-webshop.sh` verdrahtet (bewusst
-außerhalb dieser ersten Fassung) - der Exporter ist dafür bereits
-bereit, falls gewünscht.
+live-auslösbares `break-webshop.sh`/`fix-webshop.sh` für diesen
+DB-Vorfall verdrahtet (bewusst außerhalb dieser ersten Fassung) - der
+Exporter ist dafür bereits bereit, falls gewünscht.
+
+**Ein zweiter, bewusst anders geformter Vorfall: DDoS auf shop.pyur.com**
+(`break-ddos-shop.sh`/`fix-ddos-shop.sh`, 12. Szenario-Karte,
+Kontrollzentrum). "Sollte aus den Daten hervorgehen" heißt hier konkret:
+nicht nur ein Text im Incident, sondern ein Muster, das man auch ohne
+die Story zu kennen aus den Zahlen selbst ablesen kann. Der Signatur-
+Unterschied zum DB-Vorfall oben ist der Punkt der Übung -
+`STATE_FILE=ddos` lässt `shop_visitors_active`/`shop_sessions_total`
+bewusst unangetastet auf ihrer normalen Kurve (keine echten Menschen
+strömen herbei), während `shop_request_rate_per_second` komplett
+davon entkoppelt auf das ~100-200-fache springt (**Web-Traffic**:
+Statuscodes kippen Richtung 4xx/5xx, Fehlerrate steigt breit über
+*alle* Pfade statt nur zwei). Ladezeit/LCP/INP brechen auf **jeder**
+Seite ein statt nur auf Checkout (**Frontend Observability**),
+Absprungrate springt hoch, Conversion bricht ein
+(**Health & Business**). Bei der Infrastruktur sind Frontend und
+Catalog (nicht Checkout) am CPU-/Netzwerk-Limit, die CDN-Trefferquote
+fällt, während die CDN-Bandbreite gleichzeitig stark steigt (Angriffs-
+Traffic ist überproportional nicht cachebar). **Datenbank-Performance
+bleibt komplett unberührt** - keine Codezeile dort verzweigt auf
+`ddos`, bewusst als Gegenprobe: derselbe Shop, zwei erkennbar
+unterschiedliche Root Causes, ablesbar allein an *welche* Dashboards
+ausschlagen und welche nicht. Grafana-only wie das Cognigy-Szenario
+(kein OneUptime-Monitor für shop.pyur.com angelegt) - live gegen den
+Exporter verifiziert (`curl localhost:9500/metrics` gesund vs.
+`ddos`: Besucher 133→136 nahezu unverändert, Request-Rate 25,7→4923,
+Frontend/Catalog-CPU auf 95/98 % während Checkout/Search bei 53/38 %
+bleiben, CDN-Trefferquote 93→28 %, Datenbank-Latenzen unverändert im
+Normalbereich).
 
 Beide Balkendiagramm-Panels ("Traffic nach Kanal", "Nutzer je Schritt
 (Funnel)", "Fehlerrate je Pfad") von Anfang an mit derselben korrekten

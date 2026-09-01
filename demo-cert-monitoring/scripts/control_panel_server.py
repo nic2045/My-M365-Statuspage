@@ -57,6 +57,8 @@ ACTIONS = {
     "fix-jira-attachments": ("fix-jira-attachments.sh", "Jira-Anhänge-Vorfall beheben"),
     "break-leipzig-cascade": ("break-leipzig-cascade.sh", "Kettenreaktion auslösen"),
     "fix-leipzig-cascade": ("fix-leipzig-cascade.sh", "Kettenreaktion beheben"),
+    "break-ddos-shop": ("break-ddos-shop.sh", "DDoS-Vorfall auslösen"),
+    "fix-ddos-shop": ("fix-ddos-shop.sh", "DDoS-Vorfall beheben"),
 }
 
 
@@ -277,6 +279,7 @@ def get_status():
     cc_chemnitz = prom_query('cc_site_vpn_up{site="Chemnitz"}')
     leipzig_switch = prom_query('net_uplink_up{device="Access-Switch Vertrieb-2"}')
     cognigy_intent_success = prom_query('cc_cognigy_intent_success_rate_percent')
+    shop_request_rate = prom_query('shop_request_rate_per_second')
 
     def state(value, healthy_fn):
         if value is None:
@@ -298,6 +301,10 @@ def get_status():
         # (Internet-Anbindung) is enough to reflect the whole scenario:
         # it's the first to flip and the last to recover.
         "leipzig-cascade": get_monitor_state("Internet-Anbindung"),
+        # Normal request rate tops out well under 100/s; the DDoS state
+        # pushes it into the thousands (see webshop-metrics-exporter.py) -
+        # 500 sits safely between the two.
+        "ddos-shop": state(shop_request_rate, lambda v: v < 500),
     }
 
 
