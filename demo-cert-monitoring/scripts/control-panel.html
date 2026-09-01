@@ -967,6 +967,21 @@
     // itself the moment ./seed-oneuptime.sh finishes, without requiring a
     // manual page reload in between.
     setInterval(() => { refreshStatus(); loadLinks(); }, 5000);
+
+    // A link into a card that lives inside the collapsed "weitere
+    // Szenarien" <details> (e.g. from the IT-Ops-Gesamtübersicht
+    // Grafana dashboard's cross-link panel) needs that <details> opened
+    // explicitly - relying on browsers auto-expanding it for a fragment
+    // link is real, shipped behaviour in current engines, but not
+    // guaranteed everywhere this demo might be shown from.
+    if (location.hash) {
+      const target = document.querySelector(location.hash);
+      if (target) {
+        const details = target.closest("details");
+        if (details) details.open = true;
+        target.scrollIntoView({ block: "start" });
+      }
+    }
   </script>
 </body>
 </html>

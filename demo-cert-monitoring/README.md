@@ -1349,6 +1349,22 @@ das sichtbare Textpanel als auch nativ über Grafana. Im
 [Demo-Kontrollzentrum](#demo-kontrollzentrum) taucht es als erste Karte
 unter "Dashboards" auf.
 
+**Auch die shop.pyur.com-Perspektiven waren hier bisher nicht verlinkt** -
+nachgezogen: "Technische Sicht" listet jetzt zusätzlich
+`Webshop – Cross-funktional` (`/d/webshop-overview`) und
+`shop.pyur.com – Dashboard-Gruppe` (`/d/webshop-health-business`), unter
+"Weitere Werkzeuge" verlinkt "DDoS-Vorfall auslösen" direkt auf
+`http://localhost:7100/#card-ddos-shop`. Die DDoS-Karte liegt in der
+eingeklappten "weitere Szenarien"-Sektion des Kontrollzentrums (siehe
+[Demo-Kontrollzentrum](#demo-kontrollzentrum)); ein reiner
+Fragment-Link würde sich in aktuellen Browsern zwar schon von selbst
+öffnen (Chrome/Firefox/Safari expandieren ein `<details>`, das ein
+Sprungziel enthält, automatisch), verlässlich gemacht aber ein kleines
+Stück JS am Ende von `control-panel.html`: beim Laden `location.hash`
+prüfen, das nächste `<details>`-Elternelement explizit öffnen und zur
+Karte scrollen - live mit Playwright/Chromium geprüft (`details.open`
+wird `true`, die Karte liegt nach dem Laden am oberen Viewport-Rand).
+
 ## Test-Incident live durchspielen: "Zertifikat abgelaufen, IT arbeitet an Behebung"
 
 `demo-broken-site` startet **gesund** (gültiges Zertifikat,
