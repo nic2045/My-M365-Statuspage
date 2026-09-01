@@ -493,8 +493,8 @@
 
   <details class="scenario-more">
     <summary>
-      <span class="more-icon">+8</span>
-      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge, Kettenreaktion Leipzig</span></span>
+      <span class="more-icon">+9</span>
+      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge, Kettenreaktion Leipzig, DDoS auf shop.pyur.com</span></span>
       <span class="more-arrow">⌄</span>
     </summary>
     <div class="grid">
@@ -787,6 +787,44 @@
       </div>
     </div>
 
+    <div class="card" id="card-ddos-shop" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
+          <circle cx="24" cy="24" r="6" fill="#fff"/>
+          <path d="M24 4 L24 14 M44 24 L34 24 M24 44 L24 34 M4 24 L14 24 M38 10 L31 17 M38 38 L31 31 M10 38 L17 31 M10 10 L17 17" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <h2>DDoS auf shop.pyur.com</h2>
+          <span class="status unknown" id="status-ddos-shop"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Passiert:</strong> eine Flut aus Anfragen trifft
+        shop.pyur.com - der Shop bleibt erreichbar, wird aber extrem
+        langsam.<br>
+        <strong>Zeigt:</strong> die echte DDoS-Signatur direkt in den
+        Daten statt nur behauptet - Besucherzahl/Sessions bleiben normal
+        (keine echten Menschen strömen herbei), während die Request-Rate
+        auf das ~100-200-fache springt. Ladezeit/LCP brechen auf jeder
+        Seite ein (nicht nur Checkout wie beim DB-Vorfall), Frontend +
+        Catalog sowie das CDN geraten unter Last - Datenbank und
+        Zahlungs-/Warenwirtschafts-Anbindung bleiben unauffällig, bewusst
+        kein Backend-Problem.
+      </p>
+      <div class="links">
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/webshop-web-traffic" target="_blank">Grafana: Web-Traffic</a>
+          <a href="http://localhost:3000/d/webshop-frontend-observability" target="_blank">Grafana: Frontend</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-ddos-shop', 'ddos-shop')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-ddos-shop', 'ddos-shop')">Beheben</button>
+      </div>
+    </div>
+
     </div>
   </details>
 
@@ -833,7 +871,7 @@
       try {
         const res = await fetch("/api/status");
         const data = await res.json();
-        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer", "leipzig-network", "cognigy", "blueant", "jira-attachments", "leipzig-cascade"]) {
+        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer", "leipzig-network", "cognigy", "blueant", "jira-attachments", "leipzig-cascade", "ddos-shop"]) {
           const el = document.getElementById("status-" + key);
           const state = data[key] || "unknown";
           el.className = "status " + state;
@@ -929,6 +967,21 @@
     // itself the moment ./seed-oneuptime.sh finishes, without requiring a
     // manual page reload in between.
     setInterval(() => { refreshStatus(); loadLinks(); }, 5000);
+
+    // A link into a card that lives inside the collapsed "weitere
+    // Szenarien" <details> (e.g. from the IT-Ops-Gesamtübersicht
+    // Grafana dashboard's cross-link panel) needs that <details> opened
+    // explicitly - relying on browsers auto-expanding it for a fragment
+    // link is real, shipped behaviour in current engines, but not
+    // guaranteed everywhere this demo might be shown from.
+    if (location.hash) {
+      const target = document.querySelector(location.hash);
+      if (target) {
+        const details = target.closest("details");
+        if (details) details.open = true;
+        target.scrollIntoView({ block: "start" });
+      }
+    }
   </script>
 </body>
 </html>
