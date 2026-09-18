@@ -31,7 +31,7 @@
      data-acknowledged-by="{{ incident.acknowledged_by_email or '' }}"
      data-owner-email="{{ incident.owner_email or '' }}"
      data-description="{{ incident.description or '' }}"
-     data-updates="{{ _upd | tojson | e }}">
+     data-updates='{{ _upd | tojson }}'>
   <div class="p-4">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">

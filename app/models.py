@@ -155,6 +155,15 @@ class Subscriber(Base):
     confirm_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     unsubscribe_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Notification channel: "email" (default, uses `email` above as the send
+    # target) or "teams" (posts to teams_webhook_url instead - `email` is
+    # still required as a contact/identifier, but isn't sent to).
+    channel: Mapped[str] = mapped_column(String(16), nullable=False, server_default="email")
+    teams_webhook_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # Comma-separated service_names this subscriber wants notifications for.
+    # NULL/empty = all services (also the meaning for every pre-existing row,
+    # which predates this per-service selection feature).
+    services: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

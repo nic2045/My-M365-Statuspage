@@ -414,6 +414,52 @@
                class="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
         <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">{{ L["subscribe.hint"] }}</p>
       </div>
+
+      <div>
+        <span class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["subscribe.channel_label"] }}</span>
+        <div class="flex gap-3">
+          <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+            <input type="radio" name="channel" value="email" checked data-subscribe-channel
+                   class="text-blue-600 focus:ring-blue-500">
+            {{ L["subscribe.channel_email"] }}
+          </label>
+          <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+            <input type="radio" name="channel" value="teams" data-subscribe-channel
+                   class="text-blue-600 focus:ring-blue-500">
+            {{ L["subscribe.channel_teams"] }}
+          </label>
+        </div>
+      </div>
+
+      <div id="subscribe-teams-field" class="hidden">
+        <label for="subscribe-teams-webhook" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ L["subscribe.teams_webhook_label"] }}</label>
+        <input id="subscribe-teams-webhook"
+               type="url" name="teams_webhook_url"
+               placeholder="https://.../webhook/..."
+               class="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">{{ L["subscribe.teams_webhook_hint"] }}</p>
+      </div>
+
+      {% set _subscribe_services = data.services | map(attribute='service_name') | list %}
+      {% if _subscribe_services | length > 1 %}
+      <div>
+        <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300 mb-1.5">
+          <input type="checkbox" id="subscribe-all-services" checked
+                 class="rounded text-blue-600 focus:ring-blue-500">
+          {{ L["subscribe.all_services"] }}
+        </label>
+        <div id="subscribe-services-list" class="hidden pl-5 space-y-1 max-h-32 overflow-y-auto">
+          {% for svc in _subscribe_services %}
+          <label class="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+            <input type="checkbox" name="services" value="{{ svc }}"
+                   class="rounded text-blue-600 focus:ring-blue-500">
+            {{ svc }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <div class="flex items-center justify-end gap-2 pt-2">
         <button type="button" data-subscribe-modal-close
                 class="text-sm px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
@@ -450,6 +496,29 @@
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+    });
+
+    // Toggle the Teams webhook field based on the selected channel.
+    const teamsField = document.getElementById('subscribe-teams-field');
+    const teamsWebhookInput = document.getElementById('subscribe-teams-webhook');
+    modal.querySelectorAll('[data-subscribe-channel]').forEach((radio) => {
+      radio.addEventListener('change', () => {
+        const isTeams = radio.value === 'teams' && radio.checked;
+        if (radio.checked) {
+          teamsField?.classList.toggle('hidden', !isTeams);
+          if (teamsWebhookInput) teamsWebhookInput.required = isTeams;
+        }
+      });
+    });
+
+    // Toggle the per-service checkbox list based on the "all services" box.
+    const allServicesBox = document.getElementById('subscribe-all-services');
+    const servicesList = document.getElementById('subscribe-services-list');
+    allServicesBox?.addEventListener('change', () => {
+      servicesList?.classList.toggle('hidden', allServicesBox.checked);
+      if (allServicesBox.checked) {
+        servicesList?.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
+      }
     });
   })();
 </script>

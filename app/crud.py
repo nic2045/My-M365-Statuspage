@@ -806,8 +806,18 @@ async def build_status_page_data(
 
 # ── Subscriber CRUD ───────────────────────────────────────────────────────────
 
-async def create_subscriber(db: AsyncSession, email: str) -> Subscriber | None:
-    """Create a pending (unconfirmed) subscriber. Returns None if email already exists."""
+async def create_subscriber(
+    db: AsyncSession,
+    email: str,
+    channel: str = "email",
+    teams_webhook_url: str | None = None,
+    services: list[str] | None = None,
+) -> Subscriber | None:
+    """Create a pending (unconfirmed) subscriber. Returns None if email already exists.
+
+    `services` is the list of service_names to notify for; None/empty means
+    "all services" (stored as NULL, same as every pre-existing subscriber).
+    """
     existing = await db.execute(select(Subscriber).where(Subscriber.email == email))
     if existing.scalar_one_or_none():
         return None
@@ -815,6 +825,9 @@ async def create_subscriber(db: AsyncSession, email: str) -> Subscriber | None:
         email=email,
         confirm_token=uuid.uuid4().hex,
         unsubscribe_token=uuid.uuid4().hex,
+        channel=channel,
+        teams_webhook_url=teams_webhook_url,
+        services=",".join(services) if services else None,
     )
     db.add(sub)
     await db.flush()
@@ -859,6 +872,22 @@ async def get_confirmed_subscribers(db: AsyncSession) -> list[Subscriber]:
         .order_by(Subscriber.email)
     )
     return list(result.scalars().all())
+
+
+def subscriber_services(sub: Subscriber) -> list[str] | None:
+    """Parsed service_name list from Subscriber.services, or None for "all"."""
+    if not sub.services:
+        return None
+    return [s.strip() for s in sub.services.split(",") if s.strip()]
+
+
+async def get_confirmed_subscribers_for_service(db: AsyncSession, service_name: str) -> list[Subscriber]:
+    """Confirmed subscribers who opted into `service_name` (or into "all")."""
+    all_confirmed = await get_confirmed_subscribers(db)
+    return [
+        s for s in all_confirmed
+        if (wanted := subscriber_services(s)) is None or service_name in wanted
+    ]
 
 
 async def search_global(db: AsyncSession, q: str) -> dict:

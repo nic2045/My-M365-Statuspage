@@ -14,7 +14,11 @@ from app.crud import (
     get_subscriber_by_unsub_token,
 )
 from app.database import AsyncSessionLocal
-from app.notifications import send_confirmation_email
+from app.notifications import (
+    is_valid_teams_webhook_url,
+    send_confirmation_email,
+    send_teams_confirmation,
+)
 from app.templates import templates
 
 logger = logging.getLogger(__name__)
@@ -32,6 +36,9 @@ async def get_db():
 async def subscribe(
     request: Request,
     email: Annotated[str, Form()],
+    channel: Annotated[str, Form()] = "email",
+    teams_webhook_url: Annotated[str | None, Form()] = None,
+    services: Annotated[list[str] | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
 ):
     email = email.strip().lower()
@@ -41,7 +48,20 @@ async def subscribe(
             {"ok": False, "message": "Ungültige E-Mail-Adresse.", "page_title": "Anmeldung"}
         )
 
-    sub = await create_subscriber(db, email)
+    channel = channel if channel in ("email", "teams") else "email"
+    webhook = (teams_webhook_url or "").strip() or None
+    if channel == "teams" and not (webhook and is_valid_teams_webhook_url(webhook)):
+        return templates.TemplateResponse(
+            request, "subscribe_result.html",
+            {"ok": False, "message": "Ungültige Teams-Webhook-URL.", "page_title": "Anmeldung"}
+        )
+
+    sub = await create_subscriber(
+        db, email,
+        channel=channel,
+        teams_webhook_url=webhook if channel == "teams" else None,
+        services=services,
+    )
     if sub is None:
         # Already subscribed – still show success to avoid enumeration
         return templates.TemplateResponse(
@@ -51,7 +71,10 @@ async def subscribe(
 
     await db.commit()
     confirm_url = f"{settings.BASE_URL}/subscribe/confirm/{sub.confirm_token}"
-    await send_confirmation_email(email, confirm_url)
+    if channel == "teams":
+        await send_teams_confirmation(webhook, confirm_url)
+    else:
+        await send_confirmation_email(email, confirm_url)
     return templates.TemplateResponse(
         request, "subscribe_result.html",
         {"ok": True, "page_title": "Anmeldung"}
