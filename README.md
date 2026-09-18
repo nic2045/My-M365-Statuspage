@@ -294,7 +294,7 @@ FastAPI (app/main.py)
 │   ├── /embed             Einbettbares Widget (Token oder OIDC)
 │   ├── /auth/*            Login · Callback · Logout
 │   └── /api/v1/*          JSON-API · Healthcheck
-├── Jinja2-Templates (Tailwind CSS Play CDN)
+├── Jinja2-Templates (Tailwind CSS, build-time kompiliert)
 │   ├── base.html          Nav, Dark-Mode-Toggle
 │   ├── status.html        Hauptseite
 │   ├── embed.html         Widget (standalone)

@@ -73,11 +73,12 @@ app.add_middleware(
 )
 
 # Content-Security-Policy: 'unsafe-inline' is required for the inline scripts/
-# styles and the Tailwind CDN in base.html. The real wins here are
+# styles in base.html (Tailwind CSS itself is compiled at build time and
+# served from /static, no CDN involved). The real wins here are
 # frame-ancestors (anti-clickjacking), form-action, object-src and base-uri.
 _CSP = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+    "script-src 'self' 'unsafe-inline'; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com; "
     "img-src 'self' data:; "

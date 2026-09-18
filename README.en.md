@@ -297,7 +297,7 @@ FastAPI (app/main.py)
 │   ├── /auth/*            Login · callback · logout
 │   ├── /lang/{code}       Persist UI language choice
 │   └── /api/v1/*          JSON API · health check
-├── Jinja2 templates (Tailwind CSS Play CDN)
+├── Jinja2 templates (Tailwind CSS, compiled at build time)
 │   ├── base.html          Nav, language switcher, dark-mode toggle
 │   ├── status.html        Main page
 │   ├── embed.html         Widget (standalone)

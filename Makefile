@@ -1,18 +1,26 @@
-.PHONY: dev install docker build stop logs shell test lint help
+.PHONY: dev install css docker build stop logs shell test lint help
 
 HOST ?= 127.0.0.1
 PORT ?= 8000
 
-dev:
+dev: css
 	uv run uvicorn app.main:app --host $(HOST) --port $(PORT) --reload
 
 install:
 	uv sync
+	npm install
 
-docker:
+# Compiles Tailwind CSS to static/css/app.css. Needed on the host even for
+# Docker dev: docker-compose.dev.yml bind-mounts the whole repo over /app,
+# which would otherwise shadow the image's own build-time compiled CSS with
+# a host static/ that doesn't have it.
+css:
+	npm run build:css
+
+docker: css
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
-build:
+build: css
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml build
 
 stop:
@@ -33,7 +41,8 @@ lint:
 help:
 	@echo "Available commands:"
 	@echo "  make dev     - Start dev server directly via uv (http://$(HOST):$(PORT))"
-	@echo "  make install - Install dependencies via uv sync"
+	@echo "  make install - Install dependencies via uv sync + npm install"
+	@echo "  make css     - Compile Tailwind CSS to static/css/app.css"
 	@echo "  make docker  - Build and start via Docker Compose"
 	@echo "  make build   - Rebuild Docker image without starting"
 	@echo "  make stop    - Stop and remove Docker containers"

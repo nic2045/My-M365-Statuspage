@@ -23,3 +23,5 @@ ruff.toml
 README.md
 tests/
 container-structure-test.yml
+node_modules
+static/css/app.css
