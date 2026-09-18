@@ -11,7 +11,6 @@ from app.config import settings
 from app.crud import (
     add_state_change_entry,
     ensure_service_known,
-    get_confirmed_subscribers,
     get_enabled_services,
     upsert_incident,
     upsert_incident_updates,
@@ -25,7 +24,7 @@ from app.graph_client import (
 )
 from app.i18n import LABELS
 from app.models import GRAPH_STATUS_MAP, Incident
-from app.notifications import send_incident_notification, send_teams_notification
+from app.notifications import dispatch_incident_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -212,54 +211,17 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
     return None
 
 
-_TEAMS_STATUS_MAP = {
-    "active":       "interrupted",
-    "acknowledged": "interrupted",
-    "monitoring":   "degraded",
-    "resolved":     "operational",
-}
-
-
 async def _dispatch_notifications(events: list[_NotifyEvent]) -> None:
-    """Send email + Teams notifications for incidents detected during a poll.
-
-    Subscribers are queried once per poll (not per event) to avoid hitting the
-    DB N times when multiple incidents transition simultaneously.
-    """
-    if not events:
-        return
-
-    async with AsyncSessionLocal() as db:
-        confirmed = await get_confirmed_subscribers(db)
-
-    emails = [s.email for s in confirmed]
-    unsub_urls = {
-        s.email: f"{settings.BASE_URL}/unsubscribe/{s.unsubscribe_token}"
-        for s in confirmed
-    }
-
+    """Send email + Teams notifications for incidents detected during a poll."""
     for ev in events:
         subject_key = "notify.new_incident" if ev.is_new else "notify.update"
-        subject = LABELS[subject_key]
-        if emails:
-            asyncio.create_task(
-                send_incident_notification(
-                    subscribers=emails,
-                    subject=subject,
-                    incident_title=ev.incident_title,
-                    service_name=ev.service_name,
-                    description=ev.description,
-                    status_url=settings.BASE_URL,
-                    unsubscribe_urls=unsub_urls,
-                )
-            )
         asyncio.create_task(
-            send_teams_notification(
-                incident_title=ev.incident_title,
+            dispatch_incident_notifications(
                 service_name=ev.service_name,
-                status=_TEAMS_STATUS_MAP.get(ev.status, "degraded"),
+                incident_title=ev.incident_title,
+                subject=LABELS[subject_key],
                 description=ev.description,
-                status_url=settings.BASE_URL,
+                incident_status=ev.status,
             )
         )
 

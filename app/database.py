@@ -57,6 +57,9 @@ async def init_db() -> None:
             "ALTER TABLE incident_updates ADD COLUMN author VARCHAR(256)",
             "ALTER TABLE incidents ADD COLUMN translated_lang VARCHAR(8)",
             "ALTER TABLE incident_updates ADD COLUMN is_published BOOLEAN NOT NULL DEFAULT 1",
+            "ALTER TABLE subscribers ADD COLUMN channel VARCHAR(16) NOT NULL DEFAULT 'email'",
+            "ALTER TABLE subscribers ADD COLUMN teams_webhook_url VARCHAR(512)",
+            "ALTER TABLE subscribers ADD COLUMN services TEXT",
             # subscribers table is created by metadata.create_all above;
             # these stmts only fire if it already existed without the column
         ]:

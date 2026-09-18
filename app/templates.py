@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from app import __version__
 from app.config import settings as _settings
+from app.crud import subscriber_services
 from app.i18n import (
     LABELS,
     LANGUAGE_NAMES,
@@ -33,6 +34,9 @@ templates.env.globals["BUILD_SHA"] = _settings.BUILD_SHA
 templates.env.globals["BUILD_TIME"] = _settings.BUILD_TIME
 templates.env.globals["DEBUG"] = _settings.DEBUG
 templates.env.globals["DEEPL_ENABLED"] = bool(_settings.DEEPL_API_KEY)
+templates.env.globals["subscriber_services_label"] = (
+    lambda sub: ", ".join(subscriber_services(sub)) if subscriber_services(sub) else LABELS["subscribe.all_services"]
+)
 templates.env.globals["status_bar_class"] = (
     lambda s: STATUS_TAILWIND_BAR.get(s, STATUS_TAILWIND_BAR["unknown"])
 )

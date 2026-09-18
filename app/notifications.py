@@ -213,9 +213,16 @@ async def send_teams_notification(
     status: str,
     description: str,
     status_url: str,
+    webhook_urls: list[str] | None = None,
 ) -> None:
-    """Post an Adaptive Card to all configured Teams webhooks."""
-    if not settings.teams_webhook_list:
+    """Post an Adaptive Card to Teams webhooks.
+
+    Defaults to the admin-configured global webhook(s) (TEAMS_WEBHOOK_URLS)
+    when `webhook_urls` isn't given; pass an explicit list to target a single
+    subscriber's own webhook instead (see dispatch_incident_notifications).
+    """
+    urls = webhook_urls if webhook_urls is not None else settings.teams_webhook_list
+    if not urls:
         return
 
     status_colors = {
@@ -268,10 +275,123 @@ async def send_teams_notification(
     }
 
     async with httpx.AsyncClient(timeout=10) as client:
-        for url in settings.teams_webhook_list:
+        for url in urls:
             try:
                 r = await client.post(url, json=card_payload)
                 r.raise_for_status()
                 logger.info("Teams notification sent to webhook")
             except Exception:
                 logger.exception("Failed to post Teams notification to %s", url)
+
+
+async def send_teams_confirmation(webhook_url: str, confirm_url: str) -> bool:
+    """Post a confirmation prompt to a subscriber's own Teams webhook - the
+    Teams-channel equivalent of send_confirmation_email."""
+    card_payload = {
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.4",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": "M365 Statuspage – Abo bestätigen",
+                            "weight": "Bolder",
+                            "size": "Medium",
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": "Bitte bestätige dieses Abo, um Störungsmeldungen in diesem Kanal zu erhalten.",
+                            "wrap": True,
+                        },
+                    ],
+                    "actions": [
+                        {
+                            "type": "Action.OpenUrl",
+                            "title": "Abo bestätigen",
+                            "url": confirm_url,
+                        }
+                    ],
+                },
+            }
+        ],
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(webhook_url, json=card_payload)
+            r.raise_for_status()
+            logger.info("Teams confirmation prompt sent to webhook")
+            return True
+    except Exception:
+        logger.exception("Failed to post Teams confirmation to %s", webhook_url)
+        return False
+
+
+# ── Combined dispatch ──────────────────────────────────────────────────────────
+
+_TEAMS_STATUS_MAP: dict[str, str] = {
+    "active":       "interrupted",
+    "acknowledged": "interrupted",
+    "monitoring":   "degraded",
+    "resolved":     "operational",
+}
+
+
+async def dispatch_incident_notifications(
+    *,
+    service_name: str,
+    incident_title: str,
+    subject: str,
+    description: str,
+    incident_status: str,
+) -> None:
+    """Notify subscribers who opted into `service_name` via their chosen
+    channel (email or their own Teams webhook), then post to the admin's
+    global Teams webhook(s) too - the two are independent: the global
+    broadcast always fires regardless of subscriber preferences.
+    """
+    from app.crud import get_confirmed_subscribers_for_service  # noqa: PLC0415
+
+    async with AsyncSessionLocal() as db:
+        subs = await get_confirmed_subscribers_for_service(db, service_name)
+
+    teams_status = _TEAMS_STATUS_MAP.get(incident_status, "degraded")
+    email_subs = [s for s in subs if s.channel == "email"]
+    teams_subs = [s for s in subs if s.channel == "teams" and s.teams_webhook_url]
+
+    if email_subs:
+        unsub_urls = {
+            s.email: f"{settings.BASE_URL}/unsubscribe/{s.unsubscribe_token}"
+            for s in email_subs
+        }
+        await send_incident_notification(
+            subscribers=[s.email for s in email_subs],
+            subject=subject,
+            incident_title=incident_title,
+            service_name=service_name,
+            description=description,
+            status_url=settings.BASE_URL,
+            unsubscribe_urls=unsub_urls,
+        )
+
+    for s in teams_subs:
+        await send_teams_notification(
+            incident_title=incident_title,
+            service_name=service_name,
+            status=teams_status,
+            description=description,
+            status_url=settings.BASE_URL,
+            webhook_urls=[s.teams_webhook_url],
+        )
+
+    await send_teams_notification(
+        incident_title=incident_title,
+        service_name=service_name,
+        status=teams_status,
+        description=description,
+        status_url=settings.BASE_URL,
+    )

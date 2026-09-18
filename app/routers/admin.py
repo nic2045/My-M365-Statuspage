@@ -35,7 +35,6 @@ from app.crud import (
     get_all_monitored_services,
     get_all_source_labels,
     get_all_subscribers,
-    get_confirmed_subscribers,
     get_distinct_sources,
     get_enabled_services,
     get_enabled_services_with_status,
@@ -63,7 +62,7 @@ from app.graph_client import (
 )
 from app.i18n import LABELS, LABELS_BY_LANG
 from app.models import MonitoredService
-from app.notifications import send_incident_notification, send_teams_notification, send_test_email
+from app.notifications import dispatch_incident_notifications, send_test_email
 from app.templates import templates
 from app.translate_client import translate_text
 
@@ -558,30 +557,13 @@ async def create_incident(
 
     # Send notifications for new incidents (not advisories / maintenance)
     if classification == "incident":
-        confirmed = await get_confirmed_subscribers(db)
-        if confirmed:
-            unsub_urls = {
-                s.email: f"{settings.BASE_URL}/unsubscribe/{s.unsubscribe_token}"
-                for s in confirmed
-            }
-            asyncio.create_task(
-                send_incident_notification(
-                    subscribers=[s.email for s in confirmed],
-                    subject=LABELS["notify.new_incident"],
-                    incident_title=title,
-                    service_name=service_name,
-                    description=description or "",
-                    status_url=settings.BASE_URL,
-                    unsubscribe_urls=unsub_urls,
-                )
-            )
         asyncio.create_task(
-            send_teams_notification(
-                incident_title=title,
+            dispatch_incident_notifications(
                 service_name=service_name,
-                status="interrupted",
+                incident_title=title,
+                subject=LABELS["notify.new_incident"],
                 description=description or "",
-                status_url=settings.BASE_URL,
+                incident_status="active",
             )
         )
 
@@ -709,30 +691,13 @@ async def add_post(
     await db.commit()
 
     if do_notify and incident:
-        confirmed = await get_confirmed_subscribers(db)
-        if confirmed:
-            unsub_urls = {
-                s.email: f"{settings.BASE_URL}/unsubscribe/{s.unsubscribe_token}"
-                for s in confirmed
-            }
-            asyncio.create_task(
-                send_incident_notification(
-                    subscribers=[s.email for s in confirmed],
-                    subject=LABELS["notify.update"],
-                    incident_title=incident.title,
-                    service_name=incident.service_name,
-                    description=content,
-                    status_url=settings.BASE_URL,
-                    unsubscribe_urls=unsub_urls,
-                )
-            )
         asyncio.create_task(
-            send_teams_notification(
-                incident_title=incident.title,
+            dispatch_incident_notifications(
                 service_name=incident.service_name,
-                status=incident.status,
+                incident_title=incident.title,
+                subject=LABELS["notify.update"],
                 description=content,
-                status_url=settings.BASE_URL,
+                incident_status=incident.status,
             )
         )
 
