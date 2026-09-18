@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.app_settings import (
     get_app_default_language,
     get_azure_settings,
+    get_effective_language,
     get_email_settings,
     save_app_default_language,
     save_azure_settings,
@@ -63,6 +64,7 @@ from app.i18n import LABELS, LABELS_BY_LANG
 from app.models import MonitoredService
 from app.notifications import send_incident_notification, send_teams_notification, send_test_email
 from app.templates import templates
+from app.translate_client import translate_text
 
 logger = logging.getLogger(__name__)
 
@@ -900,6 +902,39 @@ async def release_incident(
     )
     await db.commit()
     flash(request, LABELS["toast.released"])
+    return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
+
+
+@router.post("/incidents/{incident_id}/translate")
+async def translate_incident(
+    request: Request,
+    incident_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """One-time, admin-triggered DeepL translation of an incident's title,
+    description and message-center posts. Not run automatically by the
+    scheduler - DeepL's free tier has a monthly character cap, so translation
+    is opt-in per incident rather than burning quota on every poll.
+    """
+    if not settings.DEEPL_API_KEY:
+        flash(request, LABELS["toast.translate_not_configured"], level="error")
+        return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
+
+    incident = await get_incident_by_id(db, incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    lang = await get_effective_language(db)
+    incident.title = await translate_text(incident.title, lang)
+    if incident.description:
+        incident.description = await translate_text(incident.description, lang)
+    for update in incident.updates:
+        update.content = await translate_text(update.content, lang, tag_handling="html")
+    incident.translated_lang = lang
+
+    await db.commit()
+    flash(request, LABELS["toast.translated"])
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
 

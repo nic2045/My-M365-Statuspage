@@ -88,6 +88,16 @@ class Settings(BaseSettings):
     # header and no admin-configured default. Supported: "de", "en".
     DEFAULT_LANGUAGE: str = "de"
 
+    # DeepL API (optional) - Microsoft's service-health text (issue titles,
+    # impact descriptions, message-center posts) is English-only; Graph has
+    # no Accept-Language support for it. When set, that text is machine-
+    # translated into the app's effective language before being stored.
+    # Free-tier keys end in ":fx" and are auto-routed to the free API
+    # endpoint; set DEEPL_API_URL only to override that (e.g. a dedicated
+    # Pro contract endpoint).
+    DEEPL_API_KEY: str = ""
+    DEEPL_API_URL: str = ""
+
     # Notifications – Email (SMTP)
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587

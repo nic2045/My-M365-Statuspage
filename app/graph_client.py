@@ -9,26 +9,8 @@ logger = logging.getLogger(__name__)
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
-# The Service Communications API honours Accept-Language and returns issue/
-# post titles and descriptions localized into it, so incidents read in the
-# same language as the rest of the page instead of always in English.
-_GRAPH_LOCALE_MAP: dict[str, str] = {
-    "de": "de-DE",
-    "en": "en-US",
-}
-
 _msal_app: msal.ConfidentialClientApplication | None = None
 _msal_credentials: tuple[str, str, str] | None = None
-
-
-async def _get_content_locale() -> str:
-    from app.app_settings import get_app_default_language  # noqa: PLC0415
-    from app.config import settings  # noqa: PLC0415
-    from app.database import AsyncSessionLocal  # noqa: PLC0415
-
-    async with AsyncSessionLocal() as db:
-        lang = await get_app_default_language(db) or settings.DEFAULT_LANGUAGE
-    return _GRAPH_LOCALE_MAP.get(lang, "en-US")
 
 
 def _get_msal_app(tenant_id: str, client_id: str, client_secret: str) -> msal.ConfidentialClientApplication:
@@ -91,7 +73,7 @@ async def _attach_posts(
 async def fetch_health_overviews() -> list[dict]:
     """Returns healthOverview objects for all services."""
     token = await _get_access_token()
-    headers = {"Authorization": f"Bearer {token}", "Accept-Language": await _get_content_locale()}
+    headers = {"Authorization": f"Bearer {token}"}
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(
             f"{GRAPH_BASE}/admin/serviceAnnouncement/healthOverviews",
@@ -104,7 +86,7 @@ async def fetch_health_overviews() -> list[dict]:
 async def fetch_issues_since(service_name: str, days: int = 90) -> list[dict]:
     """Fetch all issues (including resolved) for a service over the past N days, for backfill."""
     token = await _get_access_token()
-    headers = {"Authorization": f"Bearer {token}", "Accept-Language": await _get_content_locale()}
+    headers = {"Authorization": f"Bearer {token}"}
     since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
     # Escape single quotes per OData rules (doubled) to prevent $filter injection.
     safe_service = service_name.replace("'", "''")
@@ -134,7 +116,7 @@ async def fetch_recently_resolved_issues(days: int = 30) -> list[dict]:
     because $expand=posts is not supported on the collection endpoint with $filter.
     """
     token = await _get_access_token()
-    headers = {"Authorization": f"Bearer {token}", "Accept-Language": await _get_content_locale()}
+    headers = {"Authorization": f"Bearer {token}"}
     since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
     base_url = (
         f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
@@ -161,7 +143,7 @@ async def fetch_active_issues() -> list[dict]:
     collection endpoint when combined with $filter.
     """
     token = await _get_access_token()
-    headers = {"Authorization": f"Bearer {token}", "Accept-Language": await _get_content_locale()}
+    headers = {"Authorization": f"Bearer {token}"}
     all_issues: list[dict] = []
     base_url = (
         f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"

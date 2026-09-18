@@ -162,7 +162,6 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
     impact_desc = issue.get("impactDescription") or None
 
     fields: dict = {
-        "title": issue.get("title", ""),
         "service_name": issue.get("service", ""),
         "classification": classification,
         "status": new_status,
@@ -172,8 +171,16 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
         "is_resolved": issue.get("isResolved", False),
         "severity": severity,
     }
+    # Microsoft's service-health text is English-only and DeepL translation
+    # is an explicit, on-demand admin action (see routers/admin.py
+    # translate_incident) - not run automatically here to avoid burning
+    # through a free-tier DeepL quota on every poll. Once an admin has
+    # translated an incident (translated_lang set), stop overwriting its
+    # title from Graph so the translation sticks.
+    if not (existing_incident and existing_incident.translated_lang):
+        fields["title"] = issue.get("title", "")
     # Only set description from impactDescription when the incident has none yet,
-    # preserving any description an admin has written manually.
+    # preserving any description an admin has written manually (or translated).
     if impact_desc and not (existing_incident and existing_incident.description):
         fields["description"] = impact_desc
     if classification == "maintenance":
