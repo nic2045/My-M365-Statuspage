@@ -14,14 +14,17 @@ from app.crud import (
     get_subscriber_by_unsub_token,
 )
 from app.database import AsyncSessionLocal
-from app.notifications import send_confirmation_email, send_teams_confirmation
+from app.notifications import (
+    is_valid_teams_webhook_url,
+    send_confirmation_email,
+    send_teams_confirmation,
+)
 from app.templates import templates
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["subscribers"])
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-_HTTPS_URL_RE = re.compile(r"^https://\S+$")
 
 
 async def get_db():
@@ -47,7 +50,7 @@ async def subscribe(
 
     channel = channel if channel in ("email", "teams") else "email"
     webhook = (teams_webhook_url or "").strip() or None
-    if channel == "teams" and not (webhook and _HTTPS_URL_RE.match(webhook)):
+    if channel == "teams" and not (webhook and is_valid_teams_webhook_url(webhook)):
         return templates.TemplateResponse(
             request, "subscribe_result.html",
             {"ok": False, "message": "Ungültige Teams-Webhook-URL.", "page_title": "Anmeldung"}

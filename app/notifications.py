@@ -5,6 +5,7 @@ import logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from html import escape as _esc
+from urllib.parse import urlparse
 
 import httpx
 
@@ -13,6 +14,25 @@ from app.config import settings
 from app.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
+
+# Teams incoming webhooks (and the Power Automate flows that replaced them)
+# only ever live on these hosts. teams_webhook_url is public, unauthenticated
+# user input (the /subscribe form) - without this allowlist the server would
+# happily POST our card payload to any URL a visitor supplies, including
+# internal/private addresses (SSRF).
+_ALLOWED_TEAMS_WEBHOOK_HOSTS = ("webhook.office.com", "outlook.office.com")
+_ALLOWED_TEAMS_WEBHOOK_SUFFIXES = (".logic.azure.com",)
+
+
+def is_valid_teams_webhook_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or not host:
+        return False
+    return host in _ALLOWED_TEAMS_WEBHOOK_HOSTS or host.endswith(_ALLOWED_TEAMS_WEBHOOK_SUFFIXES)
 
 
 # ── Email ─────────────────────────────────────────────────────────────────────
@@ -276,6 +296,9 @@ async def send_teams_notification(
 
     async with httpx.AsyncClient(timeout=10) as client:
         for url in urls:
+            if not is_valid_teams_webhook_url(url):
+                logger.warning("Refusing to post Teams notification to disallowed host: %s", url)
+                continue
             try:
                 r = await client.post(url, json=card_payload)
                 r.raise_for_status()
@@ -287,6 +310,9 @@ async def send_teams_notification(
 async def send_teams_confirmation(webhook_url: str, confirm_url: str) -> bool:
     """Post a confirmation prompt to a subscriber's own Teams webhook - the
     Teams-channel equivalent of send_confirmation_email."""
+    if not is_valid_teams_webhook_url(webhook_url):
+        logger.warning("Refusing to post Teams confirmation to disallowed host: %s", webhook_url)
+        return False
     card_payload = {
         "type": "message",
         "attachments": [
