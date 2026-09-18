@@ -52,8 +52,10 @@ async def _attach_posts(
     """Fetch posts for each issue via the dedicated posts sub-resource and attach in-place.
 
     $expand=posts is not reliably supported on the issues collection endpoint with $filter,
-    so we fetch posts individually per issue. Errors per-issue are suppressed so a single
-    unavailable issue does not abort the whole batch.
+    so we fetch posts individually per issue. A failure for one issue doesn't abort the
+    whole batch, but IS logged - previously it was swallowed with no trace at all, so a
+    systemic problem (missing permission, throttling, ...) silently looked identical to
+    Microsoft genuinely not having written any updates for that issue.
     """
     for issue in issues:
         issue_id = issue.get("id", "")
@@ -65,9 +67,17 @@ async def _attach_posts(
                 f"{GRAPH_BASE}/admin/serviceAnnouncement/issues/{issue_id}/posts",
                 headers=headers,
             )
-            issue["posts"] = resp.json().get("value", []) if resp.status_code == 200 else []
+            if resp.status_code == 200:
+                issue["posts"] = resp.json().get("value", [])
+            else:
+                issue["posts"] = []
+                logger.warning(
+                    "Fetching posts for issue %s failed: HTTP %s %s",
+                    issue_id, resp.status_code, resp.text[:300],
+                )
         except Exception:
             issue["posts"] = []
+            logger.exception("Fetching posts for issue %s raised an exception", issue_id)
 
 
 async def fetch_health_overviews() -> list[dict]:
