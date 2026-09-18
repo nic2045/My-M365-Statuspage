@@ -33,6 +33,15 @@
       </button>
     </form>
     {% endif %}
+    {% if DEEPL_ENABLED and incident.graph_issue_id %}
+    <form method="post" action="/admin/incidents/{{ incident.id }}/translate">
+      <button type="submit"
+              title="{{ L['admin.translated_hint'] if incident.translated_lang else '' }}"
+              class="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-400 hover:text-gray-700 dark:text-gray-400 transition-colors">
+        {{ L["admin.translate_again"] if incident.translated_lang else L["admin.translate"] }}
+      </button>
+    </form>
+    {% endif %}
     {% if incident.is_suppressed %}
     <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400">{{ L["admin.suppressed_heading"] }}</span>
     <form method="post" action="/admin/incidents/{{ incident.id }}/unsuppress">

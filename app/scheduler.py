@@ -7,7 +7,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select as sa_select
 
-from app.app_settings import get_effective_language
 from app.config import settings
 from app.crud import (
     add_state_change_entry,
@@ -27,7 +26,6 @@ from app.graph_client import (
 from app.i18n import LABELS
 from app.models import GRAPH_STATUS_MAP, Incident
 from app.notifications import send_incident_notification, send_teams_notification
-from app.translate_client import translate_text
 
 logger = logging.getLogger(__name__)
 
@@ -161,18 +159,9 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
     existing_incident = existing.scalar_one_or_none()
     old_status = existing_incident.status if existing_incident else None
 
-    # Microsoft's service-health text is English-only (Graph has no
-    # Accept-Language support for it) - machine-translate into the org's
-    # configured language so incidents read in the same language as the
-    # rest of the page.
-    lang = await get_effective_language(db)
-    title = await translate_text(issue.get("title", ""), lang)
     impact_desc = issue.get("impactDescription") or None
-    if impact_desc:
-        impact_desc = await translate_text(impact_desc, lang)
 
     fields: dict = {
-        "title": title,
         "service_name": issue.get("service", ""),
         "classification": classification,
         "status": new_status,
@@ -182,8 +171,16 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
         "is_resolved": issue.get("isResolved", False),
         "severity": severity,
     }
+    # Microsoft's service-health text is English-only and DeepL translation
+    # is an explicit, on-demand admin action (see routers/admin.py
+    # translate_incident) - not run automatically here to avoid burning
+    # through a free-tier DeepL quota on every poll. Once an admin has
+    # translated an incident (translated_lang set), stop overwriting its
+    # title from Graph so the translation sticks.
+    if not (existing_incident and existing_incident.translated_lang):
+        fields["title"] = issue.get("title", "")
     # Only set description from impactDescription when the incident has none yet,
-    # preserving any description an admin has written manually.
+    # preserving any description an admin has written manually (or translated).
     if impact_desc and not (existing_incident and existing_incident.description):
         fields["description"] = impact_desc
     if classification == "maintenance":
@@ -198,10 +195,6 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
 
     posts = issue.get("posts")
     if posts:
-        for post in posts:
-            desc = post.get("description")
-            if isinstance(desc, dict) and desc.get("content"):
-                desc["content"] = await translate_text(desc["content"], lang, tag_handling="html")
         await upsert_incident_updates(db, incident.id, posts)
 
     # Notify subscribers only for real incidents — advisories and maintenance

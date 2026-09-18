@@ -90,6 +90,11 @@ class Incident(Base):
     owner_email: Mapped[str | None] = mapped_column(String(256), nullable=True)
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     acknowledged_by_email: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    # Set once an admin manually translates this incident (see routers/admin.py
+    # translate_incident). While set, the scheduler stops overwriting `title`
+    # from Graph's English text on every poll - title becomes a one-time
+    # manual action instead of a continuously-synced field.
+    translated_lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
