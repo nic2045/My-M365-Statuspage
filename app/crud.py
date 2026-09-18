@@ -269,7 +269,29 @@ async def get_service_current_status(
         .limit(1)
     )
     row = result.scalar_one_or_none()
-    return row or "unknown"
+    status = row or "unknown"
+    # Microsoft's own healthOverview status is a coarse aggregate that often
+    # reads "degraded" for a service with nothing worse than an active
+    # advisory attached. Advisories are informational (see get_uptime_bars'
+    # same reasoning) and shouldn't turn the badge amber - only demote when
+    # there's no genuine active incident backing it.
+    if status == "degraded" and not await _has_active_incident(db, service_name):
+        return "operational"
+    return status
+
+
+async def _has_active_incident(db: AsyncSession, service_name: str) -> bool:
+    result = await db.execute(
+        select(Incident.id)
+        .where(
+            Incident.service_name == service_name,
+            Incident.classification == "incident",
+            Incident.is_resolved.is_(False),
+            Incident.is_suppressed.is_(False),
+        )
+        .limit(1)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def get_last_poll_time(db: AsyncSession) -> datetime | None:
