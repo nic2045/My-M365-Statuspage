@@ -92,6 +92,14 @@
     <span class="text-sm text-gray-400 dark:text-gray-500 ml-2 shrink-0">· {{ inc.service_name }}</span>
   </div>
   <div class="flex items-center gap-2 shrink-0 ml-3">
+    {% set _pending = inc.updates | selectattr("is_published", "equalto", False) | list | length %}
+    {% if _pending %}
+    <span class="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400"
+          title="{{ L['admin.pending_updates_hint'] }}">
+      <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>
+      {{ _pending }}
+    </span>
+    {% endif %}
     {% if inc.owner_email %}
     {% set _owner_parts = (inc.owner_email.split('@')[0] | replace('.', ' ') | replace('_', ' ')).split() %}
     {% set _owner_initials = ((_owner_parts[0][0] if _owner_parts else '?') ~ (_owner_parts[1][0] if _owner_parts|length > 1 else '')) | upper %}
