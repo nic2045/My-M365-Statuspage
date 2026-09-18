@@ -120,6 +120,10 @@ async def upsert_incident_updates(
                 incident_id=incident_id,
                 content=content,
                 post_created_at=post_created_at,
+                # Microsoft's own text, not an operator's - stays a draft
+                # until someone reviews and publishes it (see
+                # routers/admin.py publish_incident_update).
+                is_published=False,
             )
         )
 
@@ -473,6 +477,21 @@ async def get_resolved_incidents(
     return list(result.scalars().all())
 
 
+async def publish_incident_update(
+    db: AsyncSession,
+    incident_id: int,
+    update_id: int,
+) -> bool:
+    """Operator approval step for a Graph-synced message-center post (see
+    upsert_incident_updates) - makes it visible on the public status page."""
+    update = await db.get(IncidentUpdate, update_id)
+    if update is None or update.incident_id != incident_id:
+        return False
+    update.is_published = True
+    await db.flush()
+    return True
+
+
 async def toggle_suppress_incident(
     db: AsyncSession,
     incident_id: int,
@@ -750,6 +769,7 @@ async def build_status_page_data(
                         content=u.content,
                         update_type=u.update_type,
                         post_created_at=u.post_created_at,
+                        is_published=u.is_published,
                     )
                     for u in sorted(inc.updates, key=lambda x: x.post_created_at or datetime.min)
                 ],

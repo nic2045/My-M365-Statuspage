@@ -1,7 +1,10 @@
 {# Renders one incident card with update timeline. Expects `incident` in scope. #}
 {% from "partials/_icons.html" import type_icon, phase_icon %}
+{# Only ever show published updates here - Graph-synced posts start as
+   drafts until an operator publishes them in the admin incident view. #}
+{% set _published_updates = incident.updates | selectattr("is_published") | list %}
 {% set _upd = [] %}
-{% for u in incident.updates | sort(attribute="post_created_at") %}
+{% for u in _published_updates | sort(attribute="post_created_at") %}
   {% set _ = _upd.append({"type": u.update_type, "content": u.content, "at": (u.post_created_at.strftime("%d.%m.%Y %H:%M") if u.post_created_at else ""), "author": (u.author or "")}) %}
 {% endfor %}
 <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 border-l-4 {{ incident_border_class(incident.classification) }} shadow-sm mb-4 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
@@ -60,8 +63,8 @@
       </div>
     </div>
 
-    {% if incident.updates %}
-    {% set _sorted_updates = incident.updates | sort(attribute="post_created_at") %}
+    {% if _published_updates %}
+    {% set _sorted_updates = _published_updates | sort(attribute="post_created_at") %}
     {% set _latest = _sorted_updates | last %}
     {% set _count = _sorted_updates | length %}
     <div class="mt-4 border-t border-gray-100 dark:border-gray-800 pt-3">

@@ -122,6 +122,12 @@ class IncidentUpdate(Base):
         Boolean, nullable=False, server_default="0", default=False
     )
     author: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    # False for message-center posts synced straight from Graph - an operator
+    # must review and publish them explicitly (see routers/admin.py
+    # publish_incident_update) before they appear on the public status page.
+    # True by default for admin-authored updates/state-changes, which are
+    # already public the moment an operator creates them.
+    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1", default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     incident: Mapped["Incident"] = relationship("Incident", back_populates="updates")
