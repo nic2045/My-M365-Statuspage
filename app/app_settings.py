@@ -303,3 +303,12 @@ async def save_app_default_language(db: AsyncSession, lang: str) -> None:
     if lang not in LABELS_BY_LANG:
         raise ValueError(f"unsupported language: {lang!r}")
     await set_setting(db, _LANG_SETTING_KEY, lang)
+
+
+async def get_effective_language(db: AsyncSession) -> str:
+    """Org-wide default language: admin-configured setting, else env default.
+
+    For background jobs (Graph polling) that have no per-request cookie or
+    Accept-Language header to consult.
+    """
+    return await get_app_default_language(db) or env_settings.DEFAULT_LANGUAGE

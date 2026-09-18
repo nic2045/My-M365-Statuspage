@@ -16,6 +16,7 @@ COPY package.json package-lock.json .
 RUN npm ci
 COPY tailwind.config.js .
 COPY templates/ ./templates/
+COPY app/ ./app/
 COPY static/css/input.css ./static/css/input.css
 RUN npx tailwindcss -i ./static/css/input.css -o ./static/css/app.css --minify
 
