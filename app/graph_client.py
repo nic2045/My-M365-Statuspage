@@ -9,8 +9,26 @@ logger = logging.getLogger(__name__)
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
+# The Service Communications API honours Accept-Language and returns issue/
+# post titles and descriptions localized into it, so incidents read in the
+# same language as the rest of the page instead of always in English.
+_GRAPH_LOCALE_MAP: dict[str, str] = {
+    "de": "de-DE",
+    "en": "en-US",
+}
+
 _msal_app: msal.ConfidentialClientApplication | None = None
 _msal_credentials: tuple[str, str, str] | None = None
+
+
+async def _get_content_locale() -> str:
+    from app.app_settings import get_app_default_language  # noqa: PLC0415
+    from app.config import settings  # noqa: PLC0415
+    from app.database import AsyncSessionLocal  # noqa: PLC0415
+
+    async with AsyncSessionLocal() as db:
+        lang = await get_app_default_language(db) or settings.DEFAULT_LANGUAGE
+    return _GRAPH_LOCALE_MAP.get(lang, "en-US")
 
 
 def _get_msal_app(tenant_id: str, client_id: str, client_secret: str) -> msal.ConfidentialClientApplication:
@@ -46,8 +64,8 @@ async def _get_access_token() -> str:
 
 async def _attach_posts(
     client: httpx.AsyncClient,
-    token: str,
     issues: list[dict],
+    headers: dict[str, str],
 ) -> None:
     """Fetch posts for each issue via the dedicated posts sub-resource and attach in-place.
 
@@ -55,7 +73,6 @@ async def _attach_posts(
     so we fetch posts individually per issue. Errors per-issue are suppressed so a single
     unavailable issue does not abort the whole batch.
     """
-    headers = {"Authorization": f"Bearer {token}"}
     for issue in issues:
         issue_id = issue.get("id", "")
         if not issue_id:
@@ -74,10 +91,11 @@ async def _attach_posts(
 async def fetch_health_overviews() -> list[dict]:
     """Returns healthOverview objects for all services."""
     token = await _get_access_token()
+    headers = {"Authorization": f"Bearer {token}", "Accept-Language": await _get_content_locale()}
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(
             f"{GRAPH_BASE}/admin/serviceAnnouncement/healthOverviews",
-            headers={"Authorization": f"Bearer {token}"},
+            headers=headers,
         )
         resp.raise_for_status()
         return resp.json().get("value", [])
@@ -86,6 +104,7 @@ async def fetch_health_overviews() -> list[dict]:
 async def fetch_issues_since(service_name: str, days: int = 90) -> list[dict]:
     """Fetch all issues (including resolved) for a service over the past N days, for backfill."""
     token = await _get_access_token()
+    headers = {"Authorization": f"Bearer {token}", "Accept-Language": await _get_content_locale()}
     since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
     # Escape single quotes per OData rules (doubled) to prevent $filter injection.
     safe_service = service_name.replace("'", "''")
@@ -99,7 +118,7 @@ async def fetch_issues_since(service_name: str, days: int = 90) -> list[dict]:
     async with httpx.AsyncClient(timeout=60) as client:
         url: str | None = base_url
         while url:
-            resp = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+            resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             data = resp.json()
             all_issues.extend(data.get("value", []))
@@ -115,6 +134,7 @@ async def fetch_recently_resolved_issues(days: int = 30) -> list[dict]:
     because $expand=posts is not supported on the collection endpoint with $filter.
     """
     token = await _get_access_token()
+    headers = {"Authorization": f"Bearer {token}", "Accept-Language": await _get_content_locale()}
     since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
     base_url = (
         f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
@@ -125,12 +145,12 @@ async def fetch_recently_resolved_issues(days: int = 30) -> list[dict]:
     async with httpx.AsyncClient(timeout=60) as client:
         url: str | None = base_url
         while url:
-            resp = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+            resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             data = resp.json()
             all_issues.extend(data.get("value", []))
             url = data.get("@odata.nextLink")
-        await _attach_posts(client, token, all_issues)
+        await _attach_posts(client, all_issues, headers)
     return all_issues
 
 
@@ -141,6 +161,7 @@ async def fetch_active_issues() -> list[dict]:
     collection endpoint when combined with $filter.
     """
     token = await _get_access_token()
+    headers = {"Authorization": f"Bearer {token}", "Accept-Language": await _get_content_locale()}
     all_issues: list[dict] = []
     base_url = (
         f"{GRAPH_BASE}/admin/serviceAnnouncement/issues"
@@ -149,13 +170,10 @@ async def fetch_active_issues() -> list[dict]:
     url: str | None = base_url
     async with httpx.AsyncClient(timeout=60) as client:
         while url:
-            resp = await client.get(
-                url,
-                headers={"Authorization": f"Bearer {token}"},
-            )
+            resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             data = resp.json()
             all_issues.extend(data.get("value", []))
             url = data.get("@odata.nextLink")
-        await _attach_posts(client, token, all_issues)
+        await _attach_posts(client, all_issues, headers)
     return all_issues
