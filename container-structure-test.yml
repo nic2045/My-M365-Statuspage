@@ -14,6 +14,14 @@ fileExistenceTests:
     path: "/app/static"
     shouldExist: true
 
+  - name: "compiled tailwind css"
+    path: "/app/static/css/app.css"
+    shouldExist: true
+
+  - name: "favicon"
+    path: "/app/static/favicon.svg"
+    shouldExist: true
+
   - name: "data directory"
     path: "/app/data"
     shouldExist: true

@@ -1,11 +1,25 @@
-# ── Stage 1: install dependencies ────────────────────────────────────────────
+# ── Stage 1: install Python dependencies ─────────────────────────────────────
 FROM python:3.12-slim AS builder
 WORKDIR /build
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# ── Stage 2: production runtime ──────────────────────────────────────────────
+# ── Stage 2: compile Tailwind CSS ────────────────────────────────────────────
+# Done at build time so the runtime container never depends on reaching
+# cdn.tailwindcss.com - previously loaded live in the browser, which broke
+# the whole layout (huge unstyled icons, no spacing) whenever the deployment
+# network couldn't reach that CDN.
+FROM node:20-slim AS css-builder
+WORKDIR /css
+COPY package.json package-lock.json .
+RUN npm ci
+COPY tailwind.config.js .
+COPY templates/ ./templates/
+COPY static/css/input.css ./static/css/input.css
+RUN npx tailwindcss -i ./static/css/input.css -o ./static/css/app.css --minify
+
+# ── Stage 3: production runtime ──────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
 WORKDIR /app
 
@@ -18,7 +32,8 @@ COPY --from=builder /install /usr/local
 # Copy application code
 COPY app/ ./app/
 COPY templates/ ./templates/
-RUN mkdir -p /app/static
+COPY static/ ./static/
+COPY --from=css-builder /css/static/css/app.css ./static/css/app.css
 
 # SQLite data directory – mount as named volume in production
 RUN mkdir -p /app/data && chown appuser:appuser /app/data

@@ -222,6 +222,11 @@ __marimo__/
 # Background-agent worktrees (transient, never check in)
 .claude/worktrees/
 
+# Tailwind CSS build (compiled at Docker build time, see Dockerfile;
+# static/css/input.css is the committed source, app.css is the artifact)
+node_modules/
+static/css/app.css
+
 # seed-oneuptime.sh writes this: it contains live OneUptime heartbeat
 # secret keys (each is effectively a write token for that monitor).
 demo-cert-monitoring/.oneuptime-demo-summary

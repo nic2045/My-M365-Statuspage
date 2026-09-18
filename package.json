@@ -1,0 +1,12 @@
+{
+  "name": "my-m365-statuspage-css",
+  "private": true,
+  "description": "Build-time Tailwind CSS compilation (no runtime CDN dependency in production).",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/css/input.css -o ./static/css/app.css --minify"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.15",
+    "tailwindcss": "^3.4.15"
+  }
+}
