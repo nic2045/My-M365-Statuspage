@@ -9,6 +9,7 @@ class IncidentUpdateSchema(BaseModel):
     content: str
     update_type: str = "note"
     post_created_at: datetime | None
+    is_published: bool = True
 
 
 class IncidentSchema(BaseModel):

@@ -42,6 +42,7 @@ from app.crud import (
     get_incident_by_id,
     get_known_groups,
     move_service,
+    publish_incident_update,
     search_global,
     set_service_enabled,
     set_service_group,
@@ -902,6 +903,24 @@ async def release_incident(
     )
     await db.commit()
     flash(request, LABELS["toast.released"])
+    return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
+
+
+@router.post("/incidents/{incident_id}/updates/{update_id}/publish")
+async def publish_update(
+    request: Request,
+    incident_id: int,
+    update_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Operator approval for a Graph-synced message-center post - see
+    crud.upsert_incident_updates for why these start unpublished."""
+    ok = await publish_incident_update(db, incident_id, update_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Update not found")
+    await db.commit()
+    flash(request, LABELS["toast.update_published"])
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
 
