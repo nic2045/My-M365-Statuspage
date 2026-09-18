@@ -69,6 +69,11 @@ async def _attach_posts(
             )
             if resp.status_code == 200:
                 issue["posts"] = resp.json().get("value", [])
+            elif resp.status_code == 404:
+                # Some issue types (observed for advisories) simply don't
+                # expose a posts sub-resource at all - Graph returns 404
+                # rather than an empty list. Expected, not a fetch failure.
+                issue["posts"] = []
             else:
                 issue["posts"] = []
                 logger.warning(
