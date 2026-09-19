@@ -257,7 +257,7 @@ Config        → config.py (Pydantic Settings)
 
 ## Release Lifecycle
 
-This project uses **Release Please** for automated versioning, changelog generation, and release management via Semantic Versioning.
+This project uses **Release Please** for maintaining versioning and changelog via Semantic Versioning. Release Please creates and maintains a release PR — you review, approve, and merge it when ready.
 
 ### Versioning Strategy (Semantic Versioning)
 
@@ -267,7 +267,7 @@ Format: `MAJOR.MINOR.PATCH` (e.g., `1.4.2`)
 - **MINOR:** New features backward-compatible (new incident type, new API endpoint)
 - **PATCH:** Bug fixes (scheduler fix, UI correction, dependency patch)
 
-Current version: See `app/__init__.py` and `pyproject.toml` (Release Please keeps both in sync)
+Current version: See `app/__init__.py` and `pyproject.toml` (Release Please updates both when PR is merged)
 
 ### Conventional Commits (Triggers Auto-Versioning)
 
@@ -275,14 +275,14 @@ Every commit message must follow the pattern: `type(scope): description`
 
 **Commit Types:**
 
-| Type | Increments | Example | When |
-|------|-----------|---------|------|
+| Type | Bumps to | Example | When |
+|------|----------|---------|------|
 | `feat` | MINOR | `feat(scheduler): poll Graph API every 10 min` | New feature, new capability |
 | `fix` | PATCH | `fix(admin): resolve race condition on toggle_service` | Bug fix, error correction |
-| `docs` | none | `docs: update README install instructions` | Documentation only (no code release) |
-| `refactor` | none | `refactor(crud): extract get_incident_with_updates` | Code reorganization (no behavioral change) |
-| `test` | none | `test: add pytest for notification dispatch` | Test additions/fixes |
-| `chore` | none | `chore: update dependencies` | Dependency bumps, config |
+| `docs` | no bump | `docs: update README install instructions` | Documentation only |
+| `refactor` | no bump | `refactor(crud): extract get_incident_with_updates` | Code reorganization (no change) |
+| `test` | no bump | `test: add pytest for notification dispatch` | Test additions/fixes |
+| `chore` | no bump | `chore: update dependencies` | Dependency bumps, config |
 | `perf` | PATCH | `perf(scheduler): batch Graph API queries` | Performance improvements |
 
 **Breaking Changes (MAJOR bump):**
@@ -312,40 +312,39 @@ Fixes #456"
 git commit -m "docs: add Windows WSL2 setup guide"
 ```
 
-### Release Workflow (Automated)
+### Release Workflow (Manual Merge)
 
-1. **Commits pushed to `main`** trigger Release Please action
-2. **Release Please analyzes commits** (Conventional Commits format)
-3. **Auto-generates PR** with:
+1. **Commits pushed to `main`** trigger Release Please workflow
+2. **Release Please analyzes Conventional Commits** and creates/updates a PR with:
    - Updated version in `app/__init__.py` + `pyproject.toml`
    - Generated `CHANGELOG.md` entry
    - Release notes with breaking changes, features, fixes grouped
-4. **Merge the release PR** → Release Please **creates git tag** (e.g., `v1.5.0`)
-5. **Tag push triggers `release.yml` workflow:**
-   - CI full test suite
-   - Build & push Docker images (amd64 + arm64) to GHCR
-   - Trivy CVE scan (blocks on CRITICAL)
-   - pip-audit security audit
-   - Attach audit report to GitHub Release
+3. **Review the release PR** in GitHub (verify version bump is correct)
+4. **Merge the PR when ready** — you decide when to release
+5. **After merge:** Create a GitHub Release manually:
+   - Go to Releases → Draft new release
+   - Tag version (e.g., `v1.5.0`)
+   - Copy changelog from `CHANGELOG.md`
+   - Publish
 
-**No manual version bumping needed.** Just use Conventional Commits; Release Please handles the rest.
+Or tag from CLI: `git tag v1.5.0 && git push origin v1.5.0`
 
-### Manual Release Trigger
+**Key point:** Release Please only maintains the release PR. You control when to merge and release.
 
-To force a release outside the normal flow:
-```bash
-# Go to Actions → Release Please → Run workflow
-# Or via CLI:
-gh workflow run release-please.yml --ref main
-```
+### When to Merge the Release PR
+
+- When you're ready to cut a release (enough features/fixes batched)
+- After QA testing
+- No need to wait for CI — just review the diff and version bump
+- Can merge anytime; release creation is optional and manual
 
 ### Tips for Clean Releases
 
-- **Group related commits** in one PR (e.g., all notification features together)
+- **Group related commits** in main (e.g., batch notification features before merging release PR)
 - **Use descriptive scopes** (`feat(notify)`, not `feat(x)`)
 - **Reference issues** in commit body: `Fixes #123` or `Closes #456`
 - **One feature per commit** when possible (easier to revert if needed)
-- **No docs-only commits before release** (they don't trigger a release; batch them with a code change)
+- **Batch docs-only changes** with code changes (docs alone don't trigger version bump)
 
 ## Recent Changes & PR Context
 
