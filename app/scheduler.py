@@ -194,7 +194,11 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
 
     posts = issue.get("posts")
     if posts:
-        await upsert_incident_updates(db, incident.id, posts)
+        # Once Microsoft has resolved the issue, its post(s) explain the
+        # resolution itself - publish them immediately instead of waiting
+        # on an operator, unlike posts written while the incident is still
+        # open (see upsert_incident_updates).
+        await upsert_incident_updates(db, incident.id, posts, auto_publish=(new_status == "resolved"))
 
     # Notify subscribers only for real incidents — advisories and maintenance
     # are intentionally excluded, matching the manual-create flow in

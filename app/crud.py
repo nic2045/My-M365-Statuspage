@@ -98,6 +98,7 @@ async def upsert_incident_updates(
     db: AsyncSession,
     incident_id: int,
     posts: list[dict],
+    auto_publish: bool = False,
 ) -> None:
     result = await db.execute(
         select(IncidentUpdate.post_created_at).where(
@@ -122,8 +123,11 @@ async def upsert_incident_updates(
                 post_created_at=post_created_at,
                 # Microsoft's own text, not an operator's - stays a draft
                 # until someone reviews and publishes it (see
-                # routers/admin.py publish_incident_update).
-                is_published=False,
+                # routers/admin.py publish_incident_update) - except the
+                # closing post written when Microsoft resolves the issue,
+                # which goes public immediately since it's the reason the
+                # incident is over (auto_publish, set by the caller).
+                is_published=auto_publish,
             )
         )
 
