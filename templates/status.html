@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "partials/_icons.html" import type_icon, phase_icon %}
+{% from "partials/_icons.html" import type_icon, phase_icon, severity_badge %}
 
 {% block content %}
 
@@ -319,6 +319,9 @@
             <span class="hidden sm:inline text-xs text-gray-400 dark:text-gray-500 shrink-0">{{ incident.service_name }}</span>
           </div>
           <div class="flex items-center gap-2 shrink-0">
+            {% if incident.severity %}
+              {{ severity_badge(incident.severity) }}
+            {% endif %}
             {{ type_icon(incident.classification) }}
             {{ phase_icon('resolved') }}
             <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0 hidden sm:block"

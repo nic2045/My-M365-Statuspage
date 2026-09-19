@@ -189,7 +189,9 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
 
     is_new = existing_incident is None
     status_changed = old_status is not None and old_status != new_status
-    if status_changed:
+    # For new incidents that are already resolved, record the resolution
+    should_record_state = status_changed or (is_new and new_status == "resolved")
+    if should_record_state:
         await add_state_change_entry(db, incident.id, new_status)
 
     posts = issue.get("posts")
