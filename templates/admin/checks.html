@@ -342,6 +342,15 @@ async function loadCheckStatus(serviceName, hasHttp, hasCert) {
       const statusDiv = document.getElementById(`cert-status-${serviceName}`);
       if (data.status === 'no_data') {
         statusDiv.innerHTML = '<span class="text-xs text-gray-500">Keine Daten</span>';
+      } else if (data.status === 'error') {
+        statusDiv.innerHTML = `
+          <div class="space-y-1">
+            <div class="text-xs font-medium text-red-600 dark:text-red-400">✗ Fehler</div>
+            <div class="text-xs text-gray-600 dark:text-gray-400 truncate" title="${data.error_message || 'Unbekannter Fehler'}">
+              ${data.error_message || 'Unbekannter Fehler'}
+            </div>
+          </div>
+        `;
       } else {
         const statusClass = data.status === 'ok' ? 'text-green-600 dark:text-green-400' :
                            data.status === 'warning_7' ? 'text-red-600 dark:text-red-400' :

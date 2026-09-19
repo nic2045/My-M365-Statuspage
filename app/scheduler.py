@@ -414,6 +414,26 @@ async def poll_certificates() -> None:
 
                 try:
                     cert_info = await get_certificate_expiration(service.cert_hostname)
+                except Exception as cert_error:
+                    # Record error result for dashboard visibility
+                    error_msg = str(cert_error)
+                    logger.exception(f"Failed to poll certificate for {service_name}")
+                    check_result = CertificateCheckResult(
+                        service_name=service_name,
+                        status="error",
+                        expires_at=datetime.utcnow(),
+                        valid_from=datetime.utcnow(),
+                        days_remaining=0,
+                        common_name="Error",
+                        issuer="Error",
+                        serial_number="Error",
+                        error_message=error_msg,
+                    )
+                    db.add(check_result)
+                    await db.commit()
+                    continue
+
+                try:
                     status = cert_info["status"]
                     severity = get_certificate_severity(status)
                     days_remaining = cert_info["days_remaining"]
