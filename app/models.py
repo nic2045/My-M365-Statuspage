@@ -183,6 +183,23 @@ class HttpCheckResult(Base):
     error_message: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
 
+class CertificateCheckResult(Base):
+    """History of TLS certificate check results, storing expiration and issuer info."""
+    __tablename__ = "certificate_check_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    service_name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    checked_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    valid_from: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    days_remaining: Mapped[int] = mapped_column(Integer, nullable=False)
+    common_name: Mapped[str] = mapped_column(String(256), nullable=False)
+    issuer: Mapped[str] = mapped_column(String(512), nullable=False)
+    serial_number: Mapped[str] = mapped_column(String(128), nullable=False)
+    error_message: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
+
 class Subscriber(Base):
     __tablename__ = "subscribers"
 

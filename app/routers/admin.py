@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
+from sqlalchemy import desc
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,6 +47,7 @@ from app.crud import (
     get_http_dashboard_data,
     get_incident_by_id,
     get_known_groups,
+    get_sla_breach_reasons,
     get_sla_for_month,
     move_service,
     publish_incident_update,
@@ -1378,6 +1380,29 @@ async def export_sla_csv(
     )
 
 
+@router.get("/sla/{service_name}/{year}/{month}/reasons")
+async def sla_breach_reasons(
+    service_name: str,
+    year: int,
+    month: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Get incidents that caused SLA breach for a service in a given month."""
+    try:
+        reasons = await get_sla_breach_reasons(db, service_name, year, month)
+        return JSONResponse({
+            "service_name": service_name,
+            "year": year,
+            "month": month,
+            "reasons": reasons,
+            "total_incidents": len(reasons),
+        })
+    except Exception:
+        logger.exception(f"Failed to get SLA breach reasons for {service_name}")
+        return JSONResponse({"error": "Failed to retrieve breach reasons"}, status_code=500)
+
+
 @router.get("/checks")
 async def list_checks(
     request: Request,
@@ -1469,6 +1494,105 @@ async def delete_check(
         logger.exception("Failed to delete check")
 
     return RedirectResponse(url="/admin/checks", status_code=303)
+
+
+@router.post("/checks/{service_name}/update")
+async def update_check(
+    service_name: str,
+    http_url: str | None = Form(None),
+    http_expected_status: int | None = Form(None),
+    check_interval_seconds: int | None = Form(None),
+    cert_hostname: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Update an existing check (HTTP, certificate, or both)."""
+    try:
+        result = await db.execute(
+            sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+        )
+        svc = result.scalar_one_or_none()
+        if not svc:
+            logger.warning(f"Check not found: {service_name}")
+            return RedirectResponse(url="/admin/checks", status_code=303)
+
+        if http_url:
+            svc.http_url = http_url
+            svc.http_expected_status = http_expected_status or 200
+            svc.check_interval_seconds = check_interval_seconds
+
+        if cert_hostname:
+            svc.cert_hostname = cert_hostname
+
+        await db.commit()
+        logger.info(f"Updated check: {service_name}")
+    except Exception:
+        await db.rollback()
+        logger.exception("Failed to update check")
+
+    return RedirectResponse(url="/admin/checks", status_code=303)
+
+
+@router.get("/api/checks/{service_name}/latest-http")
+async def get_latest_http_check(
+    service_name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Get latest HTTP check result for a service."""
+    from app.models import HttpCheckResult
+
+    result = await db.execute(
+        sa_select(HttpCheckResult)
+        .where(HttpCheckResult.service_name == service_name)
+        .order_by(desc(HttpCheckResult.checked_at))
+        .limit(1)
+    )
+    check = result.scalar_one_or_none()
+
+    if not check:
+        return JSONResponse({"status": "no_data"}, status_code=200)
+
+    return JSONResponse({
+        "is_up": check.is_up,
+        "status_code": check.status_code,
+        "response_time_ms": check.response_time_ms,
+        "error_message": check.error_message,
+        "checked_at": check.checked_at.isoformat() if check.checked_at else None,
+    })
+
+
+@router.get("/api/checks/{service_name}/latest-certificate")
+async def get_latest_certificate_check(
+    service_name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Get latest certificate check result for a service."""
+    from app.models import CertificateCheckResult
+
+    result = await db.execute(
+        sa_select(CertificateCheckResult)
+        .where(CertificateCheckResult.service_name == service_name)
+        .order_by(desc(CertificateCheckResult.checked_at))
+        .limit(1)
+    )
+    check = result.scalar_one_or_none()
+
+    if not check:
+        return JSONResponse({"status": "no_data"}, status_code=200)
+
+    return JSONResponse({
+        "status": check.status,
+        "expires_at": check.expires_at.isoformat() if check.expires_at else None,
+        "valid_from": check.valid_from.isoformat() if check.valid_from else None,
+        "days_remaining": check.days_remaining,
+        "common_name": check.common_name,
+        "issuer": check.issuer,
+        "serial_number": check.serial_number,
+        "error_message": check.error_message,
+        "checked_at": check.checked_at.isoformat() if check.checked_at else None,
+    })
 
 
 @router.get("/monitoring")

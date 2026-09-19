@@ -33,7 +33,14 @@ from app.graph_client import (
 )
 from app.http_check_client import check_http_endpoint, get_http_check_severity
 from app.i18n import LABELS
-from app.models import GRAPH_STATUS_MAP, HttpCheckResult, Incident, MonitoredService, ServiceStatus
+from app.models import (
+    GRAPH_STATUS_MAP,
+    CertificateCheckResult,
+    HttpCheckResult,
+    Incident,
+    MonitoredService,
+    ServiceStatus,
+)
 from app.notifications import dispatch_incident_notifications
 
 logger = logging.getLogger(__name__)
@@ -393,7 +400,8 @@ async def poll_certificates() -> None:
         try:
             result = await db.execute(
                 sa_select(MonitoredService).where(
-                    MonitoredService.cert_hostname.is_not(None) & MonitoredService.is_enabled
+                    (MonitoredService.service_type == "certificate")
+                    & MonitoredService.is_enabled
                 )
             )
             cert_services = result.scalars().all()
@@ -408,6 +416,19 @@ async def poll_certificates() -> None:
                     status = cert_info["status"]
                     severity = get_certificate_severity(status)
                     days_remaining = cert_info["days_remaining"]
+
+                    # Record certificate check result for dashboard
+                    check_result = CertificateCheckResult(
+                        service_name=service.service_name,
+                        status=status,
+                        expires_at=cert_info["expires_at"],
+                        valid_from=cert_info["valid_from"],
+                        days_remaining=days_remaining,
+                        common_name=cert_info["common_name"],
+                        issuer=cert_info["issuer"],
+                        serial_number=cert_info["serial_number"],
+                    )
+                    db.add(check_result)
 
                     # Determine incident status based on cert status
                     if status == "ok":

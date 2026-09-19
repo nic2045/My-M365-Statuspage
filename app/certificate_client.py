@@ -8,13 +8,16 @@ logger = logging.getLogger(__name__)
 
 async def get_certificate_expiration(hostname: str) -> dict[str, object]:
     """
-    Fetch TLS certificate from hostname and return expiration info.
+    Fetch TLS certificate from hostname and return detailed expiration info.
     Returns: {
         'hostname': str,
         'expires_at': datetime,
+        'valid_from': datetime,
         'days_remaining': int,
         'status': 'ok' | 'warning_30' | 'warning_7' | 'expired',
         'common_name': str,
+        'issuer': str,
+        'serial_number': str,
     }
     """
     loop = asyncio.get_event_loop()
@@ -37,6 +40,10 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
         # Parse expiration date from cert
         expires_str = cert.get("notAfter", "")
         expires_at = datetime.strptime(expires_str, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=UTC)
+
+        valid_from_str = cert.get("notBefore", "")
+        valid_from = datetime.strptime(valid_from_str, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=UTC)
+
         now = datetime.now(UTC)
         days_remaining = (expires_at - now).days
 
@@ -54,12 +61,23 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
         subject = dict(x[0] for x in cert.get("subject", []))
         common_name = subject.get("commonName", hostname)
 
+        # Extract issuer
+        issuer_list = cert.get("issuer", [])
+        issuer_dict = dict(x[0] for x in issuer_list) if issuer_list else {}
+        issuer = issuer_dict.get("commonName", "Unknown")
+
+        # Extract serial number
+        serial_number = str(cert.get("serialNumber", "Unknown"))
+
         return {
             "hostname": hostname,
             "expires_at": expires_at,
+            "valid_from": valid_from,
             "days_remaining": days_remaining,
             "status": status,
             "common_name": common_name,
+            "issuer": issuer,
+            "serial_number": serial_number,
         }
     except Exception as e:
         logger.error(f"Failed to fetch certificate for {hostname}: {e}")
