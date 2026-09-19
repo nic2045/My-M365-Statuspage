@@ -50,8 +50,8 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
 
             output = result.stdout
             cert = {
-                "issuer": [[(("commonName", "Unknown"),)]],
-                "subject": [[(("commonName", hostname),)]],
+                "issuer": [[("commonName", "Unknown")]],
+                "subject": [[("commonName", hostname)]],
                 "notAfter": "",
                 "notBefore": "",
                 "serialNumber": "Unknown",
@@ -68,13 +68,13 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
                     issuer_str = line_stripped[2:].strip()
                     if 'CN = ' in issuer_str:
                         cn = issuer_str.split('CN = ')[-1].split(',')[0]
-                        cert["issuer"] = [[(("commonName", cn),)]]
+                        cert["issuer"] = [[("commonName", cn)]]
                 elif line_stripped.startswith('s:'):
                     # Format: s:CN = pyur.com
                     subject_str = line_stripped[2:].strip()
                     if 'CN = ' in subject_str:
                         cn = subject_str.split('CN = ')[-1].split(',')[0]
-                        cert["subject"] = [[(("commonName", cn),)]]
+                        cert["subject"] = [[("commonName", cn)]]
                 elif line_stripped.startswith('v:'):
                     # Format: v:NotBefore: Sep 19 23:26:46 2026 GMT; NotAfter: Oct 19 23:27:46 2026 GMT
                     v_str = line_stripped[2:].strip()
