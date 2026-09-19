@@ -77,6 +77,22 @@ docker compose up -d --build
 Die Seite ist anschließend unter **`http://localhost:8000`** erreichbar.  
 Beim ersten Aufruf wird man zu Entra ID weitergeleitet.
 
+### Windows? WSL2 + Docker Setup
+
+Auf **Windows 10/11** automatisiert ein PowerShell-Skript die komplette Umgebung:
+
+```powershell
+# Entweder über PowerShell (Admin)
+.\setup-wsl2.ps1
+
+# Oder einfach doppelklick auf
+setup-wsl2.bat
+```
+
+**VS Code?** Öffne das Projekt in VS Code – `Start.ps1` startet automatisch und konfiguriert WSL2 + Docker bei Bedarf.
+
+👉 [Ausführliche Windows-Anleitung →](WINDOWS-SETUP.md)
+
 ---
 
 ## Entra ID App-Registrierung
