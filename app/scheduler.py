@@ -393,8 +393,7 @@ async def poll_certificates() -> None:
         try:
             result = await db.execute(
                 sa_select(MonitoredService).where(
-                    (MonitoredService.service_type == "certificate")
-                    & MonitoredService.is_enabled
+                    MonitoredService.cert_hostname.is_not(None) & MonitoredService.is_enabled
                 )
             )
             cert_services = result.scalars().all()
@@ -486,7 +485,7 @@ async def poll_http_checks() -> None:
         try:
             result = await db.execute(
                 sa_select(MonitoredService).where(
-                    (MonitoredService.service_type == "http") & MonitoredService.is_enabled
+                    MonitoredService.http_url.is_not(None) & MonitoredService.is_enabled
                 )
             )
             http_services = result.scalars().all()

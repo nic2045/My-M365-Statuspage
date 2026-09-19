@@ -1249,7 +1249,7 @@ async def get_http_dashboard_data(db: AsyncSession, uptime_days: int = 30) -> li
             uptime_sq.c.uptime_ratio,
             uptime_sq.c.sample_count,
         )
-        .where(MonitoredService.service_type == "http")
+        .where(MonitoredService.http_url.is_not(None))
         .outerjoin(
             latest_sq,
             and_(latest_sq.c.service_name == MonitoredService.service_name, latest_sq.c.rn == 1),
@@ -1278,7 +1278,7 @@ async def get_certificate_dashboard_data(db: AsyncSession) -> list[dict]:
     the still-open incident poll_certificates creates for warning/expired certs."""
     services_result = await db.execute(
         select(MonitoredService)
-        .where(MonitoredService.service_type == "certificate")
+        .where(MonitoredService.cert_hostname.is_not(None))
         .order_by(*_service_sort_clause())
     )
     services = list(services_result.scalars().all())

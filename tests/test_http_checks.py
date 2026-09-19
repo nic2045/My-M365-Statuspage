@@ -65,28 +65,30 @@ def test_get_http_check_severity():
     assert get_http_check_severity(is_up=False) == "critical"
 
 
-class TestHttpCheckAdminRoutes:
-    """CRUD + dashboard routes, exercised through a lifespan-initialized TestClient
-    so init_db() actually runs (unlike tests/test_admin_routes.py's module-level
-    client, which skips lifespan and hits every route against an empty DB)."""
+class TestChecksAdminRoutes:
+    """CRUD + dashboard routes for the unified /admin/checks page, exercised
+    through a lifespan-initialized TestClient so init_db() actually runs
+    (unlike tests/test_admin_routes.py's module-level client, which skips
+    lifespan and hits every route against an empty DB)."""
 
-    def test_create_list_and_delete(self):
+    def test_create_http_only_list_and_delete(self):
         from fastapi.testclient import TestClient
 
         from app.main import app
 
         with TestClient(app, follow_redirects=False) as client:
             create = client.post(
-                "/admin/http-checks/create",
+                "/admin/checks/create",
                 data={
                     "service_name": "Test API",
+                    "enable_http": "on",
                     "http_url": "https://example.com/health",
                     "http_expected_status": "200",
                 },
             )
             assert create.status_code == 303
 
-            listing = client.get("/admin/http-checks")
+            listing = client.get("/admin/checks")
             assert listing.status_code == 200
             assert "Test API" in listing.text
 
@@ -94,22 +96,60 @@ class TestHttpCheckAdminRoutes:
             assert dashboard.status_code == 200
             assert "Test API" in dashboard.text
 
-            delete = client.post("/admin/http-checks/Test API/delete")
+            delete = client.post("/admin/checks/Test API/delete")
             assert delete.status_code == 303
 
-            listing_after = client.get("/admin/http-checks")
+            listing_after = client.get("/admin/checks")
             assert "Test API" not in listing_after.text
 
-    def test_monitoring_dashboard_renders_certificates_too(self):
+    def test_create_cert_only_shows_on_monitoring_dashboard(self):
         from fastapi.testclient import TestClient
 
         from app.main import app
 
         with TestClient(app, follow_redirects=False) as client:
             client.post(
-                "/admin/certificates/create",
-                data={"service_name": "Test Cert Service", "cert_hostname": "example.com"},
+                "/admin/checks/create",
+                data={
+                    "service_name": "Test Cert Service",
+                    "enable_cert": "on",
+                    "cert_hostname": "example.com",
+                },
             )
             dashboard = client.get("/admin/monitoring")
             assert dashboard.status_code == 200
             assert "Test Cert Service" in dashboard.text
+
+    def test_create_combined_http_and_cert_check(self):
+        from fastapi.testclient import TestClient
+
+        from app.main import app
+
+        with TestClient(app, follow_redirects=False) as client:
+            create = client.post(
+                "/admin/checks/create",
+                data={
+                    "service_name": "Combined Service",
+                    "enable_http": "on",
+                    "http_url": "https://example.com/health",
+                    "enable_cert": "on",
+                    "cert_hostname": "example.com",
+                },
+            )
+            assert create.status_code == 303
+
+            listing = client.get("/admin/checks")
+            assert "Combined Service" in listing.text
+
+            dashboard = client.get("/admin/monitoring")
+            assert dashboard.text.count("Combined Service") == 2
+
+    def test_create_without_any_type_selected_fails(self):
+        from fastapi.testclient import TestClient
+
+        from app.main import app
+
+        with TestClient(app, follow_redirects=False) as client:
+            client.post("/admin/checks/create", data={"service_name": "Nothing Selected"})
+            listing = client.get("/admin/checks")
+            assert "Nothing Selected" not in listing.text
