@@ -8,8 +8,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.event_bus import StatusEvent, get_event_bus
-
 from app.app_settings import (
     get_app_default_language,
     get_azure_settings,
@@ -57,6 +55,7 @@ from app.crud import (
 from app.crud import delete_incident as crud_delete_incident
 from app.database import AsyncSessionLocal
 from app.dependencies import admin_nav_context, get_db
+from app.event_bus import StatusEvent, get_event_bus
 from app.flash import flash
 from app.graph_client import (
     fetch_active_issues,
