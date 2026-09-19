@@ -75,9 +75,12 @@ async def init_db() -> None:
             "ALTER TABLE monitored_services ADD COLUMN sla_target_percentage FLOAT NOT NULL DEFAULT 99.9",
             "ALTER TABLE monitored_services ADD COLUMN sla_exclude_maintenance BOOLEAN NOT NULL DEFAULT 1",
             "ALTER TABLE monitored_services ADD COLUMN sla_exclude_advisory BOOLEAN NOT NULL DEFAULT 1",
+            "ALTER TABLE monitored_services ADD COLUMN show_sla_on_status_page BOOLEAN NOT NULL DEFAULT 0",
             "ALTER TABLE monitored_services ADD COLUMN service_type VARCHAR(32) NOT NULL DEFAULT 'm365'",
             "ALTER TABLE monitored_services ADD COLUMN cert_hostname VARCHAR(256)",
             "ALTER TABLE monitored_services ADD COLUMN check_interval_seconds INTEGER",
+            "ALTER TABLE monitored_services ADD COLUMN http_url VARCHAR(512)",
+            "ALTER TABLE monitored_services ADD COLUMN http_expected_status INTEGER",
             # subscribers table is created by metadata.create_all above;
             # these stmts only fire if it already existed without the column
         ]:
@@ -150,7 +153,9 @@ async def init_db() -> None:
     ]
     async with AsyncSessionLocal() as db:
         for name, label, color, weight in _default_severities:
-            existing = await db.get(SeverityLevel, name)
+            existing = (
+                await db.execute(select(SeverityLevel).where(SeverityLevel.name == name))
+            ).scalar_one_or_none()
             if existing is None:
                 db.add(
                     SeverityLevel(
@@ -173,7 +178,9 @@ async def init_db() -> None:
     ]
     async with AsyncSessionLocal() as db:
         for name, label, color, is_terminal, order in _default_states:
-            existing = await db.get(IncidentState, name)
+            existing = (
+                await db.execute(select(IncidentState).where(IncidentState.name == name))
+            ).scalar_one_or_none()
             if existing is None:
                 db.add(
                     IncidentState(

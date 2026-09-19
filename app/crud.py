@@ -4,12 +4,13 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 import nh3
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import Integer, and_, delete, desc, func, or_, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    HttpCheckResult,
     Incident,
     IncidentUpdate,
     MonitoredService,
@@ -420,7 +421,7 @@ async def delete_incident(db: AsyncSession, incident_id: int) -> bool:
     incident = await get_incident_by_id(db, incident_id)
     if incident is None:
         return False
-    db.delete(incident)
+    await db.delete(incident)
     await db.flush()
     return True
 
@@ -546,7 +547,7 @@ async def upsert_source_label(db: AsyncSession, source: str, label: str) -> None
 async def delete_source_label(db: AsyncSession, source: str) -> bool:
     existing = await db.get(SourceLabel, source)
     if existing and not existing.is_system:
-        db.delete(existing)
+        await db.delete(existing)
         await db.flush()
         return True
     return False
@@ -792,11 +793,12 @@ async def build_status_page_data(
             MonitoredService.service_name,
             MonitoredService.show_uptime_percentage,
             MonitoredService.group_name,
+            MonitoredService.show_sla_on_status_page,
         )
         .where(MonitoredService.service_name.in_(service_names))
     )
     svc_meta = {
-        row[0]: {"show_uptime": row[1], "group": row[2]}
+        row[0]: {"show_uptime": row[1], "group": row[2], "show_sla": row[3]}
         for row in svc_meta_result.fetchall()
     }
 
@@ -808,6 +810,11 @@ async def build_status_page_data(
         uptime_pct = (
             await get_uptime_percentage(db, name, days=days) if meta.get("show_uptime", True) else None
         )
+
+        sla_data = None
+        if meta.get("show_sla"):
+            today = date.today()
+            sla_data = await get_sla_for_month(db, name, today.year, today.month)
 
         incident_schemas = [
             IncidentSchema(
@@ -846,6 +853,7 @@ async def build_status_page_data(
                 active_incidents=incident_schemas,
                 uptime_percentage=uptime_pct,
                 group_name=meta.get("group"),
+                sla_current_month=sla_data,
             )
         )
 
@@ -912,7 +920,7 @@ async def delete_subscriber(db: AsyncSession, subscriber_id: int) -> bool:
     sub = result.scalar_one_or_none()
     if not sub:
         return False
-    db.delete(sub)
+    await db.delete(sub)
     await db.flush()
     return True
 
@@ -1251,3 +1259,121 @@ async def get_sla_for_month(
         "downtime_minutes": round(downtime_minutes, 1),
         "excluded_minutes": round(excluded_minutes, 1),
     }
+
+
+async def record_http_check_result(
+    db: AsyncSession,
+    service_name: str,
+    result: dict[str, Any],
+) -> HttpCheckResult:
+    row = HttpCheckResult(
+        service_name=service_name,
+        is_up=result["is_up"],
+        status_code=result.get("status_code"),
+        response_time_ms=result.get("response_time_ms"),
+        error_message=result.get("error_message"),
+    )
+    db.add(row)
+    await db.flush()
+    return row
+
+
+async def prune_old_http_check_results(db: AsyncSession, retention_days: int) -> None:
+    cutoff = datetime.utcnow() - timedelta(days=retention_days)
+    await db.execute(delete(HttpCheckResult).where(HttpCheckResult.checked_at < cutoff))
+
+
+async def get_http_dashboard_data(db: AsyncSession, uptime_days: int = 30) -> list[dict]:
+    """HTTP-check services enriched with their latest result and uptime % over
+    the window. Uses a window function to avoid an N+1 query per service."""
+    latest_sq = (
+        select(
+            HttpCheckResult.service_name,
+            HttpCheckResult.is_up,
+            HttpCheckResult.status_code,
+            HttpCheckResult.response_time_ms,
+            HttpCheckResult.error_message,
+            HttpCheckResult.checked_at,
+            func.row_number()
+            .over(
+                partition_by=HttpCheckResult.service_name,
+                order_by=desc(HttpCheckResult.checked_at),
+            )
+            .label("rn"),
+        ).subquery()
+    )
+
+    cutoff = datetime.utcnow() - timedelta(days=uptime_days)
+    uptime_sq = (
+        select(
+            HttpCheckResult.service_name,
+            func.avg(func.cast(HttpCheckResult.is_up, Integer)).label("uptime_ratio"),
+            func.count().label("sample_count"),
+        )
+        .where(HttpCheckResult.checked_at >= cutoff)
+        .group_by(HttpCheckResult.service_name)
+        .subquery()
+    )
+
+    result = await db.execute(
+        select(
+            MonitoredService,
+            latest_sq.c.is_up,
+            latest_sq.c.status_code,
+            latest_sq.c.response_time_ms,
+            latest_sq.c.error_message,
+            latest_sq.c.checked_at,
+            uptime_sq.c.uptime_ratio,
+            uptime_sq.c.sample_count,
+        )
+        .where(MonitoredService.http_url.is_not(None))
+        .outerjoin(
+            latest_sq,
+            and_(latest_sq.c.service_name == MonitoredService.service_name, latest_sq.c.rn == 1),
+        )
+        .outerjoin(uptime_sq, uptime_sq.c.service_name == MonitoredService.service_name)
+        .order_by(*_service_sort_clause())
+    )
+
+    dashboard: list[dict] = []
+    for service, is_up, status_code, response_time_ms, error_message, checked_at, uptime_ratio, sample_count in result.all():
+        dashboard.append({
+            "service": service,
+            "is_up": is_up,
+            "status_code": status_code,
+            "response_time_ms": response_time_ms,
+            "error_message": error_message,
+            "checked_at": checked_at,
+            "uptime_percent": round(uptime_ratio * 100, 2) if uptime_ratio is not None else None,
+            "sample_count": sample_count or 0,
+        })
+    return dashboard
+
+
+async def get_certificate_dashboard_data(db: AsyncSession) -> list[dict]:
+    """Certificate services enriched with their current status, derived from
+    the still-open incident poll_certificates creates for warning/expired certs."""
+    services_result = await db.execute(
+        select(MonitoredService)
+        .where(MonitoredService.cert_hostname.is_not(None))
+        .order_by(*_service_sort_clause())
+    )
+    services = list(services_result.scalars().all())
+
+    incidents_result = await db.execute(
+        select(Incident).where(
+            Incident.source == "certificate",
+            Incident.is_resolved.is_(False),
+        )
+    )
+    open_by_service = {inc.service_name: inc for inc in incidents_result.scalars().all()}
+
+    dashboard: list[dict] = []
+    for service in services:
+        incident = open_by_service.get(service.service_name)
+        dashboard.append({
+            "service": service,
+            "status": "ok" if incident is None else ("expired" if incident.status == "active" else "warning"),
+            "incident": incident,
+        })
+    return dashboard

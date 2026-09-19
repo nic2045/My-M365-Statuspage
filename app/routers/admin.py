@@ -1,10 +1,12 @@
 import asyncio
+import csv
 import logging
 from datetime import date, datetime
+from io import StringIO
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,12 +39,13 @@ from app.crud import (
     get_all_severity_levels,
     get_all_source_labels,
     get_all_subscribers,
+    get_certificate_dashboard_data,
     get_distinct_sources,
     get_enabled_services,
     get_enabled_services_with_status,
+    get_http_dashboard_data,
     get_incident_by_id,
     get_known_groups,
-    get_sla_breach_reasons,
     get_sla_for_month,
     move_service,
     publish_incident_update,
@@ -468,7 +471,9 @@ async def admin_create_severity(
         flash(request, "Name erforderlich.")
         return RedirectResponse(url="/admin/settings#severities", status_code=303)
 
-    existing = await db.get(SeverityLevel, name_lower)
+    existing = (
+        await db.execute(sa_select(SeverityLevel).where(SeverityLevel.name == name_lower))
+    ).scalar_one_or_none()
     if existing:
         flash(request, f"Schweregrad '{name_lower}' existiert bereits.")
         return RedirectResponse(url="/admin/settings#severities", status_code=303)
@@ -496,7 +501,9 @@ async def admin_create_state(
         flash(request, "Name erforderlich.")
         return RedirectResponse(url="/admin/settings#states", status_code=303)
 
-    existing = await db.get(IncidentState, name_lower)
+    existing = (
+        await db.execute(sa_select(IncidentState).where(IncidentState.name == name_lower))
+    ).scalar_one_or_none()
     if existing:
         flash(request, f"State '{name_lower}' existiert bereits.")
         return RedirectResponse(url="/admin/settings#states", status_code=303)
@@ -528,7 +535,9 @@ async def admin_update_severity(
     from app.models import SeverityLevel
 
     name_lower = name.lower().strip()
-    severity = await db.get(SeverityLevel, name_lower)
+    severity = (
+        await db.execute(sa_select(SeverityLevel).where(SeverityLevel.name == name_lower))
+    ).scalar_one_or_none()
     if not severity or severity.is_system:
         flash(request, "Schweregrad kann nicht aktualisiert werden.")
         return RedirectResponse(url="/admin/settings#severities", status_code=303)
@@ -551,12 +560,14 @@ async def admin_delete_severity(
     from app.models import SeverityLevel
 
     name_lower = name.lower().strip()
-    severity = await db.get(SeverityLevel, name_lower)
+    severity = (
+        await db.execute(sa_select(SeverityLevel).where(SeverityLevel.name == name_lower))
+    ).scalar_one_or_none()
     if not severity or severity.is_system:
         flash(request, "System-Schweregrade können nicht gelöscht werden.")
         return RedirectResponse(url="/admin/settings#severities", status_code=303)
 
-    db.delete(severity)
+    await db.delete(severity)
     await db.commit()
     flash(request, "Schweregrad gelöscht.")
     return RedirectResponse(url="/admin/settings#severities", status_code=303)
@@ -575,7 +586,9 @@ async def admin_update_state(
     from app.models import IncidentState
 
     name_lower = name.lower().strip()
-    state = await db.get(IncidentState, name_lower)
+    state = (
+        await db.execute(sa_select(IncidentState).where(IncidentState.name == name_lower))
+    ).scalar_one_or_none()
     if not state or state.is_system:
         flash(request, "Phase kann nicht aktualisiert werden.")
         return RedirectResponse(url="/admin/settings#states", status_code=303)
@@ -598,12 +611,14 @@ async def admin_delete_state(
     from app.models import IncidentState
 
     name_lower = name.lower().strip()
-    state = await db.get(IncidentState, name_lower)
+    state = (
+        await db.execute(sa_select(IncidentState).where(IncidentState.name == name_lower))
+    ).scalar_one_or_none()
     if not state or state.is_system:
         flash(request, "System-Phasen können nicht gelöscht werden.")
         return RedirectResponse(url="/admin/settings#states", status_code=303)
 
-    db.delete(state)
+    await db.delete(state)
     await db.commit()
     flash(request, "Phase gelöscht.")
     return RedirectResponse(url="/admin/settings#states", status_code=303)
@@ -1322,6 +1337,47 @@ async def admin_sla(
     )
 
 
+@router.get("/sla/export")
+async def export_sla_csv(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Export 12-month SLA statistics as CSV."""
+    all_services = await get_all_monitored_services(db)
+    today = date.today()
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Service", "Month", "Availability %", "Target %", "Met", "Downtime (minutes)"])
+
+    for service in all_services:
+        for i in range(11, -1, -1):
+            m = today.month - i
+            y = today.year
+            if m <= 0:
+                y -= 1
+                m += 12
+
+            sla = await get_sla_for_month(db, service.service_name, y, m)
+            month_name = date(y, m, 1).strftime("%B %Y")
+            met = "Yes" if not sla["is_breach"] else "No"
+            writer.writerow([
+                service.service_name,
+                month_name,
+                f"{sla['actual_percent']:.1f}",
+                f"{sla['target_percent']:.1f}",
+                met,
+                f"{sla['downtime_minutes']:.1f}",
+            ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=sla_export.csv"},
+    )
+
+
 @router.get("/sla/{service_name}/{year}/{month}/reasons")
 async def sla_breach_reasons(
     service_name: str,
@@ -1345,40 +1401,50 @@ async def sla_breach_reasons(
         return JSONResponse({"error": "Failed to retrieve breach reasons"}, status_code=500)
 
 
-@router.get("/certificates")
-async def list_certificates(
+@router.get("/checks")
+async def list_checks(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
-    """List all certificate monitoring services."""
+    """List all HTTP- and/or certificate-monitored services (either or both per service)."""
     result = await db.execute(
-        sa_select(MonitoredService).where(MonitoredService.service_type == "certificate")
+        sa_select(MonitoredService).where(
+            MonitoredService.cert_hostname.is_not(None) | MonitoredService.http_url.is_not(None)
+        )
     )
-    certs = result.scalars().all()
+    checks = result.scalars().all()
 
     return templates.TemplateResponse(
         request,
-        "admin/certificates.html",
+        "admin/checks.html",
         {
             "user": user,
-            "certificates": certs,
-            "page_title": "Zertifikats-Monitoring",
+            "checks": checks,
+            "page_title": "Checks",
             **nav,
         },
     )
 
 
-@router.post("/certificates/create")
-async def create_certificate(
+@router.post("/checks/create")
+async def create_check(
     service_name: str = Form(...),
-    cert_hostname: str = Form(...),
+    enable_http: bool = Form(False),
+    http_url: str | None = Form(None),
+    http_expected_status: int = Form(200),
+    check_interval_seconds: int | None = Form(None),
+    enable_cert: bool = Form(False),
+    cert_hostname: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
-    """Create a new certificate monitoring service."""
+    """Create a new check - HTTP, certificate, or both on the same service."""
     try:
+        if not enable_http and not enable_cert:
+            raise ValueError("At least one of HTTP or certificate must be selected")
+
         existing = await db.execute(
             sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
         )
@@ -1387,39 +1453,66 @@ async def create_certificate(
 
         svc = MonitoredService(
             service_name=service_name,
-            service_type="certificate",
-            cert_hostname=cert_hostname,
+            service_type="check",
+            http_url=http_url if enable_http else None,
+            http_expected_status=http_expected_status if enable_http else None,
+            check_interval_seconds=check_interval_seconds if enable_http else None,
+            cert_hostname=cert_hostname if enable_cert else None,
             is_enabled=True,
-            group_name="Certificates",
+            group_name="Checks",
         )
         db.add(svc)
         await db.commit()
-        logger.info(f"Created certificate service: {service_name} ({cert_hostname})")
+        logger.info(f"Created check: {service_name} (http={enable_http}, cert={enable_cert})")
     except Exception:
         await db.rollback()
-        logger.exception("Failed to create certificate service")
+        logger.exception("Failed to create check")
 
-    return RedirectResponse(url="/admin/certificates", status_code=303)
+    return RedirectResponse(url="/admin/checks", status_code=303)
 
 
-@router.post("/certificates/{service_name}/delete")
-async def delete_certificate(
+@router.post("/checks/{service_name}/delete")
+async def delete_check(
     service_name: str,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
-    """Delete a certificate monitoring service."""
+    """Delete a check (HTTP, certificate, or both)."""
     try:
         result = await db.execute(
             sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
         )
         svc = result.scalar_one_or_none()
-        if svc and svc.service_type == "certificate":
+        if svc and (svc.cert_hostname or svc.http_url):
             await db.delete(svc)
             await db.commit()
-            logger.info(f"Deleted certificate service: {service_name}")
+            logger.info(f"Deleted check: {service_name}")
     except Exception:
         await db.rollback()
-        logger.exception("Failed to delete certificate service")
+        logger.exception("Failed to delete check")
 
-    return RedirectResponse(url="/admin/certificates", status_code=303)
+    return RedirectResponse(url="/admin/checks", status_code=303)
+
+
+@router.get("/monitoring")
+async def monitoring_dashboard(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+    nav: dict = Depends(admin_nav_context),
+):
+    """Combined live dashboard for certificate + HTTP-check monitoring."""
+    certificates = await get_certificate_dashboard_data(db)
+    http_checks = await get_http_dashboard_data(db)
+
+    return templates.TemplateResponse(
+        request,
+        "admin/monitoring.html",
+        {
+            "user": user,
+            "certificates": certificates,
+            "http_checks": http_checks,
+            "page_title": "Monitoring",
+            **nav,
+        },
+    )

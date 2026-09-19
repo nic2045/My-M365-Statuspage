@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     # Polling
     POLL_INTERVAL_MINUTES: int = 10
 
+    # HTTP health checks (MonitoredService.service_type == "http")
+    HTTP_CHECK_DEFAULT_INTERVAL_SECONDS: int = 300
+    HTTP_CHECK_TIMEOUT_SECONDS: int = 10
+    HTTP_CHECK_HISTORY_RETENTION_DAYS: int = 30
+
     # App
     DEBUG: bool = False
     APP_TITLE: str = "M365 Dienststatus"

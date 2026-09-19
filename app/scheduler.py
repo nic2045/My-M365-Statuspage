@@ -5,6 +5,7 @@ from datetime import date, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from sqlalchemy import func
 from sqlalchemy import select as sa_select
 
 from app.certificate_client import (
@@ -17,6 +18,8 @@ from app.crud import (
     add_state_change_entry,
     ensure_service_known,
     get_enabled_services,
+    prune_old_http_check_results,
+    record_http_check_result,
     upsert_incident,
     upsert_incident_updates,
     upsert_service_status,
@@ -28,8 +31,9 @@ from app.graph_client import (
     fetch_health_overviews,
     fetch_recently_resolved_issues,
 )
+from app.http_check_client import check_http_endpoint, get_http_check_severity
 from app.i18n import LABELS
-from app.models import GRAPH_STATUS_MAP, Incident, MonitoredService, ServiceStatus
+from app.models import GRAPH_STATUS_MAP, HttpCheckResult, Incident, MonitoredService, ServiceStatus
 from app.notifications import dispatch_incident_notifications
 
 logger = logging.getLogger(__name__)
@@ -470,6 +474,107 @@ async def poll_certificates() -> None:
             logger.exception("Certificate poll failed")
 
 
+async def poll_http_checks() -> None:
+    """Check HTTP endpoints and create/update incidents based on reachability.
+
+    Runs every minute but only actually checks a service once its own
+    check_interval_seconds (or the HTTP_CHECK_DEFAULT_INTERVAL_SECONDS
+    default) has elapsed since its last recorded result.
+    """
+    logger.info("Starting HTTP health check poll...")
+    async with AsyncSessionLocal() as db:
+        try:
+            result = await db.execute(
+                sa_select(MonitoredService).where(
+                    MonitoredService.http_url.is_not(None) & MonitoredService.is_enabled
+                )
+            )
+            http_services = result.scalars().all()
+
+            checked = 0
+            for service in http_services:
+                if not service.http_url:
+                    logger.warning(f"HTTP check service {service.service_name} missing URL")
+                    continue
+
+                interval = service.check_interval_seconds or settings.HTTP_CHECK_DEFAULT_INTERVAL_SECONDS
+                last_result = await db.execute(
+                    sa_select(func.max(HttpCheckResult.checked_at)).where(
+                        HttpCheckResult.service_name == service.service_name
+                    )
+                )
+                last_checked_at = last_result.scalar_one_or_none()
+                if last_checked_at and (datetime.utcnow() - last_checked_at).total_seconds() < interval:
+                    continue
+
+                try:
+                    check_result = await check_http_endpoint(
+                        service.http_url,
+                        expected_status=service.http_expected_status or 200,
+                        timeout_seconds=settings.HTTP_CHECK_TIMEOUT_SECONDS,
+                    )
+                    is_up = check_result["is_up"]
+                    await record_http_check_result(db, service.service_name, check_result)
+                    checked += 1
+
+                    if is_up:
+                        result = await db.execute(
+                            sa_select(Incident).where(
+                                (Incident.service_name == service.service_name)
+                                & (Incident.source == "http_check")
+                                & ~Incident.is_resolved
+                            )
+                        )
+                        existing = result.scalar_one_or_none()
+                        if existing is not None:
+                            existing.is_resolved = True
+                            existing.status = "resolved"
+                            existing.end_datetime = datetime.utcnow()
+                            await db.flush()
+                    else:
+                        severity = get_http_check_severity(is_up)
+                        title = f"Endpoint Down: {service.service_name}"
+                        description = check_result["error_message"] or "Endpoint unreachable"
+
+                        incident = await upsert_incident(
+                            db,
+                            graph_issue_id=f"http_{service.service_name}",
+                            title=title,
+                            service_name=service.service_name,
+                            classification="incident",
+                            status="active",
+                            source="http_check",
+                            severity=severity,
+                            description=description,
+                            start_datetime=datetime.utcnow(),
+                            is_resolved=False,
+                        )
+                        await upsert_incident_updates(
+                            db,
+                            incident.id,
+                            [
+                                {
+                                    "title": "Endpoint Down",
+                                    "body": description,
+                                    "createdDateTime": datetime.utcnow().isoformat(),
+                                    "postCreatedDateTime": datetime.utcnow().isoformat(),
+                                }
+                            ],
+                            auto_publish=True,
+                        )
+
+                    await db.commit()
+                except Exception:
+                    await db.rollback()
+                    logger.exception(f"Failed to poll HTTP check for {service.service_name}")
+
+            await prune_old_http_check_results(db, settings.HTTP_CHECK_HISTORY_RETENTION_DAYS)
+            await db.commit()
+            logger.info(f"HTTP check poll completed for {checked} of {len(http_services)} services")
+        except Exception:
+            logger.exception("HTTP check poll failed")
+
+
 def start_scheduler() -> None:
     scheduler.add_job(
         poll_graph_api,
@@ -482,6 +587,13 @@ def start_scheduler() -> None:
         poll_certificates,
         trigger=IntervalTrigger(hours=1),
         id="cert_poll",
+        replace_existing=True,
+        next_run_time=datetime.now(),
+    )
+    scheduler.add_job(
+        poll_http_checks,
+        trigger=IntervalTrigger(minutes=1),
+        id="http_check_poll",
         replace_existing=True,
         next_run_time=datetime.now(),
     )
