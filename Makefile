@@ -38,6 +38,13 @@ test:
 lint:
 	uv run ruff check .
 
+setup:
+	@echo "Windows WSL2 setup:"
+	@echo "  PowerShell: .\setup-wsl2.ps1"
+	@echo "  Or double-click: setup-wsl2.bat"
+	@echo ""
+	@echo "For options: .\setup-wsl2.ps1 -Help"
+
 help:
 	@echo "Available commands:"
 	@echo "  make dev     - Start dev server directly via uv (http://$(HOST):$(PORT))"
@@ -50,3 +57,4 @@ help:
 	@echo "  make shell   - Open shell in running container"
 	@echo "  make test    - Run test suite via uv"
 	@echo "  make lint    - Run ruff linter"
+	@echo "  make setup   - WSL2 setup info (Windows only)"
