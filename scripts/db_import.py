@@ -11,7 +11,6 @@ Merges with existing data (doesn't delete).
 import asyncio
 import json
 import sys
-from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import select
@@ -120,7 +119,7 @@ async def main():
 
         await session.commit()
 
-    print(f"\n✓ Import complete!")
+    print("\n✓ Import complete!")
     print(f"  Total imported: {totals_imported}")
     print(f"  Total skipped: {totals_skipped} (duplicates/constraints)")
     return 0

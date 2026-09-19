@@ -30,9 +30,11 @@ from app.crud import (
     delete_source_label,
     delete_subscriber,
     ensure_service_known,
+    get_all_incident_states,
     get_all_incidents,
     get_all_maintenances,
     get_all_monitored_services,
+    get_all_severity_levels,
     get_all_source_labels,
     get_all_subscribers,
     get_distinct_sources,
@@ -203,13 +205,25 @@ async def admin_settings(
     user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
-    all_services, known_groups, subscribers, email_cfg, azure_cfg, source_labels, app_lang = await asyncio.gather(
+    (
+        all_services,
+        known_groups,
+        subscribers,
+        email_cfg,
+        azure_cfg,
+        source_labels,
+        severity_levels,
+        incident_states,
+        app_lang,
+    ) = await asyncio.gather(
         get_all_monitored_services(db),
         get_known_groups(db),
         get_all_subscribers(db),
         get_email_settings(db),
         get_azure_settings(db),
         get_all_source_labels(db),
+        get_all_severity_levels(db),
+        get_all_incident_states(db),
         get_app_default_language(db),
     )
     return templates.TemplateResponse(
@@ -224,6 +238,8 @@ async def admin_settings(
             "email_cfg": email_cfg,
             "azure_cfg": azure_cfg,
             "source_labels": source_labels,
+            "severity_levels": severity_levels,
+            "incident_states": incident_states,
             "app_default_language": app_lang or settings.DEFAULT_LANGUAGE,
             "page_title": f"{LABELS['settings.title']} – {settings.APP_TITLE}",
             **nav,
@@ -430,6 +446,164 @@ async def admin_delete_subscriber(
     await db.commit()
     flash(request, LABELS["toast.subscriber_deleted"])
     return RedirectResponse(url="/admin/settings#subscribers", status_code=303)
+
+
+@router.post("/settings/severities")
+async def admin_create_severity(
+    request: Request,
+    name: Annotated[str, Form()],
+    label: Annotated[str, Form()],
+    color: Annotated[str, Form()] = "#000000",
+    weight: Annotated[int, Form()] = 1,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    from app.models import SeverityLevel
+
+    name_lower = name.lower().strip()
+    if not name_lower:
+        flash(request, "Name erforderlich.")
+        return RedirectResponse(url="/admin/settings#severities", status_code=303)
+
+    existing = await db.get(SeverityLevel, name_lower)
+    if existing:
+        flash(request, f"Schweregrad '{name_lower}' existiert bereits.")
+        return RedirectResponse(url="/admin/settings#severities", status_code=303)
+
+    db.add(SeverityLevel(name=name_lower, label=label, color=color, weight=weight, display_order=weight))
+    await db.commit()
+    flash(request, f"Schweregrad '{label}' erstellt.")
+    return RedirectResponse(url="/admin/settings#severities", status_code=303)
+
+
+@router.post("/settings/states")
+async def admin_create_state(
+    request: Request,
+    name: Annotated[str, Form()],
+    label: Annotated[str, Form()],
+    color: Annotated[str, Form()] = "#000000",
+    is_terminal: Annotated[str | None, Form()] = None,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    from app.models import IncidentState
+
+    name_lower = name.lower().strip()
+    if not name_lower:
+        flash(request, "Name erforderlich.")
+        return RedirectResponse(url="/admin/settings#states", status_code=303)
+
+    existing = await db.get(IncidentState, name_lower)
+    if existing:
+        flash(request, f"State '{name_lower}' existiert bereits.")
+        return RedirectResponse(url="/admin/settings#states", status_code=303)
+
+    db.add(
+        IncidentState(
+            name=name_lower,
+            label=label,
+            color=color,
+            is_terminal=is_terminal == "on",
+            display_order=0,
+        )
+    )
+    await db.commit()
+    flash(request, f"State '{label}' erstellt.")
+    return RedirectResponse(url="/admin/settings#states", status_code=303)
+
+
+@router.post("/settings/severities/{name}")
+async def admin_update_severity(
+    request: Request,
+    name: str,
+    label: Annotated[str, Form()],
+    color: Annotated[str, Form()] = "#000000",
+    weight: Annotated[int, Form()] = 1,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    from app.models import SeverityLevel
+
+    name_lower = name.lower().strip()
+    severity = await db.get(SeverityLevel, name_lower)
+    if not severity or severity.is_system:
+        flash(request, "Schweregrad kann nicht aktualisiert werden.")
+        return RedirectResponse(url="/admin/settings#severities", status_code=303)
+
+    severity.label = label
+    severity.color = color
+    severity.weight = weight
+    await db.commit()
+    flash(request, f"Schweregrad '{label}' aktualisiert.")
+    return RedirectResponse(url="/admin/settings#severities", status_code=303)
+
+
+@router.post("/settings/severities/{name}/delete")
+async def admin_delete_severity(
+    request: Request,
+    name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    from app.models import SeverityLevel
+
+    name_lower = name.lower().strip()
+    severity = await db.get(SeverityLevel, name_lower)
+    if not severity or severity.is_system:
+        flash(request, "System-Schweregrade können nicht gelöscht werden.")
+        return RedirectResponse(url="/admin/settings#severities", status_code=303)
+
+    db.delete(severity)
+    await db.commit()
+    flash(request, "Schweregrad gelöscht.")
+    return RedirectResponse(url="/admin/settings#severities", status_code=303)
+
+
+@router.post("/settings/states/{name}")
+async def admin_update_state(
+    request: Request,
+    name: str,
+    label: Annotated[str, Form()],
+    color: Annotated[str, Form()] = "#000000",
+    is_terminal: Annotated[str | None, Form()] = None,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    from app.models import IncidentState
+
+    name_lower = name.lower().strip()
+    state = await db.get(IncidentState, name_lower)
+    if not state or state.is_system:
+        flash(request, "Phase kann nicht aktualisiert werden.")
+        return RedirectResponse(url="/admin/settings#states", status_code=303)
+
+    state.label = label
+    state.color = color
+    state.is_terminal = is_terminal == "on"
+    await db.commit()
+    flash(request, f"Phase '{label}' aktualisiert.")
+    return RedirectResponse(url="/admin/settings#states", status_code=303)
+
+
+@router.post("/settings/states/{name}/delete")
+async def admin_delete_state(
+    request: Request,
+    name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    from app.models import IncidentState
+
+    name_lower = name.lower().strip()
+    state = await db.get(IncidentState, name_lower)
+    if not state or state.is_system:
+        flash(request, "System-Phasen können nicht gelöscht werden.")
+        return RedirectResponse(url="/admin/settings#states", status_code=303)
+
+    db.delete(state)
+    await db.commit()
+    flash(request, "Phase gelöscht.")
+    return RedirectResponse(url="/admin/settings#states", status_code=303)
 
 
 @router.get("/incidents")

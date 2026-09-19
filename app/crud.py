@@ -551,6 +551,24 @@ async def delete_source_label(db: AsyncSession, source: str) -> bool:
     return False
 
 
+async def get_all_severity_levels(db: AsyncSession) -> list:
+    from app.models import SeverityLevel
+
+    result = await db.execute(
+        select(SeverityLevel).order_by(SeverityLevel.display_order, SeverityLevel.name)
+    )
+    return result.scalars().all()
+
+
+async def get_all_incident_states(db: AsyncSession) -> list:
+    from app.models import IncidentState
+
+    result = await db.execute(
+        select(IncidentState).order_by(IncidentState.display_order, IncidentState.name)
+    )
+    return result.scalars().all()
+
+
 def _service_sort_clause():
     """Sort: group (NULL last) → admin-set sort_order → service_name."""
     from sqlalchemy import case

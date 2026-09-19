@@ -210,3 +210,33 @@ class UpdateTemplate(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     applicable_phases: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class SeverityLevel(Base):
+    """Configurable severity levels for incidents (critical, high, medium, low, etc.)."""
+    __tablename__ = "severity_levels"
+    __table_args__ = (UniqueConstraint("name", name="uq_severity_name"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(64), nullable=False)
+    color: Mapped[str] = mapped_column(String(7), nullable=False)
+    weight: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class IncidentState(Base):
+    """Configurable incident states/phases (active, acknowledged, monitoring, resolved, etc.)."""
+    __tablename__ = "incident_states"
+    __table_args__ = (UniqueConstraint("name", name="uq_state_name"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(64), nullable=False)
+    color: Mapped[str] = mapped_column(String(7), nullable=False)
+    is_terminal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

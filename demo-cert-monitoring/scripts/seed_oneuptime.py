@@ -22,7 +22,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 BASE = os.environ["OU_BASE"]
 SYNC_BASE = os.environ["OU_SYNC_BASE"]
@@ -209,7 +209,7 @@ def iso(dt):
     # fixes this for every caller, without having to touch each call site.
     if dt.tzinfo is None:
         dt = dt.astimezone()
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 # ── Account ─────────────────────────────────────────────────────────────────
@@ -1078,7 +1078,7 @@ if not existing_telemetry_key:
     # confirmed live via a direct get-list call, not assumed.
     telemetry_secret_key = (created_key.get("secretKey") or {}).get("value")
     if telemetry_secret_key:
-        _log_now_ns = int(datetime.now(timezone.utc).timestamp() * 1e9)
+        _log_now_ns = int(datetime.now(UTC).timestamp() * 1e9)
         DOCUWARE_LOG_EVENTS = [
             (25 * 60, 17, "Login-Service: Verbindung zur Datenbank docuware-db:5432 "
                           "fehlgeschlagen (connection refused)"),
@@ -1118,7 +1118,7 @@ if not existing_telemetry_key:
     # no text transformation on those two fields, unlike e.g. `event_type`
     # which gets prettified into className), so the DetectionRule below
     # matches on those two instead of guessing at the prettified value.
-    _sec_now = datetime.now(timezone.utc)
+    _sec_now = datetime.now(UTC)
     ATTACKER_IP = "203.0.113.44"
     TARGETED_USERS = ["m.schmidt", "j.wagner", "t.becker", "a.hoffmann"]
     security_events = [{
@@ -1472,7 +1472,7 @@ existing_fw_announcement = find_by_name(
 fw_end_parsed = (
     parse_iso_loosely(existing_fw_announcement.get("endAnnouncementAt"))
     if existing_fw_announcement else None)
-fw_already_past = fw_end_parsed is not None and fw_end_parsed < datetime.now(timezone.utc)
+fw_already_past = fw_end_parsed is not None and fw_end_parsed < datetime.now(UTC)
 
 if fw_already_past:
     print(f"    '{FW_ANNOUNCEMENT_TITLE}' window already ended ({fw_end_parsed.date()}) - "
