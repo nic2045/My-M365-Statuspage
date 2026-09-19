@@ -19,8 +19,13 @@ router = APIRouter(prefix="/api/v1", tags=["api"])
 
 @router.get("/health")
 async def health_check():
-    """Basic liveness check — returns 200 if app is running (no auth required)."""
-    return {"status": "alive", "timestamp": datetime.utcnow().isoformat()}
+    """Docker healthcheck endpoint – no authentication required.
+
+    Response shape is a fixed {"status": "ok"} contract (see
+    tests/test_docker_integration.py::test_health_200) - add new fields to
+    /health/full instead of changing this one.
+    """
+    return {"status": "ok"}
 
 
 @router.get("/health/ready")

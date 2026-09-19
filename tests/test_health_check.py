@@ -11,11 +11,11 @@ def client():
 
 class TestHealthEndpoints:
     def test_health_liveness_200(self, client):
-        """Liveness check should always return 200."""
+        """Liveness check should always return 200 with the fixed {"status": "ok"}
+        contract that tests/test_docker_integration.py::test_health_200 relies on."""
         response = client.get("/api/v1/health")
         assert response.status_code == 200
-        assert response.json()["status"] == "alive"
-        assert "timestamp" in response.json()
+        assert response.json() == {"status": "ok"}
 
     def test_health_readiness_200(self, client):
         """Readiness check should return 200 when DB is healthy."""
