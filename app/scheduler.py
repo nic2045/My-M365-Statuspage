@@ -218,11 +218,21 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
     return None
 
 
+def _log_notification_error(task: asyncio.Task) -> None:
+    """Log exceptions from fire-and-forget notification tasks."""
+    try:
+        task.result()
+    except asyncio.CancelledError:
+        pass
+    except Exception as e:
+        logger.exception("Notification dispatch failed: %s", e)
+
+
 async def _dispatch_notifications(events: list[_NotifyEvent]) -> None:
     """Send email + Teams notifications for incidents detected during a poll."""
     for ev in events:
         subject_key = "notify.new_incident" if ev.is_new else "notify.update"
-        asyncio.create_task(
+        task = asyncio.create_task(
             dispatch_incident_notifications(
                 service_name=ev.service_name,
                 incident_title=ev.incident_title,
@@ -231,6 +241,7 @@ async def _dispatch_notifications(events: list[_NotifyEvent]) -> None:
                 incident_status=ev.status,
             )
         )
+        task.add_done_callback(_log_notification_error)
 
 
 async def poll_graph_api() -> None:

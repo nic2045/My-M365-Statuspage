@@ -99,6 +99,7 @@ def _compute_phase_segments(incident) -> list[dict]:
     boundaries: list[tuple[datetime, str]] = [(incident.start_datetime, "active")]
     for sc in state_changes:
         boundaries.append((sc.post_created_at, sc.content))
+    # boundaries is guaranteed non-empty (always has at least start_datetime)
     boundaries.append((end, boundaries[-1][1]))
 
     segments: list[dict] = []
@@ -119,22 +120,24 @@ async def _backfill_service(service_name: str) -> None:
     after a service is enabled – no synthetic ServiceStatus rows needed.
     """
     from app.scheduler import sync_issue_as_incident  # local import: avoids circular dep
-    try:
-        issues = await fetch_issues_since(service_name, days=90)
-        synced = 0
-        async with AsyncSessionLocal() as db:
+    async with AsyncSessionLocal() as db:
+        try:
+            issues = await fetch_issues_since(service_name, days=90)
+            synced = 0
             for issue in issues:
                 await sync_issue_as_incident(db, issue)
                 synced += 1
             await db.commit()
-        logger.info("Historical incident sync completed for %s (%d of %d issues)", service_name, synced, len(issues))
-    except Exception:
-        logger.exception("Historical incident sync failed for %s", service_name)
+            logger.info("Historical incident sync completed for %s (%d of %d issues)", service_name, synced, len(issues))
+        except Exception:
+            await db.rollback()
+            logger.exception("Historical incident sync failed for %s", service_name)
 
 
 # Tracks a pending delayed poll so it can be cancelled and restarted when
 # another service is enabled before the timer fires (debounce behaviour).
 _pending_poll_task: asyncio.Task | None = None
+_poll_task_lock = asyncio.Lock()
 
 
 async def _delayed_poll(delay: float = 8.0) -> None:
@@ -154,12 +157,13 @@ async def _delayed_poll(delay: float = 8.0) -> None:
         logger.exception("Delayed poll failed")
 
 
-def _schedule_delayed_poll(delay: float = 8.0) -> None:
+async def _schedule_delayed_poll(delay: float = 8.0) -> None:
     """Cancel any pending delayed poll and start a fresh one."""
     global _pending_poll_task
-    if _pending_poll_task and not _pending_poll_task.done():
-        _pending_poll_task.cancel()
-    _pending_poll_task = asyncio.create_task(_delayed_poll(delay))
+    async with _poll_task_lock:
+        if _pending_poll_task and not _pending_poll_task.done():
+            _pending_poll_task.cancel()
+        _pending_poll_task = asyncio.create_task(_delayed_poll(delay))
 
 
 @router.get("/")
@@ -740,7 +744,7 @@ async def toggle_service(
 
     if new_state:
         asyncio.create_task(_backfill_service(service_name))
-        _schedule_delayed_poll(delay=8.0)  # debounced: cancels any pending poll first
+        await _schedule_delayed_poll(delay=8.0)  # debounced: cancels any pending poll first
 
     return RedirectResponse(url="/admin/settings", status_code=303)
 
