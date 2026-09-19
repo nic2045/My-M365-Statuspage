@@ -72,6 +72,9 @@ async def init_db() -> None:
             "ALTER TABLE incidents ADD COLUMN postmortem_action_items TEXT",
             "ALTER TABLE incidents ADD COLUMN postmortem_timeline TEXT",
             "ALTER TABLE incidents ADD COLUMN postmortem_published_at DATETIME",
+            "ALTER TABLE monitored_services ADD COLUMN sla_target_percentage FLOAT NOT NULL DEFAULT 99.9",
+            "ALTER TABLE monitored_services ADD COLUMN sla_exclude_maintenance BOOLEAN NOT NULL DEFAULT 1",
+            "ALTER TABLE monitored_services ADD COLUMN sla_exclude_advisory BOOLEAN NOT NULL DEFAULT 1",
             # subscribers table is created by metadata.create_all above;
             # these stmts only fire if it already existed without the column
         ]:

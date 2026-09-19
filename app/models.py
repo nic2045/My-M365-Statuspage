@@ -5,6 +5,7 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -156,6 +157,9 @@ class MonitoredService(Base):
     )
     group_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0", default=0)
+    sla_target_percentage: Mapped[float] = mapped_column(Float, nullable=False, default=99.9)
+    sla_exclude_maintenance: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    sla_exclude_advisory: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -42,6 +42,7 @@ from app.crud import (
     get_enabled_services_with_status,
     get_incident_by_id,
     get_known_groups,
+    get_sla_for_month,
     move_service,
     publish_incident_update,
     search_global,
@@ -55,6 +56,7 @@ from app.crud import (
 from app.crud import delete_incident as crud_delete_incident
 from app.database import AsyncSessionLocal
 from app.dependencies import admin_nav_context, get_db
+from app.event_bus import StatusEvent, get_event_bus
 from app.flash import flash
 from app.graph_client import (
     fetch_active_issues,
@@ -733,6 +735,19 @@ async def create_incident(
     )
     await db.commit()
 
+    # Publish SSE event
+    event_bus = get_event_bus()
+    await event_bus.publish(
+        StatusEvent(
+            event_type="incident.created",
+            service_name=service_name,
+            incident_id=incident.id,
+            title=title,
+            status="active",
+            timestamp=datetime.utcnow(),
+        )
+    )
+
     # Send notifications for new incidents (not advisories / maintenance)
     if classification == "incident":
         asyncio.create_task(
@@ -846,6 +861,28 @@ async def update_incident(
         await add_state_change_entry(db, incident_id, effective_new, author=_user_email(user))
 
     await db.commit()
+
+    # Publish SSE event for status change
+    event_bus = get_event_bus()
+    if old_resolved != new_resolved and new_resolved:
+        event_type = "incident.resolved"
+    elif old_status != status or old_resolved != new_resolved:
+        event_type = "incident.updated"
+    else:
+        event_type = None
+
+    if event_type and old:
+        await event_bus.publish(
+            StatusEvent(
+                event_type=event_type,
+                service_name=old.service_name,
+                incident_id=incident_id,
+                title=title,
+                status=effective_new,
+                timestamp=datetime.utcnow(),
+            )
+        )
+
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
 
@@ -1223,6 +1260,62 @@ async def debug_fetch(
             "resolved_issues": resolved_issues,
             "errors": errors,
             "page_title": "Debug – Graph API",
+            **nav,
+        },
+    )
+
+
+# ── SLA / Service Level Agreements ─────────────────────────────────────────
+
+@router.get("/sla")
+async def admin_sla(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+    nav: dict = Depends(admin_nav_context),
+):
+    """Display SLA statistics (last 12 months per service)."""
+    all_services = await get_all_monitored_services(db)
+
+    today = date.today()
+    sla_data = []
+
+    for service in all_services:
+        months_data = []
+        for i in range(11, -1, -1):
+            # Calculate year and month i months ago
+            m = today.month - i
+            y = today.year
+            if m <= 0:
+                y -= 1
+                m += 12
+
+            sla = await get_sla_for_month(db, service.service_name, y, m)
+            months_data.append({
+                "year": y,
+                "month": m,
+                "actual": sla["actual_percent"],
+                "target": sla["target_percent"],
+                "is_breach": sla["is_breach"],
+            })
+
+        # Calculate 12-month average
+        avg = sum(m["actual"] for m in months_data) / len(months_data) if months_data else 0
+        sla_data.append({
+            "service_name": service.service_name,
+            "target": service.sla_target_percentage,
+            "months": months_data,
+            "avg_12m": round(avg, 2),
+            "months_met": sum(1 for m in months_data if not m["is_breach"]),
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "admin/sla.html",
+        {
+            "user": user,
+            "sla_data": sla_data,
+            "page_title": "SLA-Statistik",
             **nav,
         },
     )

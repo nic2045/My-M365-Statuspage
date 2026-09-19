@@ -13,6 +13,7 @@
                   or (key == 'maintenances' and (_path == '/admin/maintenances' or _path.startswith('/admin/maintenance')))
                   or (key == 'settings'     and _path == '/admin/settings')
                   or (key == 'debug'        and _path.startswith('/admin/debug'))
+                  or (key == 'sla'          and _path == '/admin/sla')
                   or (key == 'own'          and _path.startswith('/admin/incidents') and _query == 'manual')
                   or (key == 'new_incident' and _path == '/admin/incidents/new')
                   or (key == 'services'     and _path == '/admin/settings') %}
@@ -33,6 +34,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
         {% elif key == 'debug' %}
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+        {% elif key == 'sla' %}
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 12.75h2.25c.621 0 1.125.504 1.125 1.125v6.75c0 .621-.504 1.125-1.125 1.125h-2.25A1.125 1.125 0 019.75 19.875v-6.75zm6-2.25h2.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V11.625c0-.621.504-1.125 1.125-1.125z"/>
         {% elif key == 'own' %}
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
         {% elif key == 'new_incident' %}
@@ -109,6 +112,7 @@
           <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 pb-1">
             {{ L["admin.nav.system_section"] }}
           </p>
+          {{ nav_link('/admin/sla', L['admin.nav.sla'], 'sla') }}
           {{ nav_link('/admin/settings', L['admin.nav.settings'], 'settings') }}
           {{ nav_link('/admin/debug', L['admin.nav.debug'], 'debug') }}
         </div>
