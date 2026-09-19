@@ -1621,7 +1621,6 @@ async def sensors_dashboard(
 
 @router.post("/api/sensors/poll-certificates")
 async def manual_poll_certificates(
-    request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
@@ -1629,7 +1628,6 @@ async def manual_poll_certificates(
     try:
         from app.scheduler import poll_certificates  # noqa: PLC0415
         await poll_certificates()
-        flash(request, "Zertifikat-Check gestartet.")
         return JSONResponse({"ok": True})
     except Exception as exc:
         logger.exception("Manual certificate poll failed")
@@ -1638,7 +1636,6 @@ async def manual_poll_certificates(
 
 @router.post("/api/sensors/poll-http")
 async def manual_poll_http(
-    request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
@@ -1646,7 +1643,6 @@ async def manual_poll_http(
     try:
         from app.scheduler import poll_http_checks  # noqa: PLC0415
         await poll_http_checks()
-        flash(request, "HTTP-Check gestartet.")
         return JSONResponse({"ok": True})
     except Exception as exc:
         logger.exception("Manual HTTP checks poll failed")
