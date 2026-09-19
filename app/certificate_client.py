@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import socket
 import ssl
 from datetime import UTC, datetime
 from urllib.parse import urlparse
@@ -38,15 +39,14 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
 
     loop = asyncio.get_event_loop()
     try:
-        context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-
         def _get_cert() -> dict[str, object]:
-            with ssl.create_connection((hostname, 443), timeout=5) as conn:
-                sock = context.wrap_socket(conn, server_hostname=hostname)
-                cert = sock.getpeercert()
-                sock.close()
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+            with socket.create_connection((hostname, 443), timeout=10) as sock:
+                with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+                    cert = ssock.getpeercert()
             return cert
 
         cert = await loop.run_in_executor(None, _get_cert)
