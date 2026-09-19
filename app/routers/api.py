@@ -40,7 +40,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)):
         logger.error(f"Database health check failed: {e}")
         return JSONResponse(
             status_code=503,
-            content={"status": "unavailable", **checks},
+            content={"status": "unavailable", "database": False, "timestamp": datetime.utcnow().isoformat()},
         )
 
     return {"status": "ready", **checks}
@@ -67,7 +67,7 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
         }
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
-        checks["database"] = {"status": "down", "error": str(e)}
+        checks["database"] = {"status": "down"}
 
     # Check Graph API (non-critical for readiness, but useful for monitoring)
     try:
@@ -84,7 +84,7 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
             }
     except Exception as e:
         logger.warning(f"Graph API health check failed: {e}")
-        checks["graph_api"] = {"status": "down", "error": str(e)}
+        checks["graph_api"] = {"status": "down"}
 
     # Overall status: critical if database is down, otherwise healthy
     overall_status = (
