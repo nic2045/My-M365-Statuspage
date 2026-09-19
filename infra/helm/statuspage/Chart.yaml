@@ -1,0 +1,17 @@
+apiVersion: v2
+name: statuspage
+description: M365 Status Dashboard Helm Chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/nic2045/My-M365-Statuspage
+source:
+  - https://github.com/nic2045/My-M365-Statuspage
+maintainers:
+  - name: Nico
+    email: nico_a@online.de
+keywords:
+  - statuspage
+  - m365
+  - dashboard
+  - monitoring
