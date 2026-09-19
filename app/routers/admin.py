@@ -37,9 +37,11 @@ from app.crud import (
     get_all_severity_levels,
     get_all_source_labels,
     get_all_subscribers,
+    get_certificate_dashboard_data,
     get_distinct_sources,
     get_enabled_services,
     get_enabled_services_with_status,
+    get_http_dashboard_data,
     get_incident_by_id,
     get_known_groups,
     get_sla_for_month,
@@ -1399,3 +1401,111 @@ async def delete_certificate(
         logger.exception("Failed to delete certificate service")
 
     return RedirectResponse(url="/admin/certificates", status_code=303)
+
+
+@router.get("/http-checks")
+async def list_http_checks(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+    nav: dict = Depends(admin_nav_context),
+):
+    """List all HTTP health-check services."""
+    result = await db.execute(
+        sa_select(MonitoredService).where(MonitoredService.service_type == "http")
+    )
+    checks = result.scalars().all()
+
+    return templates.TemplateResponse(
+        request,
+        "admin/http_checks.html",
+        {
+            "user": user,
+            "checks": checks,
+            "page_title": "HTTP-Checks",
+            **nav,
+        },
+    )
+
+
+@router.post("/http-checks/create")
+async def create_http_check(
+    service_name: str = Form(...),
+    http_url: str = Form(...),
+    http_expected_status: int = Form(200),
+    check_interval_seconds: int | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Create a new HTTP health-check service."""
+    try:
+        existing = await db.execute(
+            sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+        )
+        if existing.scalar_one_or_none() is not None:
+            raise ValueError(f"Service '{service_name}' already exists")
+
+        svc = MonitoredService(
+            service_name=service_name,
+            service_type="http",
+            http_url=http_url,
+            http_expected_status=http_expected_status,
+            check_interval_seconds=check_interval_seconds,
+            is_enabled=True,
+            group_name="HTTP Checks",
+        )
+        db.add(svc)
+        await db.commit()
+        logger.info(f"Created HTTP check service: {service_name} ({http_url})")
+    except Exception:
+        await db.rollback()
+        logger.exception("Failed to create HTTP check service")
+
+    return RedirectResponse(url="/admin/http-checks", status_code=303)
+
+
+@router.post("/http-checks/{service_name}/delete")
+async def delete_http_check(
+    service_name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Delete an HTTP health-check service."""
+    try:
+        result = await db.execute(
+            sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+        )
+        svc = result.scalar_one_or_none()
+        if svc and svc.service_type == "http":
+            await db.delete(svc)
+            await db.commit()
+            logger.info(f"Deleted HTTP check service: {service_name}")
+    except Exception:
+        await db.rollback()
+        logger.exception("Failed to delete HTTP check service")
+
+    return RedirectResponse(url="/admin/http-checks", status_code=303)
+
+
+@router.get("/monitoring")
+async def monitoring_dashboard(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+    nav: dict = Depends(admin_nav_context),
+):
+    """Combined live dashboard for certificate + HTTP-check monitoring."""
+    certificates = await get_certificate_dashboard_data(db)
+    http_checks = await get_http_dashboard_data(db)
+
+    return templates.TemplateResponse(
+        request,
+        "admin/monitoring.html",
+        {
+            "user": user,
+            "certificates": certificates,
+            "http_checks": http_checks,
+            "page_title": "Monitoring",
+            **nav,
+        },
+    )
