@@ -1,10 +1,12 @@
 import asyncio
+import csv
 import logging
 from datetime import date, datetime
+from io import StringIO
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1320,6 +1322,47 @@ async def admin_sla(
             "page_title": "SLA-Statistik",
             **nav,
         },
+    )
+
+
+@router.get("/sla/export")
+async def export_sla_csv(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Export 12-month SLA statistics as CSV."""
+    all_services = await get_all_monitored_services(db)
+    today = date.today()
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Service", "Month", "Availability %", "Target %", "Met", "Downtime (minutes)"])
+
+    for service in all_services:
+        for i in range(11, -1, -1):
+            m = today.month - i
+            y = today.year
+            if m <= 0:
+                y -= 1
+                m += 12
+
+            sla = await get_sla_for_month(db, service.service_name, y, m)
+            month_name = date(y, m, 1).strftime("%B %Y")
+            met = "Yes" if not sla["is_breach"] else "No"
+            writer.writerow([
+                service.service_name,
+                month_name,
+                f"{sla['actual_percent']:.1f}",
+                f"{sla['target_percent']:.1f}",
+                met,
+                f"{sla['downtime_minutes']:.1f}",
+            ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=sla_export.csv"},
     )
 
 

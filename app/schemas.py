@@ -40,6 +40,7 @@ class ServiceStatusSchema(BaseModel):
     active_incidents: list[IncidentSchema] = []
     uptime_percentage: float | None = None
     group_name: str | None = None
+    sla_current_month: dict | None = None
 
 
 class StatusPageSchema(BaseModel):

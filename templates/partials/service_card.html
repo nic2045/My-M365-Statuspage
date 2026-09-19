@@ -24,15 +24,22 @@
       </div>
     </div>
 
-    {# Uptime percentage #}
+    {# Uptime percentage + SLA badge #}
     <div class="mb-3">
       <div class="flex items-baseline justify-between gap-2 mb-1">
         <span class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ L["page.uptime_short"] }}</span>
-        {% if service.uptime_percentage is not none %}
-        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ "%.1f"|format(service.uptime_percentage) }}%</span>
-        {% else %}
-        <span class="text-sm text-gray-400 dark:text-gray-500">—</span>
-        {% endif %}
+        <div class="flex items-center gap-2">
+          {% if service.uptime_percentage is not none %}
+          <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ "%.1f"|format(service.uptime_percentage) }}%</span>
+          {% else %}
+          <span class="text-sm text-gray-400 dark:text-gray-500">—</span>
+          {% endif %}
+          {% if service.sla_current_month %}
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium {% if service.sla_current_month.is_breach %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300{% else %}bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300{% endif %}">
+            {{ service.sla_current_month.actual_percent }}% SLA
+          </span>
+          {% endif %}
+        </div>
       </div>
       {# Mini uptime bar (last 30 days) #}
       <div class="flex gap-px w-full" aria-label="30-Tage Verfügbarkeit">

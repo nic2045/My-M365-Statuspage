@@ -793,11 +793,12 @@ async def build_status_page_data(
             MonitoredService.service_name,
             MonitoredService.show_uptime_percentage,
             MonitoredService.group_name,
+            MonitoredService.show_sla_on_status_page,
         )
         .where(MonitoredService.service_name.in_(service_names))
     )
     svc_meta = {
-        row[0]: {"show_uptime": row[1], "group": row[2]}
+        row[0]: {"show_uptime": row[1], "group": row[2], "show_sla": row[3]}
         for row in svc_meta_result.fetchall()
     }
 
@@ -809,6 +810,11 @@ async def build_status_page_data(
         uptime_pct = (
             await get_uptime_percentage(db, name, days=days) if meta.get("show_uptime", True) else None
         )
+
+        sla_data = None
+        if meta.get("show_sla"):
+            today = date.today()
+            sla_data = await get_sla_for_month(db, name, today.year, today.month)
 
         incident_schemas = [
             IncidentSchema(
@@ -847,6 +853,7 @@ async def build_status_page_data(
                 active_incidents=incident_schemas,
                 uptime_percentage=uptime_pct,
                 group_name=meta.get("group"),
+                sla_current_month=sla_data,
             )
         )
 

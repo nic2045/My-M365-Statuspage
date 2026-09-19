@@ -75,6 +75,7 @@ async def init_db() -> None:
             "ALTER TABLE monitored_services ADD COLUMN sla_target_percentage FLOAT NOT NULL DEFAULT 99.9",
             "ALTER TABLE monitored_services ADD COLUMN sla_exclude_maintenance BOOLEAN NOT NULL DEFAULT 1",
             "ALTER TABLE monitored_services ADD COLUMN sla_exclude_advisory BOOLEAN NOT NULL DEFAULT 1",
+            "ALTER TABLE monitored_services ADD COLUMN show_sla_on_status_page BOOLEAN NOT NULL DEFAULT 0",
             "ALTER TABLE monitored_services ADD COLUMN service_type VARCHAR(32) NOT NULL DEFAULT 'm365'",
             "ALTER TABLE monitored_services ADD COLUMN cert_hostname VARCHAR(256)",
             "ALTER TABLE monitored_services ADD COLUMN check_interval_seconds INTEGER",
