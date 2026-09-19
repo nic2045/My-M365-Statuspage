@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -42,6 +42,7 @@ from app.crud import (
     get_enabled_services_with_status,
     get_incident_by_id,
     get_known_groups,
+    get_sla_for_month,
     move_service,
     publish_incident_update,
     search_global,
@@ -1259,6 +1260,62 @@ async def debug_fetch(
             "resolved_issues": resolved_issues,
             "errors": errors,
             "page_title": "Debug – Graph API",
+            **nav,
+        },
+    )
+
+
+# ── SLA / Service Level Agreements ─────────────────────────────────────────
+
+@router.get("/sla")
+async def admin_sla(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+    nav: dict = Depends(admin_nav_context),
+):
+    """Display SLA statistics (last 12 months per service)."""
+    all_services = await get_all_monitored_services(db)
+
+    today = date.today()
+    sla_data = []
+
+    for service in all_services:
+        months_data = []
+        for i in range(11, -1, -1):
+            # Calculate year and month i months ago
+            m = today.month - i
+            y = today.year
+            if m <= 0:
+                y -= 1
+                m += 12
+
+            sla = await get_sla_for_month(db, service.service_name, y, m)
+            months_data.append({
+                "year": y,
+                "month": m,
+                "actual": sla["actual_percent"],
+                "target": sla["target_percent"],
+                "is_breach": sla["is_breach"],
+            })
+
+        # Calculate 12-month average
+        avg = sum(m["actual"] for m in months_data) / len(months_data) if months_data else 0
+        sla_data.append({
+            "service_name": service.service_name,
+            "target": service.sla_target_percentage,
+            "months": months_data,
+            "avg_12m": round(avg, 2),
+            "months_met": sum(1 for m in months_data if not m["is_breach"]),
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "admin/sla.html",
+        {
+            "user": user,
+            "sla_data": sla_data,
+            "page_title": "SLA-Statistik",
             **nav,
         },
     )
