@@ -1,4 +1,5 @@
 import uuid
+from calendar import monthrange
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -1068,3 +1069,108 @@ async def search_global(db: AsyncSession, q: str) -> dict:
             remaining -= len(items)
 
     return {"groups": capped}
+
+
+async def get_sla_for_month(
+    db: AsyncSession,
+    service_name: str,
+    year: int,
+    month: int,
+) -> dict[str, Any]:
+    """Calculate SLA availability for a service in a given month.
+
+    Severity weighting:
+      - interrupted/critical: 100% downtime contribution
+      - degraded: 50% downtime contribution
+
+    Returns:
+        {
+            "actual_percent": 99.95,
+            "target_percent": 99.9,
+            "is_breach": False,
+            "downtime_minutes": 21.6,
+            "excluded_minutes": 0.0,
+        }
+    """
+    svc_result = await db.execute(
+        select(MonitoredService).where(MonitoredService.service_name == service_name)
+    )
+    service = svc_result.scalar_one_or_none()
+    if not service:
+        return {
+            "actual_percent": 0.0,
+            "target_percent": 99.9,
+            "is_breach": True,
+            "downtime_minutes": 0.0,
+            "excluded_minutes": 0.0,
+        }
+
+    # Month boundaries
+    days_in_month = monthrange(year, month)[1]
+    start_date = date(year, month, 1)
+    end_date = date(year, month, days_in_month)
+
+    # Total minutes in month
+    total_minutes = days_in_month * 24 * 60
+
+    # Get all incidents
+    incidents_result = await db.execute(
+        select(Incident).where(
+            Incident.service_name == service_name,
+            Incident.is_suppressed.is_(False),
+            Incident.start_datetime.is_not(None),
+        )
+    )
+    incidents = list(incidents_result.scalars().all())
+
+    downtime_minutes = 0.0
+    excluded_minutes = 0.0
+
+    for inc in incidents:
+        # Skip if entirely outside month
+        if inc.end_datetime and inc.end_datetime.date() < start_date:
+            continue
+        if inc.start_datetime.date() > end_date:
+            continue
+
+        # Check if should be excluded
+        exclude = False
+        if service.sla_exclude_maintenance and inc.classification == "maintenance":
+            exclude = True
+        if service.sla_exclude_advisory and inc.classification == "advisory":
+            exclude = True
+
+        # Clamp incident dates to month
+        inc_start = max(inc.start_datetime.date(), start_date)
+        inc_end_date = inc.end_datetime.date() if inc.end_datetime else end_date
+        inc_end = min(inc_end_date, end_date)
+
+        # Calculate minutes for this incident
+        days = (inc_end - inc_start).days + 1
+        minutes = days * 24 * 60
+
+        if exclude:
+            excluded_minutes += minutes
+        else:
+            # Apply severity weighting
+            if inc.severity in ("critical",) or inc.status == "interrupted":
+                weighted_minutes = minutes
+            elif inc.status == "degraded":
+                weighted_minutes = minutes * 0.5
+            else:
+                weighted_minutes = minutes
+
+            downtime_minutes += weighted_minutes
+
+    # Calculate actual percentage
+    actual_minutes = max(0, total_minutes - downtime_minutes)
+    actual_percent = (actual_minutes / total_minutes * 100) if total_minutes > 0 else 100
+    is_breach = actual_percent < service.sla_target_percentage
+
+    return {
+        "actual_percent": round(actual_percent, 2),
+        "target_percent": service.sla_target_percentage,
+        "is_breach": is_breach,
+        "downtime_minutes": round(downtime_minutes, 1),
+        "excluded_minutes": round(excluded_minutes, 1),
+    }
