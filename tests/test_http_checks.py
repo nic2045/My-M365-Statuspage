@@ -108,8 +108,8 @@ class TestHttpCheckAdminRoutes:
         with TestClient(app, follow_redirects=False) as client:
             client.post(
                 "/admin/certificates/create",
-                data={"service_name": "example.com", "cert_hostname": "example.com"},
+                data={"service_name": "Test Cert Service", "cert_hostname": "example.com"},
             )
             dashboard = client.get("/admin/monitoring")
             assert dashboard.status_code == 200
-            assert "example.com" in dashboard.text
+            assert "Test Cert Service" in dashboard.text
