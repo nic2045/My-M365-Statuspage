@@ -188,9 +188,9 @@ async def sync_issue_as_incident(db, issue: dict) -> "_NotifyEvent | None":
     incident = await upsert_incident(db, graph_issue_id=issue["id"], **fields)
 
     is_new = existing_incident is None
-    status_changed = old_status is not None and old_status != new_status
-    # For new incidents that are already resolved, record the resolution
-    should_record_state = status_changed or (is_new and new_status == "resolved")
+    # Record state changes: for existing incidents when status changes,
+    # for new incidents only if already resolved (historical incidents)
+    should_record_state = (old_status != new_status) if not is_new else (new_status == "resolved")
     if should_record_state:
         await add_state_change_entry(db, incident.id, new_status)
 
