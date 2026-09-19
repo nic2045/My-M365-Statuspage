@@ -400,7 +400,7 @@ async def poll_certificates() -> None:
         try:
             result = await db.execute(
                 sa_select(MonitoredService).where(
-                    (MonitoredService.service_type == "certificate")
+                    MonitoredService.cert_hostname.is_not(None)
                     & MonitoredService.is_enabled
                 )
             )
