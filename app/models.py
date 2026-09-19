@@ -160,6 +160,7 @@ class MonitoredService(Base):
     sla_target_percentage: Mapped[float] = mapped_column(Float, nullable=False, default=99.9)
     sla_exclude_maintenance: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     sla_exclude_advisory: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    show_sla_on_status_page: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
