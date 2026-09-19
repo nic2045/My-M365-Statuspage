@@ -1378,122 +1378,50 @@ async def export_sla_csv(
     )
 
 
-@router.get("/certificates")
-async def list_certificates(
+@router.get("/checks")
+async def list_checks(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
-    """List all certificate monitoring services."""
+    """List all HTTP- and/or certificate-monitored services (either or both per service)."""
     result = await db.execute(
-        sa_select(MonitoredService).where(MonitoredService.service_type == "certificate")
-    )
-    certs = result.scalars().all()
-
-    return templates.TemplateResponse(
-        request,
-        "admin/certificates.html",
-        {
-            "user": user,
-            "certificates": certs,
-            "page_title": "Zertifikats-Monitoring",
-            **nav,
-        },
-    )
-
-
-@router.post("/certificates/create")
-async def create_certificate(
-    service_name: str = Form(...),
-    cert_hostname: str = Form(...),
-    db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_admin),
-):
-    """Create a new certificate monitoring service."""
-    try:
-        existing = await db.execute(
-            sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+        sa_select(MonitoredService).where(
+            MonitoredService.cert_hostname.is_not(None) | MonitoredService.http_url.is_not(None)
         )
-        if existing.scalar_one_or_none() is not None:
-            raise ValueError(f"Service '{service_name}' already exists")
-
-        svc = MonitoredService(
-            service_name=service_name,
-            service_type="certificate",
-            cert_hostname=cert_hostname,
-            is_enabled=True,
-            group_name="Certificates",
-        )
-        db.add(svc)
-        await db.commit()
-        logger.info(f"Created certificate service: {service_name} ({cert_hostname})")
-    except Exception:
-        await db.rollback()
-        logger.exception("Failed to create certificate service")
-
-    return RedirectResponse(url="/admin/certificates", status_code=303)
-
-
-@router.post("/certificates/{service_name}/delete")
-async def delete_certificate(
-    service_name: str,
-    db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_admin),
-):
-    """Delete a certificate monitoring service."""
-    try:
-        result = await db.execute(
-            sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
-        )
-        svc = result.scalar_one_or_none()
-        if svc and svc.service_type == "certificate":
-            await db.delete(svc)
-            await db.commit()
-            logger.info(f"Deleted certificate service: {service_name}")
-    except Exception:
-        await db.rollback()
-        logger.exception("Failed to delete certificate service")
-
-    return RedirectResponse(url="/admin/certificates", status_code=303)
-
-
-@router.get("/http-checks")
-async def list_http_checks(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_admin),
-    nav: dict = Depends(admin_nav_context),
-):
-    """List all HTTP health-check services."""
-    result = await db.execute(
-        sa_select(MonitoredService).where(MonitoredService.service_type == "http")
     )
     checks = result.scalars().all()
 
     return templates.TemplateResponse(
         request,
-        "admin/http_checks.html",
+        "admin/checks.html",
         {
             "user": user,
             "checks": checks,
-            "page_title": "HTTP-Checks",
+            "page_title": "Checks",
             **nav,
         },
     )
 
 
-@router.post("/http-checks/create")
-async def create_http_check(
+@router.post("/checks/create")
+async def create_check(
     service_name: str = Form(...),
-    http_url: str = Form(...),
+    enable_http: bool = Form(False),
+    http_url: str | None = Form(None),
     http_expected_status: int = Form(200),
     check_interval_seconds: int | None = Form(None),
+    enable_cert: bool = Form(False),
+    cert_hostname: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
-    """Create a new HTTP health-check service."""
+    """Create a new check - HTTP, certificate, or both on the same service."""
     try:
+        if not enable_http and not enable_cert:
+            raise ValueError("At least one of HTTP or certificate must be selected")
+
         existing = await db.execute(
             sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
         )
@@ -1502,44 +1430,45 @@ async def create_http_check(
 
         svc = MonitoredService(
             service_name=service_name,
-            service_type="http",
-            http_url=http_url,
-            http_expected_status=http_expected_status,
-            check_interval_seconds=check_interval_seconds,
+            service_type="check",
+            http_url=http_url if enable_http else None,
+            http_expected_status=http_expected_status if enable_http else None,
+            check_interval_seconds=check_interval_seconds if enable_http else None,
+            cert_hostname=cert_hostname if enable_cert else None,
             is_enabled=True,
-            group_name="HTTP Checks",
+            group_name="Checks",
         )
         db.add(svc)
         await db.commit()
-        logger.info(f"Created HTTP check service: {service_name} ({http_url})")
+        logger.info(f"Created check: {service_name} (http={enable_http}, cert={enable_cert})")
     except Exception:
         await db.rollback()
-        logger.exception("Failed to create HTTP check service")
+        logger.exception("Failed to create check")
 
-    return RedirectResponse(url="/admin/http-checks", status_code=303)
+    return RedirectResponse(url="/admin/checks", status_code=303)
 
 
-@router.post("/http-checks/{service_name}/delete")
-async def delete_http_check(
+@router.post("/checks/{service_name}/delete")
+async def delete_check(
     service_name: str,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
-    """Delete an HTTP health-check service."""
+    """Delete a check (HTTP, certificate, or both)."""
     try:
         result = await db.execute(
             sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
         )
         svc = result.scalar_one_or_none()
-        if svc and svc.service_type == "http":
+        if svc and (svc.cert_hostname or svc.http_url):
             await db.delete(svc)
             await db.commit()
-            logger.info(f"Deleted HTTP check service: {service_name}")
+            logger.info(f"Deleted check: {service_name}")
     except Exception:
         await db.rollback()
-        logger.exception("Failed to delete HTTP check service")
+        logger.exception("Failed to delete check")
 
-    return RedirectResponse(url="/admin/http-checks", status_code=303)
+    return RedirectResponse(url="/admin/checks", status_code=303)
 
 
 @router.get("/monitoring")
