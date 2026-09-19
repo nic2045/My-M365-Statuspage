@@ -1,5 +1,5 @@
 {# Renders one incident card with update timeline. Expects `incident` in scope. #}
-{% from "partials/_icons.html" import type_icon, phase_icon %}
+{% from "partials/_icons.html" import type_icon, phase_icon, severity_badge %}
 {# Only ever show published updates here - Graph-synced posts start as
    drafts until an operator publishes them in the admin incident view. #}
 {% set _published_updates = incident.updates | selectattr("is_published") | list %}
@@ -58,7 +58,10 @@
         </div>
         {% endif %}
       </div>
-      <div class="shrink-0 flex items-center">
+      <div class="shrink-0 flex items-center gap-2">
+        {% if incident.severity %}
+          {{ severity_badge(incident.severity) }}
+        {% endif %}
         {{ type_icon(incident.classification, size='w-5 h-5') }}
       </div>
     </div>

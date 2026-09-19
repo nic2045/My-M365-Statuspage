@@ -40,3 +40,11 @@
   <path stroke-linecap="round" stroke-linejoin="round" d="{{ _i.d }}"/>
 </svg>
 {%- endmacro %}
+
+{% macro severity_badge(severity) -%}
+{%- if severity %}
+<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md {{ severity_badge_class(severity) }}" title="{{ severity_label(severity) }}">
+  {{ severity_label(severity) }}
+</span>
+{%- endif %}
+{%- endmacro %}
