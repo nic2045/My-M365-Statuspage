@@ -1,0 +1,121 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_content %}
+<div class="space-y-8">
+  <div>
+    <h1 class="text-3xl font-bold">Sensors</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Live-Status für Zertifikats- und HTTP-Sensoren.</p>
+  </div>
+
+  {# ── Certificates ─────────────────────────────────────────────── #}
+  <section class="space-y-3">
+    <h2 class="text-lg font-semibold flex items-center gap-2">
+      <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      Zertifikate
+    </h2>
+    {% if certificates %}
+      <div class="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+              <th class="px-6 py-3 text-left font-semibold">Service</th>
+              <th class="px-6 py-3 text-center font-semibold">Status</th>
+              <th class="px-6 py-3 text-left font-semibold">Ablaufdatum</th>
+              <th class="px-6 py-3 text-right font-semibold">Verbleibend</th>
+              <th class="px-6 py-3 text-left font-semibold">Aussteller</th>
+              <th class="px-6 py-3 text-left font-semibold">Letzter Check</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in certificates %}
+              <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td class="px-6 py-3 font-medium">
+                  {{ row.service.service_name }}
+                  <div class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{{ row.service.cert_hostname }}</div>
+                </td>
+                <td class="px-6 py-3 text-center">
+                  <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold
+                    {% if row.status == 'ok' %}bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-400
+                    {% elif row.status == 'expired' %}bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-400
+                    {% else %}bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400{% endif %}">
+                    {% if row.status == 'ok' %}OK{% elif row.status == 'expired' %}Abgelaufen{% else %}Warnung{% endif %}
+                  </span>
+                </td>
+                <td class="px-6 py-3 text-left">
+                  {% if row.expires_at %}{{ row.expires_at.strftime("%Y-%m-%d") }}{% else %}—{% endif %}
+                </td>
+                <td class="px-6 py-3 text-right tabular-nums">
+                  {% if row.days_remaining is not none %}
+                    <span class="{% if row.days_remaining < 0 %}text-red-600 dark:text-red-400 font-semibold{% elif row.days_remaining < 7 %}text-red-600 dark:text-red-400 font-semibold{% elif row.days_remaining < 30 %}text-amber-600 dark:text-amber-400{% else %}text-green-600 dark:text-green-400{% endif %}">
+                      {{ row.days_remaining }} d
+                    </span>
+                  {% else %}—{% endif %}
+                </td>
+                <td class="px-6 py-3 text-left text-xs text-gray-600 dark:text-gray-300">{{ row.issuer or '—' }}</td>
+                <td class="px-6 py-3 text-gray-500 dark:text-gray-400 text-xs">{{ row.checked_at.strftime("%Y-%m-%d %H:%M") if row.checked_at else "—" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="rounded-lg bg-gray-50 dark:bg-gray-900 p-6 text-center text-gray-600 dark:text-gray-400">
+        Keine Zertifikate konfiguriert. <a href="/admin/checks" class="text-blue-600 hover:underline">Jetzt hinzufügen</a>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── HTTP checks ──────────────────────────────────────────────── #}
+  <section class="space-y-3">
+    <h2 class="text-lg font-semibold flex items-center gap-2">
+      <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9.75h4.875a2.625 2.625 0 010 5.25H12M8.25 9.75L10.5 7.5M8.25 9.75L10.5 12M4.5 3.75h15v16.5h-15z"/>
+      </svg>
+      HTTP-Checks
+    </h2>
+    {% if http_checks %}
+      <div class="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+              <th class="px-6 py-3 text-left font-semibold">Service</th>
+              <th class="px-6 py-3 text-center font-semibold">Status</th>
+              <th class="px-6 py-3 text-right font-semibold">Latenz</th>
+              <th class="px-6 py-3 text-right font-semibold">Uptime ({{ 30 }}d)</th>
+              <th class="px-6 py-3 text-left font-semibold">Letzter Check</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in http_checks %}
+              <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td class="px-6 py-3 font-medium">
+                  {{ row.service.service_name }}
+                  <div class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{{ row.service.http_url }}</div>
+                </td>
+                <td class="px-6 py-3 text-center">
+                  {% if row.is_up is none %}
+                    <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 text-xs font-semibold">Noch kein Check</span>
+                  {% elif row.is_up %}
+                    <span class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-400 px-3 py-1 text-xs font-semibold">✓ Up ({{ row.status_code }})</span>
+                  {% else %}
+                    <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-400 px-3 py-1 text-xs font-semibold">✗ Down{% if row.error_message %} — {{ row.error_message }}{% endif %}</span>
+                  {% endif %}
+                </td>
+                <td class="px-6 py-3 text-right tabular-nums">{% if row.response_time_ms is not none %}{{ row.response_time_ms }} ms{% else %}—{% endif %}</td>
+                <td class="px-6 py-3 text-right tabular-nums">{% if row.uptime_percent is not none %}{{ row.uptime_percent }}%{% else %}—{% endif %}</td>
+                <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ row.checked_at.strftime("%Y-%m-%d %H:%M") if row.checked_at else "—" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="rounded-lg bg-gray-50 dark:bg-gray-900 p-6 text-center text-gray-600 dark:text-gray-400">
+        Keine HTTP-Checks konfiguriert. <a href="/admin/checks" class="text-blue-600 hover:underline">Jetzt hinzufügen</a>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
