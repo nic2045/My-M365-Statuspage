@@ -1354,8 +1354,6 @@ async def get_http_dashboard_data(db: AsyncSession, uptime_days: int = 30) -> li
 async def get_certificate_dashboard_data(db: AsyncSession) -> list[dict]:
     """Certificate services enriched with their current status, derived from
     the still-open incident poll_certificates creates for warning/expired certs."""
-    from app.models import CertificateCheckResult
-
     services_result = await db.execute(
         select(MonitoredService)
         .where(MonitoredService.cert_hostname.is_not(None))
