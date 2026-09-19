@@ -546,7 +546,7 @@ async def delete_source_label(db: AsyncSession, source: str) -> bool:
     existing = await db.get(SourceLabel, source)
     if existing and not existing.is_system:
         db.delete(existing)
-        await db.commit()
+        await db.flush()
         return True
     return False
 
@@ -609,7 +609,8 @@ async def get_enabled_services_with_status(db: AsyncSession) -> list[dict]:
     rows = result.fetchall()
     enriched: list[dict] = []
     for name, group, status in rows:
-        # Apply advisory-downgrade logic: if status is "degraded" but no active incident, show "operational"
+        # Apply advisory-downgrade logic: if status is degraded but no active
+        # incident, show operational (advisories are informational only)
         if status == "degraded":
             has_incident = await _has_active_incident(db, name)
             if not has_incident:
@@ -775,7 +776,10 @@ async def build_status_page_data(
         )
         .where(MonitoredService.service_name.in_(service_names))
     )
-    svc_meta = {row[0]: {"show_uptime": row[1], "group": row[2]} for row in svc_meta_result.fetchall()}
+    svc_meta = {
+        row[0]: {"show_uptime": row[1], "group": row[2]}
+        for row in svc_meta_result.fetchall()
+    }
 
     for name in service_names:
         current_status = await get_service_current_status(db, name)
