@@ -17,13 +17,14 @@ from app.crud import (
     upsert_service_status,
 )
 from app.database import AsyncSessionLocal
+from app.event_bus import StatusEvent, get_event_bus
 from app.graph_client import (
     fetch_active_issues,
     fetch_health_overviews,
     fetch_recently_resolved_issues,
 )
 from app.i18n import LABELS
-from app.models import GRAPH_STATUS_MAP, Incident
+from app.models import GRAPH_STATUS_MAP, Incident, ServiceStatus
 from app.notifications import dispatch_incident_notifications
 
 logger = logging.getLogger(__name__)
@@ -257,8 +258,16 @@ async def poll_graph_api() -> None:
     logger.info("Graph API poll started for services: %s", monitored)
 
     # ── Phase 1: Health overviews (committed independently) ──────────────────
+    service_status_changes: list[tuple[str, str]] = []  # (service_name, new_status)
     async with AsyncSessionLocal() as db:
         try:
+            # Query existing service statuses for today before making changes
+            existing_stmt = sa_select(ServiceStatus).where(ServiceStatus.date == today)
+            existing_result = await db.execute(existing_stmt)
+            existing_statuses: dict[str, str] = {
+                row.service_name: row.status for row in existing_result.scalars()
+            }
+
             overviews = await fetch_health_overviews()
             seen_services: set[str] = set()
 
@@ -274,10 +283,18 @@ async def poll_graph_api() -> None:
                 raw_status = svc.get("status", "unknown")
                 mapped = GRAPH_STATUS_MAP.get(raw_status, "unknown")
                 await upsert_service_status(db, name, today, mapped, raw_status)
+                # Track if status changed
+                old_status = existing_statuses.get(name)
+                if old_status is not None and old_status != mapped:
+                    service_status_changes.append((name, mapped))
 
             for name in monitored:
                 if name not in seen_services:
                     await upsert_service_status(db, name, today, "operational", "serviceOperational")
+                    # Track if status changed
+                    old_status = existing_statuses.get(name)
+                    if old_status is not None and old_status != "operational":
+                        service_status_changes.append((name, "operational"))
 
             await db.commit()
             logger.info("Health overviews committed for %d services.", len(monitored))
@@ -285,6 +302,21 @@ async def poll_graph_api() -> None:
         except Exception:
             await db.rollback()
             logger.exception("Health overview poll failed")
+            service_status_changes.clear()
+
+    # Publish service status change events after Phase 1 commit
+    event_bus = get_event_bus()
+    for service_name, new_status in service_status_changes:
+        await event_bus.publish(
+            StatusEvent(
+                event_type="service.status_changed",
+                service_name=service_name,
+                incident_id="",
+                title="",
+                status=new_status,
+                timestamp=datetime.utcnow(),
+            )
+        )
 
     # ── Phase 2: Active incidents (independent – failure here doesn't touch phase 3) ──
     notify_events: list[_NotifyEvent] = []

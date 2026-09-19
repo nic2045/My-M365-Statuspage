@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.event_bus import StatusEvent, get_event_bus
+
 from app.app_settings import (
     get_app_default_language,
     get_azure_settings,
@@ -733,6 +735,19 @@ async def create_incident(
     )
     await db.commit()
 
+    # Publish SSE event
+    event_bus = get_event_bus()
+    await event_bus.publish(
+        StatusEvent(
+            event_type="incident.created",
+            service_name=service_name,
+            incident_id=incident.id,
+            title=title,
+            status="active",
+            timestamp=datetime.utcnow(),
+        )
+    )
+
     # Send notifications for new incidents (not advisories / maintenance)
     if classification == "incident":
         asyncio.create_task(
@@ -846,6 +861,28 @@ async def update_incident(
         await add_state_change_entry(db, incident_id, effective_new, author=_user_email(user))
 
     await db.commit()
+
+    # Publish SSE event for status change
+    event_bus = get_event_bus()
+    if old_resolved != new_resolved and new_resolved:
+        event_type = "incident.resolved"
+    elif old_status != status or old_resolved != new_resolved:
+        event_type = "incident.updated"
+    else:
+        event_type = None
+
+    if event_type and old:
+        await event_bus.publish(
+            StatusEvent(
+                event_type=event_type,
+                service_name=old.service_name,
+                incident_id=incident_id,
+                title=title,
+                status=effective_new,
+                timestamp=datetime.utcnow(),
+            )
+        )
+
     return RedirectResponse(url=f"/admin/incidents/{incident_id}", status_code=303)
 
 
