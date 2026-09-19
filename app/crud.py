@@ -1376,7 +1376,7 @@ async def get_certificate_dashboard_data(db: AsyncSession) -> list[dict]:
         # Get latest certificate check result for this service
         cert_result = await db.execute(
             select(CertificateCheckResult)
-            .where(CertificateCheckResult.service_id == service.id)
+            .where(CertificateCheckResult.service_name == service.service_name)
             .order_by(CertificateCheckResult.checked_at.desc())
             .limit(1)
         )
