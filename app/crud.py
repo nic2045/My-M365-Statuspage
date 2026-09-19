@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    CertificateCheckResult,
     HttpCheckResult,
     Incident,
     IncidentUpdate,

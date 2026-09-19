@@ -1,0 +1,11 @@
+name: "CodeQL Config"
+
+paths-ignore:
+  - demo-cert-monitoring
+  - grafana-dashboards
+  - tests
+  - "**/*.md"
+
+disable-default-queries: false
+queries:
+  - uses: security-and-quality
