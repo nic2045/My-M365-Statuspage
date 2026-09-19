@@ -1071,6 +1071,83 @@ async def search_global(db: AsyncSession, q: str) -> dict:
     return {"groups": capped}
 
 
+async def get_sla_breach_reasons(
+    db: AsyncSession,
+    service_name: str,
+    year: int,
+    month: int,
+) -> list[dict[str, Any]]:
+    """Get incidents that caused SLA breach for a service in a given month.
+
+    Returns list of incidents with downtime contribution details.
+    """
+    svc_result = await db.execute(
+        select(MonitoredService).where(MonitoredService.service_name == service_name)
+    )
+    service = svc_result.scalar_one_or_none()
+    if not service:
+        return []
+
+    days_in_month = monthrange(year, month)[1]
+    start_date = date(year, month, 1)
+    end_date = date(year, month, days_in_month)
+
+    incidents_result = await db.execute(
+        select(Incident).where(
+            Incident.service_name == service_name,
+            Incident.is_suppressed.is_(False),
+            Incident.start_datetime.is_not(None),
+        )
+    )
+    incidents = list(incidents_result.scalars().all())
+
+    breach_reasons = []
+
+    for inc in incidents:
+        if inc.end_datetime and inc.end_datetime.date() < start_date:
+            continue
+        if inc.start_datetime.date() > end_date:
+            continue
+
+        exclude = False
+        if service.sla_exclude_maintenance and inc.classification == "maintenance":
+            exclude = True
+        if service.sla_exclude_advisory and inc.classification == "advisory":
+            exclude = True
+
+        if exclude:
+            continue
+
+        inc_start = max(inc.start_datetime.date(), start_date)
+        inc_end_date = inc.end_datetime.date() if inc.end_datetime else end_date
+        inc_end = min(inc_end_date, end_date)
+
+        days = (inc_end - inc_start).days + 1
+        minutes = days * 24 * 60
+
+        if inc.severity in ("critical",) or inc.status == "interrupted":
+            weighted_minutes = minutes
+        elif inc.status == "degraded":
+            weighted_minutes = minutes * 0.5
+        else:
+            weighted_minutes = minutes
+
+        breach_reasons.append({
+            "id": inc.id,
+            "title": inc.title,
+            "status": inc.status,
+            "classification": inc.classification,
+            "severity": inc.severity,
+            "start_datetime": inc.start_datetime.isoformat() if inc.start_datetime else None,
+            "end_datetime": inc.end_datetime.isoformat() if inc.end_datetime else None,
+            "duration_minutes": round(minutes, 1),
+            "weighted_minutes": round(weighted_minutes, 1),
+            "description": inc.description,
+        })
+
+    return sorted(breach_reasons, key=lambda x: x["weighted_minutes"], reverse=True)
+
+
 async def get_sla_for_month(
     db: AsyncSession,
     service_name: str,

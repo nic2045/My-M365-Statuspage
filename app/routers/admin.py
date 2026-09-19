@@ -42,6 +42,7 @@ from app.crud import (
     get_enabled_services_with_status,
     get_incident_by_id,
     get_known_groups,
+    get_sla_breach_reasons,
     get_sla_for_month,
     move_service,
     publish_incident_update,
@@ -1319,6 +1320,29 @@ async def admin_sla(
             **nav,
         },
     )
+
+
+@router.get("/sla/{service_name}/{year}/{month}/reasons")
+async def sla_breach_reasons(
+    service_name: str,
+    year: int,
+    month: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Get incidents that caused SLA breach for a service in a given month."""
+    try:
+        reasons = await get_sla_breach_reasons(db, service_name, year, month)
+        return JSONResponse({
+            "service_name": service_name,
+            "year": year,
+            "month": month,
+            "reasons": reasons,
+            "total_incidents": len(reasons),
+        })
+    except Exception:
+        logger.exception(f"Failed to get SLA breach reasons for {service_name}")
+        return JSONResponse({"error": "Failed to retrieve breach reasons"}, status_code=500)
 
 
 @router.get("/certificates")
