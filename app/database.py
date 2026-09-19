@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import settings
-from app.models import Base, MonitoredService, SourceLabel
+from app.models import Base, MonitoredService, SourceLabel, UpdateTemplate
 
 os.makedirs("data", exist_ok=True)
 
@@ -87,3 +87,38 @@ async def init_db() -> None:
             if existing is None:
                 db.add(SourceLabel(source=src, label=lbl, is_system=True))
         await db.commit()
+
+    # Seed default update templates
+    _default_templates = [
+        (
+            "Untersuchung gestartet",
+            "Untersuchung gestartet — wir analysieren das Problem und werden Sie bald aktualisieren.",
+            "active,acknowledged",
+        ),
+        (
+            "Ursache identifiziert",
+            "Wir haben die Ursache identifiziert und arbeiten an der Behebung.",
+            "acknowledged,monitoring",
+        ),
+        (
+            "Workaround verfügbar",
+            "Ein Workaround ist verfügbar. Siehe die Details oben.",
+            "monitoring",
+        ),
+        (
+            "Fix eingespielt",
+            "Der Fix wurde eingespielt. Wir überwachen die Situation genau.",
+            "monitoring",
+        ),
+        (
+            "Behoben",
+            "Das Problem wurde behoben. Der Service ist wieder voll verfügbar.",
+            "resolved",
+        ),
+    ]
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(func.count()).select_from(UpdateTemplate))
+        if result.scalar_one() == 0:
+            for name, content, phases in _default_templates:
+                db.add(UpdateTemplate(name=name, content=content, applicable_phases=phases))
+            await db.commit()
