@@ -282,6 +282,11 @@
     {% endif %}
     <div class="space-y-2" data-history-entries>
       {% for incident in recent_resolved %}
+      {% set _published_updates = incident.updates | selectattr("is_published") | list %}
+      {% set _upd = [] %}
+      {% for u in _published_updates | sort(attribute="post_created_at") %}
+        {% set _ = _upd.append({"type": u.update_type, "content": u.content, "at": (u.post_created_at.strftime("%d.%m.%Y %H:%M") if u.post_created_at else ""), "author": (u.author or "")}) %}
+      {% endfor %}
       <div id="incident-{{ incident.id }}"
            role="button" tabindex="0"
            data-incident-entry data-incident-card
@@ -306,6 +311,7 @@
            data-acknowledged-by="{{ incident.acknowledged_by_email or '' }}"
            data-owner-email="{{ incident.owner_email or '' }}"
            data-description="{{ incident.description or '' }}"
+           data-updates='{{ _upd | tojson }}'
            class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 border-l-4 border-l-emerald-400 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
         <div class="flex items-center gap-3 px-3 py-2.5">
           <div class="min-w-0 flex-1 flex items-center gap-2">
