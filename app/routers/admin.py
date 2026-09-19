@@ -1617,3 +1617,33 @@ async def sensors_dashboard(
             **nav,
         },
     )
+
+
+@router.post("/api/sensors/poll-certificates")
+async def manual_poll_certificates(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+) -> JSONResponse:
+    """Manually trigger certificate poll (for testing)."""
+    try:
+        from app.scheduler import poll_certificates  # noqa: PLC0415
+        await poll_certificates()
+        return JSONResponse({"ok": True})
+    except Exception:
+        logger.exception("Manual certificate poll failed")
+        return JSONResponse({"ok": False, "error": "Poll failed"}, status_code=500)
+
+
+@router.post("/api/sensors/poll-http")
+async def manual_poll_http(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+) -> JSONResponse:
+    """Manually trigger HTTP checks poll (for testing)."""
+    try:
+        from app.scheduler import poll_http_checks  # noqa: PLC0415
+        await poll_http_checks()
+        return JSONResponse({"ok": True})
+    except Exception:
+        logger.exception("Manual HTTP checks poll failed")
+        return JSONResponse({"ok": False, "error": "Poll failed"}, status_code=500)
