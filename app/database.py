@@ -8,7 +8,14 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import settings
-from app.models import Base, MonitoredService, SourceLabel, UpdateTemplate
+from app.models import (
+    Base,
+    IncidentState,
+    MonitoredService,
+    SeverityLevel,
+    SourceLabel,
+    UpdateTemplate,
+)
 
 os.makedirs("data", exist_ok=True)
 
@@ -60,6 +67,11 @@ async def init_db() -> None:
             "ALTER TABLE subscribers ADD COLUMN channel VARCHAR(16) NOT NULL DEFAULT 'email'",
             "ALTER TABLE subscribers ADD COLUMN teams_webhook_url VARCHAR(512)",
             "ALTER TABLE subscribers ADD COLUMN services TEXT",
+            "ALTER TABLE incidents ADD COLUMN postmortem_impact TEXT",
+            "ALTER TABLE incidents ADD COLUMN postmortem_root_cause TEXT",
+            "ALTER TABLE incidents ADD COLUMN postmortem_action_items TEXT",
+            "ALTER TABLE incidents ADD COLUMN postmortem_timeline TEXT",
+            "ALTER TABLE incidents ADD COLUMN postmortem_published_at DATETIME",
             # subscribers table is created by metadata.create_all above;
             # these stmts only fire if it already existed without the column
         ]:
@@ -122,3 +134,49 @@ async def init_db() -> None:
             for name, content, phases in _default_templates:
                 db.add(UpdateTemplate(name=name, content=content, applicable_phases=phases))
             await db.commit()
+
+    # Seed default severity levels (idempotent)
+    _default_severities = [
+        ("critical", "Kritisch", "#dc3545", 4),
+        ("high", "Hoch", "#fd7e14", 3),
+        ("medium", "Mittel", "#ffc107", 2),
+        ("low", "Niedrig", "#0dcaf0", 1),
+    ]
+    async with AsyncSessionLocal() as db:
+        for name, label, color, weight in _default_severities:
+            existing = await db.get(SeverityLevel, name)
+            if existing is None:
+                db.add(
+                    SeverityLevel(
+                        name=name,
+                        label=label,
+                        color=color,
+                        weight=weight,
+                        display_order=weight,
+                        is_system=True,
+                    )
+                )
+        await db.commit()
+
+    # Seed default incident states (idempotent)
+    _default_states = [
+        ("active", "Untersuchung läuft", "#fbbf24", False, 1),
+        ("acknowledged", "Identifiziert", "#fb923c", False, 2),
+        ("monitoring", "Überwachung", "#60a5fa", False, 3),
+        ("resolved", "Behoben", "#10b981", True, 4),
+    ]
+    async with AsyncSessionLocal() as db:
+        for name, label, color, is_terminal, order in _default_states:
+            existing = await db.get(IncidentState, name)
+            if existing is None:
+                db.add(
+                    IncidentState(
+                        name=name,
+                        label=label,
+                        color=color,
+                        is_terminal=is_terminal,
+                        display_order=order,
+                        is_system=True,
+                    )
+                )
+        await db.commit()
