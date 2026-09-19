@@ -421,7 +421,7 @@ async def delete_incident(db: AsyncSession, incident_id: int) -> bool:
     incident = await get_incident_by_id(db, incident_id)
     if incident is None:
         return False
-    db.delete(incident)
+    await db.delete(incident)
     await db.flush()
     return True
 
@@ -547,7 +547,7 @@ async def upsert_source_label(db: AsyncSession, source: str, label: str) -> None
 async def delete_source_label(db: AsyncSession, source: str) -> bool:
     existing = await db.get(SourceLabel, source)
     if existing and not existing.is_system:
-        db.delete(existing)
+        await db.delete(existing)
         await db.flush()
         return True
     return False
@@ -920,7 +920,7 @@ async def delete_subscriber(db: AsyncSession, subscriber_id: int) -> bool:
     sub = result.scalar_one_or_none()
     if not sub:
         return False
-    db.delete(sub)
+    await db.delete(sub)
     await db.flush()
     return True
 

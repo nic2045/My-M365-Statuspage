@@ -471,7 +471,9 @@ async def admin_create_severity(
         flash(request, "Name erforderlich.")
         return RedirectResponse(url="/admin/settings#severities", status_code=303)
 
-    existing = await db.get(SeverityLevel, name_lower)
+    existing = (
+        await db.execute(sa_select(SeverityLevel).where(SeverityLevel.name == name_lower))
+    ).scalar_one_or_none()
     if existing:
         flash(request, f"Schweregrad '{name_lower}' existiert bereits.")
         return RedirectResponse(url="/admin/settings#severities", status_code=303)
@@ -499,7 +501,9 @@ async def admin_create_state(
         flash(request, "Name erforderlich.")
         return RedirectResponse(url="/admin/settings#states", status_code=303)
 
-    existing = await db.get(IncidentState, name_lower)
+    existing = (
+        await db.execute(sa_select(IncidentState).where(IncidentState.name == name_lower))
+    ).scalar_one_or_none()
     if existing:
         flash(request, f"State '{name_lower}' existiert bereits.")
         return RedirectResponse(url="/admin/settings#states", status_code=303)
@@ -531,7 +535,9 @@ async def admin_update_severity(
     from app.models import SeverityLevel
 
     name_lower = name.lower().strip()
-    severity = await db.get(SeverityLevel, name_lower)
+    severity = (
+        await db.execute(sa_select(SeverityLevel).where(SeverityLevel.name == name_lower))
+    ).scalar_one_or_none()
     if not severity or severity.is_system:
         flash(request, "Schweregrad kann nicht aktualisiert werden.")
         return RedirectResponse(url="/admin/settings#severities", status_code=303)
@@ -554,12 +560,14 @@ async def admin_delete_severity(
     from app.models import SeverityLevel
 
     name_lower = name.lower().strip()
-    severity = await db.get(SeverityLevel, name_lower)
+    severity = (
+        await db.execute(sa_select(SeverityLevel).where(SeverityLevel.name == name_lower))
+    ).scalar_one_or_none()
     if not severity or severity.is_system:
         flash(request, "System-Schweregrade können nicht gelöscht werden.")
         return RedirectResponse(url="/admin/settings#severities", status_code=303)
 
-    db.delete(severity)
+    await db.delete(severity)
     await db.commit()
     flash(request, "Schweregrad gelöscht.")
     return RedirectResponse(url="/admin/settings#severities", status_code=303)
@@ -578,7 +586,9 @@ async def admin_update_state(
     from app.models import IncidentState
 
     name_lower = name.lower().strip()
-    state = await db.get(IncidentState, name_lower)
+    state = (
+        await db.execute(sa_select(IncidentState).where(IncidentState.name == name_lower))
+    ).scalar_one_or_none()
     if not state or state.is_system:
         flash(request, "Phase kann nicht aktualisiert werden.")
         return RedirectResponse(url="/admin/settings#states", status_code=303)
@@ -601,12 +611,14 @@ async def admin_delete_state(
     from app.models import IncidentState
 
     name_lower = name.lower().strip()
-    state = await db.get(IncidentState, name_lower)
+    state = (
+        await db.execute(sa_select(IncidentState).where(IncidentState.name == name_lower))
+    ).scalar_one_or_none()
     if not state or state.is_system:
         flash(request, "System-Phasen können nicht gelöscht werden.")
         return RedirectResponse(url="/admin/settings#states", status_code=303)
 
-    db.delete(state)
+    await db.delete(state)
     await db.commit()
     flash(request, "Phase gelöscht.")
     return RedirectResponse(url="/admin/settings#states", status_code=303)
