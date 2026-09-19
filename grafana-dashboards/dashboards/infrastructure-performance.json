@@ -1,0 +1,467 @@
+{
+  "dashboard": {
+    "title": "Infrastructure Performance - VMware & Windows Services",
+    "description": "Monitor 2 VMware ESXi hosts, 10 VMs, and critical Windows services (IIS, SQL Server, etc.)",
+    "tags": ["infrastructure", "vmware", "windows", "services"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "ESXi Hosts Overview",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "vmware_host_power_state{host=~\"esxi.*\"}",
+            "legendFormat": "{{host}}"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "center",
+          "orientation": "auto",
+          "textMode": "auto"
+        }
+      },
+      {
+        "id": 2,
+        "title": "ESXi-01 CPU Usage",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "vmware_host_cpu_usage_average{host=\"esxi-01.example.internal\"}",
+            "legendFormat": "CPU %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 80},
+                {"color": "red", "value": 90}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "ESXi-01 Memory Usage",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 4},
+        "targets": [
+          {
+            "expr": "vmware_host_mem_usage_average{host=\"esxi-01.example.internal\"}",
+            "legendFormat": "Memory %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 85},
+                {"color": "red", "value": 95}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "ESXi-01 Running VMs",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "vmware_host_num_vm{host=\"esxi-01.example.internal\"}",
+            "legendFormat": "VMs"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "ESXi-01 Uptime",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 4},
+        "targets": [
+          {
+            "expr": "vmware_host_uptime_seconds{host=\"esxi-01.example.internal\"}/86400",
+            "legendFormat": "Days"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "days"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "ESXi-02 CPU Usage",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "vmware_host_cpu_usage_average{host=\"esxi-02.example.internal\"}",
+            "legendFormat": "CPU %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 80},
+                {"color": "red", "value": 90}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "ESXi-02 Memory Usage",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8},
+        "targets": [
+          {
+            "expr": "vmware_host_mem_usage_average{host=\"esxi-02.example.internal\"}",
+            "legendFormat": "Memory %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 85},
+                {"color": "red", "value": 95}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "ESXi-02 Running VMs",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "vmware_host_num_vm{host=\"esxi-02.example.internal\"}",
+            "legendFormat": "VMs"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "ESXi-02 Uptime",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+        "targets": [
+          {
+            "expr": "vmware_host_uptime_seconds{host=\"esxi-02.example.internal\"}/86400",
+            "legendFormat": "Days"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "days"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Datastore Capacity",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "vmware_datastore_capacity_size",
+            "legendFormat": "{{datastore}}"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Datastore Free Space %",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "(vmware_datastore_freespace_size / vmware_datastore_capacity_size) * 100",
+            "legendFormat": "{{datastore}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 20},
+                {"color": "green", "value": 40}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "VM Load - ESXi-01",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "node_load1{instance=~\"vm-01.*|vm-02.*|vm-03.*|vm-04.*|vm-05.*\"}",
+            "format": "table",
+            "instant": true
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "VM Load - ESXi-02",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+        "targets": [
+          {
+            "expr": "node_load1{instance=~\"vm-06.*|vm-07.*|vm-08.*|vm-09.*|vm-10.*\"}",
+            "format": "table",
+            "instant": true
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "VM CPU Usage - All VMs",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "rate(node_cpu_seconds_total{mode=\"user\"}[5m]) * 100",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "max": 100,
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "VM Memory Usage - All VMs",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+        "targets": [
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 85},
+                {"color": "red", "value": 95}
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Disk Usage - All VMs",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 36},
+        "targets": [
+          {
+            "expr": "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "{{instance}}"
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "MS SQL Server - Connections",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 44},
+        "targets": [
+          {
+            "expr": "mssql_connections",
+            "legendFormat": "{{instance}}"
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "MS SQL - Batch Requests/sec",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 44},
+        "targets": [
+          {
+            "expr": "mssql_batch_requests_per_sec",
+            "legendFormat": "{{instance}}"
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "MS SQL - Buffer Cache Hit Ratio",
+        "type": "gauge",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 44},
+        "targets": [
+          {
+            "expr": "mssql_buffer_cache_hit_ratio",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 90},
+                {"color": "green", "value": 95}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 20,
+        "title": "MS SQL - Deadlocks/sec",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 50},
+        "targets": [
+          {
+            "expr": "mssql_deadlocks_per_sec",
+            "legendFormat": "{{instance}}"
+          }
+        ]
+      },
+      {
+        "id": 21,
+        "title": "MS SQL - Database Size",
+        "type": "table",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 50},
+        "targets": [
+          {
+            "expr": "mssql_database_size_bytes / (1024^3)",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "{{database}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "GB"
+          }
+        }
+      },
+      {
+        "id": 22,
+        "title": "Windows Services Status",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 56},
+        "targets": [
+          {
+            "expr": "windows_service_state{service=~\"IIS|MSSQLSERVER|SQLSERVERAGENT|DNS|DHCP|EventLog\"}",
+            "format": "table",
+            "instant": true
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "title": "IIS Application Pool Status",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 64},
+        "targets": [
+          {
+            "expr": "iis_apppool_cpu_usage",
+            "legendFormat": "{{apppool}}"
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "title": "IIS HTTP Requests/sec",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 64},
+        "targets": [
+          {
+            "expr": "rate(iis_http_requests_total[1m])",
+            "legendFormat": "{{site}}"
+          }
+        ]
+      }
+    ]
+  },
+  "refresh": "30s",
+  "schemaVersion": 16,
+  "style": "dark",
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(vmware_host_power_state, host)",
+        "current": {"text": "All", "value": "$__all"},
+        "multi": true
+      },
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(node_load1, instance)",
+        "current": {"text": "All", "value": "$__all"},
+        "multi": true
+      }
+    ]
+  }
+}
