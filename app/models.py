@@ -102,6 +102,11 @@ class Incident(Base):
     # from Graph's English text on every poll - title becomes a one-time
     # manual action instead of a continuously-synced field.
     translated_lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    postmortem_impact: Mapped[str | None] = mapped_column(Text, nullable=True)
+    postmortem_root_cause: Mapped[str | None] = mapped_column(Text, nullable=True)
+    postmortem_action_items: Mapped[str | None] = mapped_column(Text, nullable=True)
+    postmortem_timeline: Mapped[str | None] = mapped_column(Text, nullable=True)
+    postmortem_published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

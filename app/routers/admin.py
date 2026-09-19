@@ -621,6 +621,11 @@ async def update_incident(
     scheduled_end: Annotated[str | None, Form()] = None,
     source: Annotated[str | None, Form()] = None,
     external_id: Annotated[str | None, Form()] = None,
+    postmortem_impact: Annotated[str | None, Form()] = None,
+    postmortem_root_cause: Annotated[str | None, Form()] = None,
+    postmortem_action_items: Annotated[str | None, Form()] = None,
+    postmortem_timeline: Annotated[str | None, Form()] = None,
+    postmortem_publish: Annotated[str | None, Form()] = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
@@ -642,7 +647,15 @@ async def update_incident(
         "is_resolved": new_resolved,
         "end_datetime": parsed_end,
         "external_id": external_id.strip() if external_id else None,
+        "postmortem_impact": postmortem_impact or None,
+        "postmortem_root_cause": postmortem_root_cause or None,
+        "postmortem_action_items": postmortem_action_items or None,
+        "postmortem_timeline": postmortem_timeline or None,
     }
+    if postmortem_publish == "on":
+        updates["postmortem_published_at"] = datetime.utcnow()
+    else:
+        updates["postmortem_published_at"] = None
     if start_datetime:
         updates["start_datetime"] = _parse_form_dt(start_datetime)
     if source:
