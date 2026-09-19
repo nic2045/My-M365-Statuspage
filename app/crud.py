@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 import nh3
-from sqlalchemy import desc, or_, select
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -419,7 +419,7 @@ async def delete_incident(db: AsyncSession, incident_id: int) -> bool:
     incident = await get_incident_by_id(db, incident_id)
     if incident is None:
         return False
-    await db.delete(incident)
+    db.delete(incident)
     await db.flush()
     return True
 
@@ -545,8 +545,8 @@ async def upsert_source_label(db: AsyncSession, source: str, label: str) -> None
 async def delete_source_label(db: AsyncSession, source: str) -> bool:
     existing = await db.get(SourceLabel, source)
     if existing and not existing.is_system:
-        await db.delete(existing)
-        await db.commit()
+        db.delete(existing)
+        await db.flush()
         return True
     return False
 
@@ -571,19 +571,50 @@ async def get_enabled_services(db: AsyncSession) -> list[str]:
 
 
 async def get_enabled_services_with_status(db: AsyncSession) -> list[dict]:
-    """Same order as get_enabled_services, enriched with current status + group."""
+    """Same order as get_enabled_services, enriched with current status + group.
+
+    Optimized to avoid N+1 queries by joining with latest ServiceStatus in single query.
+    """
+    # Subquery: latest status per service
+    latest_status_sq = (
+        select(
+            ServiceStatus.service_name,
+            ServiceStatus.status,
+            func.row_number()
+            .over(
+                partition_by=ServiceStatus.service_name,
+                order_by=desc(ServiceStatus.date),
+            )
+            .label("rn"),
+        )
+        .subquery()
+    )
+
     result = await db.execute(
         select(
             MonitoredService.service_name,
             MonitoredService.group_name,
+            func.coalesce(latest_status_sq.c.status, "unknown").label("status"),
         )
         .where(MonitoredService.is_enabled.is_(True))
+        .outerjoin(
+            latest_status_sq,
+            and_(
+                latest_status_sq.c.service_name == MonitoredService.service_name,
+                latest_status_sq.c.rn == 1,
+            ),
+        )
         .order_by(*_service_sort_clause())
     )
     rows = result.fetchall()
     enriched: list[dict] = []
-    for name, group in rows:
-        status = await get_service_current_status(db, name)
+    for name, group, status in rows:
+        # Apply advisory-downgrade logic: if status is degraded but no active
+        # incident, show operational (advisories are informational only)
+        if status == "degraded":
+            has_incident = await _has_active_incident(db, name)
+            if not has_incident:
+                status = "operational"
         enriched.append({
             "service_name": name,
             "group_name": group,
@@ -745,7 +776,10 @@ async def build_status_page_data(
         )
         .where(MonitoredService.service_name.in_(service_names))
     )
-    svc_meta = {row[0]: {"show_uptime": row[1], "group": row[2]} for row in svc_meta_result.fetchall()}
+    svc_meta = {
+        row[0]: {"show_uptime": row[1], "group": row[2]}
+        for row in svc_meta_result.fetchall()
+    }
 
     for name in service_names:
         current_status = await get_service_current_status(db, name)
@@ -859,7 +893,7 @@ async def delete_subscriber(db: AsyncSession, subscriber_id: int) -> bool:
     sub = result.scalar_one_or_none()
     if not sub:
         return False
-    await db.delete(sub)
+    db.delete(sub)
     await db.flush()
     return True
 
