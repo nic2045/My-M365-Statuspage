@@ -187,3 +187,14 @@ class SourceLabel(Base):
     source: Mapped[str] = mapped_column(String(100), primary_key=True)
     label: Mapped[str] = mapped_column(String(200), nullable=False)
     is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
+
+class UpdateTemplate(Base):
+    """Pre-written templates for incident updates to speed up admin postings."""
+    __tablename__ = "update_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    applicable_phases: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
