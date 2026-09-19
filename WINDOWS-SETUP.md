@@ -126,6 +126,69 @@ make stop
 
 ---
 
+## VS Code Integration (Windows)
+
+### Automatic Setup on Project Open
+
+The project includes a **Start.ps1** script that automatically detects and configures WSL2 + Docker when you open the project in VS Code.
+
+**How it works:**
+1. When you open the project in VS Code, the terminal automatically runs Start.ps1
+2. Start.ps1 checks if WSL2 and Docker are set up
+3. If anything is missing, it offers to run setup-wsl2.ps1
+4. If everything is ready, it shows available make commands
+
+### Setup (One-Time)
+
+1. **Install VS Code Extensions**
+   - Open VS Code
+   - Go to Extensions (Ctrl+Shift+X)
+   - Search for and install: "Remote - WSL"
+   - (Other recommended: Python, Pylance, Ruff, Tailwind CSS, Docker)
+
+2. **That's it!** 
+   - Extensions are auto-recommended when you open the project (.vscode/extensions.json)
+   - Terminal profile is auto-configured (.vscode/settings.json)
+
+### Using WSL2 Remote
+
+For the best development experience on Windows:
+
+```powershell
+# Open VS Code in WSL2
+wsl code .
+
+# Or from VS Code: Remote Explorer > WSL Targets > Open Folder in WSL
+```
+
+This runs VS Code inside WSL2, giving you native Linux development experience without any path translation overhead.
+
+### Manual Terminal Commands
+
+If you prefer to run commands manually in VS Code terminal:
+
+```powershell
+# Start the dev environment
+make docker
+
+# Follow logs (in another terminal)
+make logs
+
+# Open shell in container
+make shell
+```
+
+### Debugging
+
+To attach a Python debugger to the running app in Docker:
+
+1. Open `.vscode/launch.json`
+2. Click "Run and Debug" (Ctrl+Shift+D)
+3. Select "Python: Docker App"
+4. Set breakpoints and debug
+
+---
+
 ## Troubleshooting
 
 ### "Administrator privileges required"

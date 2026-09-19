@@ -1,0 +1,34 @@
+{
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "args": [
+        "-NoExit",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "& {. .\\Start.ps1}"
+      ]
+    }
+  },
+  "terminal.integrated.automationProfile.windows": {
+    "source": "PowerShell",
+    "args": ["-NoExit", "-ExecutionPolicy", "Bypass"]
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.formatOnSave": true
+  },
+  "python.linting.enabled": true,
+  "python.linting.ruffEnabled": true,
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/node_modules": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true
+  }
+}
