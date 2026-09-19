@@ -1321,7 +1321,6 @@ async def admin_sla(
             **nav,
         },
     )
-<<<<<<< HEAD
 
 
 @router.get("/sla/export")
@@ -1363,5 +1362,3 @@ async def export_sla_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=sla_export.csv"},
     )
-=======
->>>>>>> origin/main
