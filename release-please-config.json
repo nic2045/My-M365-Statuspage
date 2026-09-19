@@ -13,6 +13,11 @@
         {
           "type": "generic",
           "path": "app/__init__.py"
+        },
+        {
+          "type": "toml",
+          "path": "pyproject.toml",
+          "glob": false
         }
       ]
     }

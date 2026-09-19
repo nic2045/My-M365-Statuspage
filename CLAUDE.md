@@ -255,12 +255,105 @@ Config        → config.py (Pydantic Settings)
 - **Behavior:** Import merges (doesn't delete); skips duplicates; validates foreign keys
 - **Details:** See `MIGRATION.md` for full workflow
 
+## Release Lifecycle
+
+This project uses **Release Please** for automated versioning, changelog generation, and release management via Semantic Versioning.
+
+### Versioning Strategy (Semantic Versioning)
+
+Format: `MAJOR.MINOR.PATCH` (e.g., `1.4.2`)
+
+- **MAJOR:** Breaking changes (incompatible API, DB schema migration required)
+- **MINOR:** New features backward-compatible (new incident type, new API endpoint)
+- **PATCH:** Bug fixes (scheduler fix, UI correction, dependency patch)
+
+Current version: See `app/__init__.py` and `pyproject.toml` (Release Please keeps both in sync)
+
+### Conventional Commits (Triggers Auto-Versioning)
+
+Every commit message must follow the pattern: `type(scope): description`
+
+**Commit Types:**
+
+| Type | Increments | Example | When |
+|------|-----------|---------|------|
+| `feat` | MINOR | `feat(scheduler): poll Graph API every 10 min` | New feature, new capability |
+| `fix` | PATCH | `fix(admin): resolve race condition on toggle_service` | Bug fix, error correction |
+| `docs` | none | `docs: update README install instructions` | Documentation only (no code release) |
+| `refactor` | none | `refactor(crud): extract get_incident_with_updates` | Code reorganization (no behavioral change) |
+| `test` | none | `test: add pytest for notification dispatch` | Test additions/fixes |
+| `chore` | none | `chore: update dependencies` | Dependency bumps, config |
+| `perf` | PATCH | `perf(scheduler): batch Graph API queries` | Performance improvements |
+
+**Breaking Changes (MAJOR bump):**
+```
+feat(api)!: remove deprecated /v1/incidents endpoint
+
+Closes #456
+```
+The `!` before `:` marks a breaking change → triggers MAJOR version bump.
+
+**Examples:**
+```bash
+git commit -m "feat(notify): add Slack webhook support
+
+- New channel type 'slack' in Subscriber model
+- Dispatch notifications to Slack via webhook_url
+- Admin panel to configure Slack webhooks
+
+Fixes #123"
+
+git commit -m "fix(admin): handle concurrent service enable/disable
+
+Closes race condition via asyncio.Lock on _pending_poll_task
+
+Fixes #456"
+
+git commit -m "docs: add Windows WSL2 setup guide"
+```
+
+### Release Workflow (Automated)
+
+1. **Commits pushed to `main`** trigger Release Please action
+2. **Release Please analyzes commits** (Conventional Commits format)
+3. **Auto-generates PR** with:
+   - Updated version in `app/__init__.py` + `pyproject.toml`
+   - Generated `CHANGELOG.md` entry
+   - Release notes with breaking changes, features, fixes grouped
+4. **Merge the release PR** → Release Please **creates git tag** (e.g., `v1.5.0`)
+5. **Tag push triggers `release.yml` workflow:**
+   - CI full test suite
+   - Build & push Docker images (amd64 + arm64) to GHCR
+   - Trivy CVE scan (blocks on CRITICAL)
+   - pip-audit security audit
+   - Attach audit report to GitHub Release
+
+**No manual version bumping needed.** Just use Conventional Commits; Release Please handles the rest.
+
+### Manual Release Trigger
+
+To force a release outside the normal flow:
+```bash
+# Go to Actions → Release Please → Run workflow
+# Or via CLI:
+gh workflow run release-please.yml --ref main
+```
+
+### Tips for Clean Releases
+
+- **Group related commits** in one PR (e.g., all notification features together)
+- **Use descriptive scopes** (`feat(notify)`, not `feat(x)`)
+- **Reference issues** in commit body: `Fixes #123` or `Closes #456`
+- **One feature per commit** when possible (easier to revert if needed)
+- **No docs-only commits before release** (they don't trigger a release; batch them with a code change)
+
 ## Recent Changes & PR Context
 
 The latest PRs added (in order):
 - **#184**: Severity display in incident cards + state-change recording for new resolved incidents
 - **#185**: Windows WSL2 Docker setup automation (setup-wsl2.ps1, setup-wsl2.bat) + VS Code integration (Start.ps1, .vscode/ config)
 - **#186**: Database export/import scripts + Makefile targets for cross-platform data migration (macOS → Windows)
+- **#187**: Code style standardization + developer onboarding best practices in CLAUDE.md (type hints, dependency injection, layered architecture, async patterns)
 
 Recent bug fixes (now merged to main):
 - Fixed critical SQLAlchemy bug: removed incorrect `await` on `db.delete()` (3 locations in crud.py)
