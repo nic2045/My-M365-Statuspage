@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  statuspage:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: pyur-statuspage:1.0.0
+    container_name: statuspage-prod
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: "sqlite:////app/data/statuspage.db"
+      DEBUG: "false"
+      POLL_INTERVAL_MINUTES: "10"
+    volumes:
+      - statuspage_data:/app/data
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - statuspage-net
+    depends_on:
+      - postgres
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: statuspage-db-prod
+    restart: always
+    environment:
+      POSTGRES_DB: statuspage
+      POSTGRES_USER: statuspage
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - statuspage-net
+    secrets:
+      - db_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U statuspage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: statuspage-cache-prod
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - statuspage-net
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: statuspage-metrics-prod
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - statuspage-net
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  statuspage_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+
+networks:
+  statuspage-net:
+    driver: bridge
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt

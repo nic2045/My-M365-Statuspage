@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "statuspage.fullname" . }}-config
+  labels:
+    {{- include "statuspage.labels" . | nindent 4 }}
+data:
+  admin-role: {{ .Values.secrets.adminRole | quote }}
+  {{- if .Values.secrets.adminEmails }}
+  admin-emails: {{ .Values.secrets.adminEmails | quote }}
+  {{- end }}
+  {{- if .Values.secrets.monitoredServices }}
+  monitored-services: {{ .Values.secrets.monitoredServices | quote }}
+  {{- end }}

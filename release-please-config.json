@@ -7,12 +7,17 @@
       "release-type": "simple",
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
-      "draft": false,
+      "draft": true,
       "prerelease": false,
       "extra-files": [
         {
           "type": "generic",
           "path": "app/__init__.py"
+        },
+        {
+          "type": "toml",
+          "path": "pyproject.toml",
+          "glob": false
         }
       ]
     }

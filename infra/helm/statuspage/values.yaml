@@ -1,0 +1,135 @@
+replicaCount: 1
+
+image:
+  repository: pyur-statuspage
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/api/v1/metrics"
+
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: status.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Environment configuration
+env:
+  DEBUG: "false"
+  POLL_INTERVAL_MINUTES: "10"
+  DISABLE_AUTH: "false"
+
+# Secrets must be provided at deployment time
+secrets:
+  azureTenantId: ""
+  azureClientId: ""
+  azureClientSecret: ""
+  embedApiKey: ""
+  adminRole: "Admin"
+  adminEmails: ""
+  monitoredServices: "Exchange Online,Microsoft Teams,OneDrive"
+  smtpServer: ""
+  smtpPort: "587"
+  smtpUsername: ""
+  smtpPassword: ""
+
+# Persistence for SQLite database
+persistence:
+  enabled: true
+  storageClassName: "standard"
+  size: 1Gi
+  mountPath: /app/data
+
+# Database configuration (if using external database)
+database:
+  type: sqlite
+  sqlite:
+    path: /app/data/statuspage.db
+  postgresql:
+    enabled: false
+    host: "postgres.default.svc.cluster.local"
+    port: 5432
+    database: "statuspage"
+    username: "statuspage"
+    password: ""
+
+# Optional: OpenBao/Vault integration for secret management
+vault:
+  enabled: false
+  address: ""
+  role: ""
+  path: ""
+
+# Livenessand Readiness probes
+livenessProbe:
+  httpGet:
+    path: /api/v1/health
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/v1/health
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
