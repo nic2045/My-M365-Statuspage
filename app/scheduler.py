@@ -7,6 +7,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select as sa_select
 
+from app.certificate_client import (
+    get_certificate_expiration,
+    get_certificate_severity,
+    get_certificate_status_display,
+)
 from app.config import settings
 from app.crud import (
     add_state_change_entry,
@@ -24,7 +29,7 @@ from app.graph_client import (
     fetch_recently_resolved_issues,
 )
 from app.i18n import LABELS
-from app.models import GRAPH_STATUS_MAP, Incident, ServiceStatus
+from app.models import GRAPH_STATUS_MAP, Incident, MonitoredService, ServiceStatus
 from app.notifications import dispatch_incident_notifications
 
 logger = logging.getLogger(__name__)
@@ -377,6 +382,94 @@ async def poll_graph_api() -> None:
     await _dispatch_notifications(resolved_notify_events)
 
 
+async def poll_certificates() -> None:
+    """Monitor TLS certificates and create/update incidents based on expiration status."""
+    logger.info("Starting certificate poll...")
+    async with AsyncSessionLocal() as db:
+        try:
+            result = await db.execute(
+                sa_select(MonitoredService).where(
+                    (MonitoredService.service_type == "certificate")
+                    & MonitoredService.is_enabled
+                )
+            )
+            cert_services = result.scalars().all()
+
+            for service in cert_services:
+                if not service.cert_hostname:
+                    logger.warning(f"Certificate service {service.service_name} missing hostname")
+                    continue
+
+                try:
+                    cert_info = await get_certificate_expiration(service.cert_hostname)
+                    status = cert_info["status"]
+                    severity = get_certificate_severity(status)
+                    days_remaining = cert_info["days_remaining"]
+
+                    # Determine incident status based on cert status
+                    if status == "ok":
+                        # If there was a previous incident, mark it resolved
+                        result = await db.execute(
+                            sa_select(Incident).where(
+                                (Incident.service_name == service.service_name)
+                                & (Incident.source == "certificate")
+                                & ~Incident.is_resolved
+                            )
+                        )
+                        existing = result.scalar_one_or_none()
+                        if existing is not None:
+                            existing.is_resolved = True
+                            existing.status = "resolved"
+                            existing.end_datetime = datetime.utcnow()
+                            await db.flush()
+                    else:
+                        # Create or update incident for certificate warning/expiration
+                        title = f"Certificate Expiration Warning: {cert_info['common_name']}"
+                        if status == "expired":
+                            title = f"Certificate Expired: {cert_info['common_name']}"
+
+                        description = f"Certificate for {service.cert_hostname} expires in {days_remaining} days ({cert_info['expires_at'].isoformat()})"
+                        incident_phase = "active" if status == "expired" else "monitoring"
+
+                        incident = await upsert_incident(
+                            db,
+                            graph_issue_id=f"cert_{service.service_name}",
+                            title=title,
+                            service_name=service.service_name,
+                            classification="incident",
+                            status=incident_phase,
+                            source="certificate",
+                            severity=severity,
+                            description=description,
+                            start_datetime=datetime.utcnow(),
+                            is_resolved=False,
+                        )
+
+                        # Add update with current status
+                        await upsert_incident_updates(
+                            db,
+                            incident.id,
+                            [
+                                {
+                                    "title": get_certificate_status_display(status),
+                                    "body": description,
+                                    "createdDateTime": datetime.utcnow().isoformat(),
+                                    "postCreatedDateTime": datetime.utcnow().isoformat(),
+                                }
+                            ],
+                            auto_publish=True,
+                        )
+
+                    await db.commit()
+                except Exception:
+                    await db.rollback()
+                    logger.exception(f"Failed to poll certificate for {service.service_name}")
+
+            logger.info(f"Certificate poll completed for {len(cert_services)} services")
+        except Exception:
+            logger.exception("Certificate poll failed")
+
+
 def start_scheduler() -> None:
     scheduler.add_job(
         poll_graph_api,
@@ -384,6 +477,13 @@ def start_scheduler() -> None:
         id="graph_poll",
         replace_existing=True,
         next_run_time=datetime.now(),  # run immediately on startup
+    )
+    scheduler.add_job(
+        poll_certificates,
+        trigger=IntervalTrigger(hours=1),
+        id="cert_poll",
+        replace_existing=True,
+        next_run_time=datetime.now(),
     )
     scheduler.start()
     logger.info("Scheduler started (interval: %d min)", settings.POLL_INTERVAL_MINUTES)

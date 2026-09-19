@@ -1319,3 +1319,83 @@ async def admin_sla(
             **nav,
         },
     )
+
+
+@router.get("/certificates")
+async def list_certificates(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+    nav: dict = Depends(admin_nav_context),
+):
+    """List all certificate monitoring services."""
+    result = await db.execute(
+        sa_select(MonitoredService).where(MonitoredService.service_type == "certificate")
+    )
+    certs = result.scalars().all()
+
+    return templates.TemplateResponse(
+        request,
+        "admin/certificates.html",
+        {
+            "user": user,
+            "certificates": certs,
+            "page_title": "Zertifikats-Monitoring",
+            **nav,
+        },
+    )
+
+
+@router.post("/certificates/create")
+async def create_certificate(
+    service_name: str = Form(...),
+    cert_hostname: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Create a new certificate monitoring service."""
+    try:
+        existing = await db.execute(
+            sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+        )
+        if existing.scalar_one_or_none() is not None:
+            raise ValueError(f"Service '{service_name}' already exists")
+
+        svc = MonitoredService(
+            service_name=service_name,
+            service_type="certificate",
+            cert_hostname=cert_hostname,
+            is_enabled=True,
+            group_name="Certificates",
+        )
+        db.add(svc)
+        await db.commit()
+        logger.info(f"Created certificate service: {service_name} ({cert_hostname})")
+    except Exception:
+        await db.rollback()
+        logger.exception("Failed to create certificate service")
+
+    return RedirectResponse(url="/admin/certificates", status_code=303)
+
+
+@router.post("/certificates/{service_name}/delete")
+async def delete_certificate(
+    service_name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Delete a certificate monitoring service."""
+    try:
+        result = await db.execute(
+            sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+        )
+        svc = result.scalar_one_or_none()
+        if svc and svc.service_type == "certificate":
+            await db.delete(svc)
+            await db.commit()
+            logger.info(f"Deleted certificate service: {service_name}")
+    except Exception:
+        await db.rollback()
+        logger.exception("Failed to delete certificate service")
+
+    return RedirectResponse(url="/admin/certificates", status_code=303)
