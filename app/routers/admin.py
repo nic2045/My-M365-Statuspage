@@ -1613,7 +1613,7 @@ async def sensors_dashboard(
             "user": user,
             "certificates": certificates,
             "http_checks": http_checks,
-            "page_title": "Monitoring",
+            "page_title": "Sensors",
             **nav,
         },
     )
