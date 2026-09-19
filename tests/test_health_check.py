@@ -33,4 +33,5 @@ class TestHealthEndpoints:
         data = response.json()
         assert data["status"] == "healthy"
         assert data["checks"]["database"]["status"] == "up"
+        assert "graph_api" in data["checks"]
         assert data["checks"]["timestamp"]
