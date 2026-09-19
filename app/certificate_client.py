@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import socket
-import ssl
 import subprocess
 from datetime import UTC, datetime
 from urllib.parse import urlparse
@@ -42,8 +40,8 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
     try:
         def _get_cert() -> dict[str, object]:
             # Use openssl to fetch certificate info (most reliable method)
-            cmd = f"echo '' | openssl s_client -servername {hostname} -connect {hostname}:443 -showcerts 2>/dev/null"
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+            cmd = ["openssl", "s_client", "-servername", hostname, "-connect", f"{hostname}:443", "-showcerts"]
+            result = subprocess.run(cmd, input="", capture_output=True, text=True, timeout=10, stderr=subprocess.DEVNULL)  # noqa: S603
 
             if result.returncode != 0:
                 raise ValueError(f"openssl failed: {result.stderr}")
