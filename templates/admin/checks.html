@@ -227,7 +227,7 @@ function splitAndStoreUrl() {
 
   if (enableCert && urlInput) {
     const input = urlInput.trim();
-    let hostname = input;
+    let hostname;
 
     if (input.includes('://')) {
       try {
