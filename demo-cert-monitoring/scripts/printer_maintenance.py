@@ -30,7 +30,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 BASE = os.environ["OU_BASE"]
 EMAIL = os.environ.get("OU_EMAIL", "demo@example.com")
@@ -83,7 +83,7 @@ def iso(dt):
     # this avoids (dates landing hours in the future otherwise).
     if dt.tzinfo is None:
         dt = dt.astimezone()
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def get_list(model, query=None, select=None, limit=100):

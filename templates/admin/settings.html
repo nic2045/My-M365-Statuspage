@@ -460,6 +460,140 @@
   </div>
 </section>
 
+{# ── Severity Levels ─────────────────────────────────────────────────────────── #}
+<a id="severities" class="block scroll-mt-20"></a>
+<section class="mb-8">
+  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
+    Schweregrade
+  </h2>
+  <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">Konfigurierbare Schweregrade für Incident-Klassifizierung</p>
+
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+    {# Existing entries #}
+    {% for sl in severity_levels %}
+    <div class="flex items-center gap-3 px-5 py-3 {{ 'opacity-60' if sl.is_system else '' }}">
+      <div class="w-5 h-5 shrink-0 rounded border-2 border-gray-300 dark:border-gray-600" style="background-color: {{ sl.color }}"></div>
+      <code class="text-xs font-mono text-gray-500 dark:text-gray-400 w-20 shrink-0">{{ sl.name }}</code>
+      {% if sl.is_system %}
+        <span class="flex-1 text-sm text-gray-700 dark:text-gray-300">{{ sl.label }}</span>
+        <span class="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">W: {{ sl.weight }}</span>
+        <span class="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">System</span>
+      {% else %}
+        <form method="post" action="/admin/settings/severities/{{ sl.name | urlencode }}" class="flex flex-1 items-center gap-2 min-w-0">
+          <input type="text" name="label" value="{{ sl.label }}"
+                 class="flex-1 min-w-0 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input type="color" name="color" value="{{ sl.color }}"
+                 class="w-8 h-8 rounded cursor-pointer" />
+          <input type="number" name="weight" value="{{ sl.weight }}" min="1"
+                 class="w-12 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button type="submit"
+                  class="shrink-0 text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-700 hover:border-gray-400 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+            Speichern
+          </button>
+        </form>
+        <form method="post" action="/admin/settings/severities/{{ sl.name | urlencode }}/delete" class="shrink-0">
+          <button type="submit"
+                  onclick="return confirm('Schweregrad löschen?')"
+                  class="text-xs px-2 py-1 rounded-lg border border-transparent text-gray-400 hover:text-red-600 hover:border-red-200 dark:text-gray-500 dark:hover:text-red-400 transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {# Add new entry row #}
+    <form method="post" action="/admin/settings/severities"
+          class="flex items-center gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-800/50">
+      <div class="w-5 h-5 shrink-0 rounded border-2 border-gray-300 dark:border-gray-600" style="background-color: #000000"></div>
+      <input type="text" name="name" placeholder="Name (z. B. critical)"
+             class="w-24 text-xs font-mono rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <input type="text" name="label" placeholder="Bezeichnung"
+             class="flex-1 min-w-0 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <input type="color" name="color" value="#000000"
+             class="w-8 h-8 rounded cursor-pointer" />
+      <input type="number" name="weight" value="1" min="1"
+             class="w-16 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <button type="submit"
+              class="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-medium transition-colors">
+        Hinzufügen
+      </button>
+    </form>
+  </div>
+</section>
+
+{# ── Incident States ─────────────────────────────────────────────────────────── #}
+<a id="states" class="block scroll-mt-20"></a>
+<section class="mb-8">
+  <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
+    Incident-Phasen
+  </h2>
+  <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">Konfigurierbare Phasen für Incident-Lifecycle</p>
+
+  <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+    {# Existing entries #}
+    {% for st in incident_states %}
+    <div class="flex items-center gap-3 px-5 py-3 {{ 'opacity-60' if st.is_system else '' }}">
+      <div class="w-5 h-5 shrink-0 rounded border-2 border-gray-300 dark:border-gray-600" style="background-color: {{ st.color }}"></div>
+      <code class="text-xs font-mono text-gray-500 dark:text-gray-400 w-20 shrink-0">{{ st.name }}</code>
+      {% if st.is_system %}
+        <span class="flex-1 text-sm text-gray-700 dark:text-gray-300">{{ st.label }}</span>
+        {% if st.is_terminal %}<span class="text-[11px] text-amber-600 dark:text-amber-400 shrink-0">Terminal</span>{% endif %}
+        <span class="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">System</span>
+      {% else %}
+        <form method="post" action="/admin/settings/states/{{ st.name | urlencode }}" class="flex flex-1 items-center gap-2 min-w-0">
+          <input type="text" name="label" value="{{ st.label }}"
+                 class="flex-1 min-w-0 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input type="color" name="color" value="{{ st.color }}"
+                 class="w-8 h-8 rounded cursor-pointer" />
+          <label class="inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 shrink-0">
+            <input type="checkbox" name="is_terminal" {% if st.is_terminal %}checked{% endif %}
+                   class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+            Terminal
+          </label>
+          <button type="submit"
+                  class="shrink-0 text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-700 hover:border-gray-400 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+            Speichern
+          </button>
+        </form>
+        <form method="post" action="/admin/settings/states/{{ st.name | urlencode }}/delete" class="shrink-0">
+          <button type="submit"
+                  onclick="return confirm('Phase löschen?')"
+                  class="text-xs px-2 py-1 rounded-lg border border-transparent text-gray-400 hover:text-red-600 hover:border-red-200 dark:text-gray-500 dark:hover:text-red-400 transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {# Add new entry row #}
+    <form method="post" action="/admin/settings/states"
+          class="flex items-center gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-800/50">
+      <div class="w-5 h-5 shrink-0 rounded border-2 border-gray-300 dark:border-gray-600" style="background-color: #000000"></div>
+      <input type="text" name="name" placeholder="Name (z. B. active)"
+             class="w-24 text-xs font-mono rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <input type="text" name="label" placeholder="Bezeichnung"
+             class="flex-1 min-w-0 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <input type="color" name="color" value="#000000"
+             class="w-8 h-8 rounded cursor-pointer" />
+      <label class="inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 shrink-0">
+        <input type="checkbox" name="is_terminal"
+               class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+        Terminal
+      </label>
+      <button type="submit"
+              class="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-medium transition-colors">
+        Hinzufügen
+      </button>
+    </form>
+  </div>
+</section>
+
 {# ── MS Teams Webhook ────────────────────────────────────────────────────────── #}
 <section class="mb-8">
   <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
