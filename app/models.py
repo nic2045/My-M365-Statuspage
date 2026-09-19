@@ -48,6 +48,13 @@ STATUS_BADGE_CLASSES: dict[str, str] = {
     "unknown":     "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
 }
 
+STATUS_RING_CLASSES: dict[str, str] = {
+    "operational": "bg-emerald-100 dark:bg-emerald-900/40",
+    "degraded":    "bg-amber-100 dark:bg-amber-900/40",
+    "interrupted": "bg-red-100 dark:bg-red-900/40",
+    "unknown":     "bg-gray-100 dark:bg-gray-800",
+}
+
 INCIDENT_BORDER: dict[str, str] = {
     "incident":    "border-red-500",
     "advisory":    "border-amber-400",
@@ -95,6 +102,11 @@ class Incident(Base):
     # from Graph's English text on every poll - title becomes a one-time
     # manual action instead of a continuously-synced field.
     translated_lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    postmortem_impact: Mapped[str | None] = mapped_column(Text, nullable=True)
+    postmortem_root_cause: Mapped[str | None] = mapped_column(Text, nullable=True)
+    postmortem_action_items: Mapped[str | None] = mapped_column(Text, nullable=True)
+    postmortem_timeline: Mapped[str | None] = mapped_column(Text, nullable=True)
+    postmortem_published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

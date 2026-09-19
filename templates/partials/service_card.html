@@ -1,0 +1,64 @@
+{# Renders one service as a card. Expects `service` (ServiceStatusSchema) in scope. #}
+<div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm transition-shadow hover:shadow-md"
+     id="svc-{{ service.service_name | lower | replace(' ', '-') | replace('/', '-') | replace('_', '-') }}"
+     data-service-card
+     data-service="{{ service.service_name }}">
+  <div class="flex flex-col h-full">
+    {# Header: Status ring + Service name #}
+    <div class="flex items-start justify-between gap-3 mb-3">
+      <div class="flex-1 min-w-0">
+        <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ service.service_name }}</h3>
+        {% if service.group %}
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ service.group }}</p>
+        {% endif %}
+      </div>
+      {# Status indicator ring #}
+      <div class="shrink-0 flex items-center justify-center w-10 h-10 rounded-full {{ status_ring_class(service.current_status) }}">
+        {% if service.current_status == "operational" %}
+        <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+        {% elif service.current_status == "interrupted" %}
+        <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+        {% else %}
+        <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Uptime percentage #}
+    <div class="mb-3">
+      <div class="flex items-baseline justify-between gap-2 mb-1">
+        <span class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ L["page.uptime_short"] }}</span>
+        {% if service.uptime_percentage is not none %}
+        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ "%.1f"|format(service.uptime_percentage) }}%</span>
+        {% else %}
+        <span class="text-sm text-gray-400 dark:text-gray-500">—</span>
+        {% endif %}
+      </div>
+      {# Mini uptime bar (last 30 days) #}
+      <div class="flex gap-px w-full" aria-label="30-Tage Verfügbarkeit">
+        {% set _range = service.uptime_days[-30:] if service.uptime_days | length > 30 else service.uptime_days %}
+        {% for day in _range %}
+        <button type="button"
+          data-day-bar
+          data-date="{{ day.date.isoformat() }}"
+          data-date-label="{{ day.date | date_de }}"
+          data-status="{{ day.status }}"
+          data-status-label="{{ status_label(day.status) }}"
+          data-service="{{ service.service_name }}"
+          class="h-4 flex-1 rounded-sm bar-tooltip transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 cursor-pointer {{ status_bar_class(day.status) }}"
+          title="{{ day.date | date_de }}: {{ status_label(day.status) }}"
+          aria-label="{{ day.date | date_de }}: {{ status_label(day.status) }}"
+        ></button>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Recent incident (if any) #}
+    {% if service.active_incidents %}
+    <div class="mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{{ L["page.active_incident"] }}</p>
+      <p class="text-xs text-red-600 dark:text-red-400 font-medium truncate">{{ service.active_incidents[0].title }}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>

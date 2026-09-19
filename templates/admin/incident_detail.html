@@ -169,6 +169,43 @@
       </div>
     {% endcall %}
 
+    {% if incident.is_resolved %}
+    {% call f.form_card(L["admin.postmortem_heading"]) %}
+      <div>
+        {{ f.field_label(L["admin.postmortem_impact"] + " (Markdown)", optional=True) }}
+        <textarea name="postmortem_impact" rows="3"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none">{{ incident.postmortem_impact or "" }}</textarea>
+      </div>
+
+      <div>
+        {{ f.field_label(L["admin.postmortem_root_cause"] + " (Markdown)", optional=True) }}
+        <textarea name="postmortem_root_cause" rows="3"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none">{{ incident.postmortem_root_cause or "" }}</textarea>
+      </div>
+
+      <div>
+        {{ f.field_label(L["admin.postmortem_action_items"] + " (Markdown)", optional=True) }}
+        <textarea name="postmortem_action_items" rows="3"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none">{{ incident.postmortem_action_items or "" }}</textarea>
+      </div>
+
+      <div>
+        {{ f.field_label(L["admin.postmortem_timeline"] + " (Markdown)", optional=True) }}
+        <textarea name="postmortem_timeline" rows="3"
+                  class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none">{{ incident.postmortem_timeline or "" }}</textarea>
+      </div>
+
+      <div>
+        <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input type="checkbox" name="postmortem_publish" value="on"
+                 {% if incident.postmortem_published_at %}checked{% endif %}
+                 class="rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500">
+          {{ L["admin.postmortem_publish"] }}
+        </label>
+      </div>
+    {% endcall %}
+    {% endif %}
+
     <div>
       <button type="submit"
               class="px-5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium transition-colors">

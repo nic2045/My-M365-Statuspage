@@ -15,7 +15,12 @@ from app.i18n import (
     get_current_language,
     get_label,
 )
-from app.models import INCIDENT_BORDER, STATUS_BADGE_CLASSES, STATUS_TAILWIND_BAR
+from app.models import (
+    INCIDENT_BORDER,
+    STATUS_BADGE_CLASSES,
+    STATUS_RING_CLASSES,
+    STATUS_TAILWIND_BAR,
+)
 
 _ALLOWED_MD_TAGS = {"p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "br", "code", "pre", "blockquote"}
 _ALLOWED_MD_ATTRS = {"a": {"href", "title"}}
@@ -42,6 +47,9 @@ templates.env.globals["status_bar_class"] = (
 )
 templates.env.globals["status_badge_class"] = (
     lambda s: STATUS_BADGE_CLASSES.get(s, STATUS_BADGE_CLASSES["unknown"])
+)
+templates.env.globals["status_ring_class"] = (
+    lambda s: STATUS_RING_CLASSES.get(s, STATUS_RING_CLASSES["unknown"])
 )
 templates.env.globals["incident_border_class"] = (
     lambda c: INCIDENT_BORDER.get(c, "border-gray-400")
