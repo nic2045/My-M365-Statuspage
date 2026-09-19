@@ -21,6 +21,7 @@
         <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <tr>
             <th class="px-6 py-3 text-left font-semibold">Service</th>
+            <th class="px-6 py-3 text-left font-semibold">Gruppe</th>
             <th class="px-6 py-3 text-center font-semibold">Typ</th>
             <th class="px-6 py-3 text-left font-semibold">HTTP-URL</th>
             <th class="px-6 py-3 text-left font-semibold">HTTP Status</th>
@@ -34,6 +35,17 @@
           {% for check in checks %}
             <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
               <td class="px-6 py-3 font-medium">{{ check.service_name }}</td>
+              <td class="px-6 py-3">
+                <form method="post" action="/admin/checks/{{ check.service_name | urlencode }}/group" class="flex items-center gap-1">
+                  <input type="text"
+                    name="group_name"
+                    list="known-groups"
+                    value="{{ check.group_name or '' }}"
+                    placeholder="Gruppe..."
+                    class="text-xs px-2 py-1 flex-1 min-w-0 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-2 py-1">
+                  <button type="submit" class="text-xs px-2 py-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">✓</button>
+                </form>
+              </td>
               <td class="px-6 py-3 text-center">
                 <span class="inline-flex gap-1">
                   {% if check.http_url %}
@@ -90,6 +102,15 @@
     </div>
   {% endif %}
 </div>
+
+<!-- Known Groups Datalist -->
+<datalist id="known-groups">
+  {% if known_groups %}
+    {% for group in known_groups %}
+      <option value="{{ group }}"></option>
+    {% endfor %}
+  {% endif %}
+</datalist>
 
 <!-- Edit Check Modal -->
 <div id="edit-check-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -154,6 +175,11 @@
       <div>
         <label class="block text-sm font-medium mb-2">Service-Name</label>
         <input type="text" name="service_name" required placeholder="z.B. API Gateway" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-2">Dashboard Gruppe</label>
+        <input type="text" name="group_name" list="known-groups" placeholder="z.B. Checks, Monitoring" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
       </div>
 
       <div>
