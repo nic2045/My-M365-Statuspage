@@ -407,8 +407,9 @@ async def poll_certificates() -> None:
             cert_services = result.scalars().all()
 
             for service in cert_services:
+                service_name = service.service_name
                 if not service.cert_hostname:
-                    logger.warning(f"Certificate service {service.service_name} missing hostname")
+                    logger.warning(f"Certificate service {service_name} missing hostname")
                     continue
 
                 try:
@@ -419,7 +420,7 @@ async def poll_certificates() -> None:
 
                     # Record certificate check result for dashboard
                     check_result = CertificateCheckResult(
-                        service_name=service.service_name,
+                        service_name=service_name,
                         status=status,
                         expires_at=cert_info["expires_at"],
                         valid_from=cert_info["valid_from"],
@@ -435,7 +436,7 @@ async def poll_certificates() -> None:
                         # If there was a previous incident, mark it resolved
                         result = await db.execute(
                             sa_select(Incident).where(
-                                (Incident.service_name == service.service_name)
+                                (Incident.service_name == service_name)
                                 & (Incident.source == "certificate")
                                 & ~Incident.is_resolved
                             )
@@ -457,9 +458,9 @@ async def poll_certificates() -> None:
 
                         incident = await upsert_incident(
                             db,
-                            graph_issue_id=f"cert_{service.service_name}",
+                            graph_issue_id=f"cert_{service_name}",
                             title=title,
-                            service_name=service.service_name,
+                            service_name=service_name,
                             classification="incident",
                             status=incident_phase,
                             source="certificate",
@@ -487,7 +488,7 @@ async def poll_certificates() -> None:
                     await db.commit()
                 except Exception:
                     await db.rollback()
-                    logger.exception(f"Failed to poll certificate for {service.service_name}")
+                    logger.exception(f"Failed to poll certificate for {service_name}")
 
             logger.info(f"Certificate poll completed for {len(cert_services)} services")
         except Exception:
@@ -513,14 +514,15 @@ async def poll_http_checks() -> None:
 
             checked = 0
             for service in http_services:
+                service_name = service.service_name
                 if not service.http_url:
-                    logger.warning(f"HTTP check service {service.service_name} missing URL")
+                    logger.warning(f"HTTP check service {service_name} missing URL")
                     continue
 
                 interval = service.check_interval_seconds or settings.HTTP_CHECK_DEFAULT_INTERVAL_SECONDS
                 last_result = await db.execute(
                     sa_select(func.max(HttpCheckResult.checked_at)).where(
-                        HttpCheckResult.service_name == service.service_name
+                        HttpCheckResult.service_name == service_name
                     )
                 )
                 last_checked_at = last_result.scalar_one_or_none()
@@ -534,13 +536,13 @@ async def poll_http_checks() -> None:
                         timeout_seconds=settings.HTTP_CHECK_TIMEOUT_SECONDS,
                     )
                     is_up = check_result["is_up"]
-                    await record_http_check_result(db, service.service_name, check_result)
+                    await record_http_check_result(db, service_name, check_result)
                     checked += 1
 
                     if is_up:
                         result = await db.execute(
                             sa_select(Incident).where(
-                                (Incident.service_name == service.service_name)
+                                (Incident.service_name == service_name)
                                 & (Incident.source == "http_check")
                                 & ~Incident.is_resolved
                             )
@@ -553,14 +555,14 @@ async def poll_http_checks() -> None:
                             await db.flush()
                     else:
                         severity = get_http_check_severity(is_up)
-                        title = f"Endpoint Down: {service.service_name}"
+                        title = f"Endpoint Down: {service_name}"
                         description = check_result["error_message"] or "Endpoint unreachable"
 
                         incident = await upsert_incident(
                             db,
-                            graph_issue_id=f"http_{service.service_name}",
+                            graph_issue_id=f"http_{service_name}",
                             title=title,
-                            service_name=service.service_name,
+                            service_name=service_name,
                             classification="incident",
                             status="active",
                             source="http_check",
@@ -586,7 +588,7 @@ async def poll_http_checks() -> None:
                     await db.commit()
                 except Exception:
                     await db.rollback()
-                    logger.exception(f"Failed to poll HTTP check for {service.service_name}")
+                    logger.exception(f"Failed to poll HTTP check for {service_name}")
 
             await prune_old_http_check_results(db, settings.HTTP_CHECK_HISTORY_RETENTION_DAYS)
             await db.commit()
