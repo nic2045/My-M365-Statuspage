@@ -1,7 +1,8 @@
 """Tests for i18n completeness and label availability."""
-import re
 import pathlib
-from app.i18n import LABELS_DE, LABELS_EN, LABELS_BY_LANG
+import re
+
+from app.i18n import LABELS_BY_LANG, LABELS_DE, LABELS_EN
 
 
 def test_all_template_keys_present():
@@ -30,7 +31,7 @@ def test_all_labels_de_have_corresponding_en():
 
     for key in LABELS_DE.keys():
         if key not in LABELS_EN:
-            missing_en[key] = f"Missing English translation"
+            missing_en[key] = "Missing English translation"
 
     assert not missing_en, f"Missing English translations: {missing_en}"
 

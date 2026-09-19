@@ -4,7 +4,7 @@ import asyncio
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from app.event_bus import StatusEvent, get_event_bus
+from app.event_bus import get_event_bus
 
 router = APIRouter(tags=["sse"])
 
@@ -19,7 +19,7 @@ async def event_stream(request: Request) -> None:
             try:
                 event = await asyncio.wait_for(queue.get(), timeout=30.0)
                 yield f"data: {event.to_sse_data()}\n\n"
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 yield ": heartbeat\n\n"
 
             if await request.is_disconnected():
