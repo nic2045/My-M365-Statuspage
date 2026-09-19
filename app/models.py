@@ -151,6 +151,7 @@ class MonitoredService(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     service_name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    service_type: Mapped[str] = mapped_column(String(32), nullable=False, server_default="m365", default="m365")
     is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     show_uptime_percentage: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="1", default=True
@@ -161,6 +162,8 @@ class MonitoredService(Base):
     sla_exclude_maintenance: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     sla_exclude_advisory: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     show_sla_on_status_page: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    cert_hostname: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    check_interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
