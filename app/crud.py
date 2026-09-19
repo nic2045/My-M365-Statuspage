@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    CertificateCheckResult,
     HttpCheckResult,
     Incident,
     IncidentUpdate,
@@ -1371,9 +1372,23 @@ async def get_certificate_dashboard_data(db: AsyncSession) -> list[dict]:
     dashboard: list[dict] = []
     for service in services:
         incident = open_by_service.get(service.service_name)
+
+        # Get latest certificate check result for this service
+        cert_result = await db.execute(
+            select(CertificateCheckResult)
+            .where(CertificateCheckResult.service_id == service.id)
+            .order_by(CertificateCheckResult.checked_at.desc())
+            .limit(1)
+        )
+        latest_check = cert_result.scalars().first()
+
         dashboard.append({
             "service": service,
             "status": "ok" if incident is None else ("expired" if incident.status == "active" else "warning"),
             "incident": incident,
+            "expires_at": latest_check.expires_at if latest_check else None,
+            "days_remaining": latest_check.days_remaining if latest_check else None,
+            "issuer": latest_check.issuer if latest_check else None,
+            "checked_at": latest_check.checked_at if latest_check else None,
         })
     return dashboard
