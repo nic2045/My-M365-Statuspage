@@ -17,7 +17,9 @@
             <th class="px-6 py-3 text-left font-semibold">Service</th>
             <th class="px-6 py-3 text-center font-semibold">Typ</th>
             <th class="px-6 py-3 text-left font-semibold">HTTP-URL</th>
+            <th class="px-6 py-3 text-left font-semibold">HTTP Status</th>
             <th class="px-6 py-3 text-left font-semibold">Zertifikats-Host</th>
+            <th class="px-6 py-3 text-left font-semibold">Zertifikat Status</th>
             <th class="px-6 py-3 text-center font-semibold">Status</th>
             <th class="px-6 py-3 text-right font-semibold">Aktion</th>
           </tr>
@@ -37,7 +39,25 @@
                 </span>
               </td>
               <td class="px-6 py-3 truncate max-w-xs">{{ check.http_url or "—" }}</td>
+              <td class="px-6 py-3 text-sm">
+                {% if check.http_url %}
+                  <div id="http-status-{{ check.service_name }}" class="text-gray-600 dark:text-gray-400">
+                    <span class="text-xs">wird geladen...</span>
+                  </div>
+                {% else %}
+                  <span class="text-gray-500">—</span>
+                {% endif %}
+              </td>
               <td class="px-6 py-3">{{ check.cert_hostname or "—" }}</td>
+              <td class="px-6 py-3 text-sm">
+                {% if check.cert_hostname %}
+                  <div id="cert-status-{{ check.service_name }}" class="text-gray-600 dark:text-gray-400">
+                    <span class="text-xs">wird geladen...</span>
+                  </div>
+                {% else %}
+                  <span class="text-gray-500">—</span>
+                {% endif %}
+              </td>
               <td class="px-6 py-3 text-center">
                 <span class="inline-flex items-center rounded-full {% if check.is_enabled %}bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-400{% else %}bg-gray-100 dark:bg-gray-900/40 text-gray-600 dark:text-gray-400{% endif %} px-3 py-1 text-xs font-semibold">
                   {% if check.is_enabled %}✓ Aktiv{% else %}⊘ Inaktiv{% endif %}
@@ -217,5 +237,77 @@ function openEditModal(serviceName, httpUrl, httpStatus, checkInterval, certHost
 
   modal.classList.remove('hidden');
 }
+
+async function loadCheckStatus(serviceName, hasHttp, hasCert) {
+  if (hasHttp) {
+    try {
+      const resp = await fetch(`/admin/api/checks/${encodeURIComponent(serviceName)}/latest-http`);
+      const data = await resp.json();
+      const statusDiv = document.getElementById(`http-status-${serviceName}`);
+      if (data.status === 'no_data') {
+        statusDiv.innerHTML = '<span class="text-xs text-gray-500">Keine Daten</span>';
+      } else {
+        const isUp = data.is_up ? '✓' : '✗';
+        const responseTime = data.response_time_ms ? `${data.response_time_ms.toFixed(0)}ms` : '—';
+        const statusCode = data.status_code || '—';
+        statusDiv.innerHTML = `
+          <div class="space-y-1">
+            <div class="text-xs font-medium ${data.is_up ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
+              ${isUp} ${statusCode}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400">${responseTime}</div>
+          </div>
+        `;
+      }
+    } catch (e) {
+      console.error('Failed to load HTTP check status:', e);
+    }
+  }
+
+  if (hasCert) {
+    try {
+      const resp = await fetch(`/admin/api/checks/${encodeURIComponent(serviceName)}/latest-certificate`);
+      const data = await resp.json();
+      const statusDiv = document.getElementById(`cert-status-${serviceName}`);
+      if (data.status === 'no_data') {
+        statusDiv.innerHTML = '<span class="text-xs text-gray-500">Keine Daten</span>';
+      } else {
+        const statusClass = data.status === 'ok' ? 'text-green-600 dark:text-green-400' :
+                           data.status === 'warning_7' ? 'text-red-600 dark:text-red-400' :
+                           data.status === 'expired' ? 'text-red-700 dark:text-red-300' :
+                           'text-amber-600 dark:text-amber-400';
+        const expiresDate = new Date(data.expires_at).toLocaleDateString('de-DE');
+        statusDiv.innerHTML = `
+          <div class="space-y-1">
+            <div class="text-xs font-medium ${statusClass}">
+              ${data.status === 'ok' ? '✓ OK' : data.status === 'warning_7' ? '⚠ 7 Tage' : data.status === 'expired' ? '✗ Abgelaufen' : '⚠ 30 Tage'}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400">
+              ${expiresDate} (${data.days_remaining}d)
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-500 truncate" title="${data.issuer}">
+              ${data.issuer}
+            </div>
+          </div>
+        `;
+      }
+    } catch (e) {
+      console.error('Failed to load certificate check status:', e);
+    }
+  }
+}
+
+// Load status for all checks on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('tbody tr');
+  rows.forEach(row => {
+    const serviceName = row.querySelector('td:first-child').textContent;
+    const hasHttp = row.querySelector('[id^="http-status-"]') !== null;
+    const hasCert = row.querySelector('[id^="cert-status-"]') !== null;
+    if (hasHttp || hasCert) {
+      loadCheckStatus(serviceName, hasHttp, hasCert);
+    }
+  });
+});
 </script>
 {% endblock %}

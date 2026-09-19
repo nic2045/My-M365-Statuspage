@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
+from sqlalchemy import desc
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1530,6 +1531,68 @@ async def update_check(
         logger.exception("Failed to update check")
 
     return RedirectResponse(url="/admin/checks", status_code=303)
+
+
+@router.get("/api/checks/{service_name}/latest-http")
+async def get_latest_http_check(
+    service_name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Get latest HTTP check result for a service."""
+    from app.models import HttpCheckResult
+
+    result = await db.execute(
+        sa_select(HttpCheckResult)
+        .where(HttpCheckResult.service_name == service_name)
+        .order_by(desc(HttpCheckResult.checked_at))
+        .limit(1)
+    )
+    check = result.scalar_one_or_none()
+
+    if not check:
+        return JSONResponse({"status": "no_data"}, status_code=200)
+
+    return JSONResponse({
+        "is_up": check.is_up,
+        "status_code": check.status_code,
+        "response_time_ms": check.response_time_ms,
+        "error_message": check.error_message,
+        "checked_at": check.checked_at.isoformat() if check.checked_at else None,
+    })
+
+
+@router.get("/api/checks/{service_name}/latest-certificate")
+async def get_latest_certificate_check(
+    service_name: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Get latest certificate check result for a service."""
+    from app.models import CertificateCheckResult
+
+    result = await db.execute(
+        sa_select(CertificateCheckResult)
+        .where(CertificateCheckResult.service_name == service_name)
+        .order_by(desc(CertificateCheckResult.checked_at))
+        .limit(1)
+    )
+    check = result.scalar_one_or_none()
+
+    if not check:
+        return JSONResponse({"status": "no_data"}, status_code=200)
+
+    return JSONResponse({
+        "status": check.status,
+        "expires_at": check.expires_at.isoformat() if check.expires_at else None,
+        "valid_from": check.valid_from.isoformat() if check.valid_from else None,
+        "days_remaining": check.days_remaining,
+        "common_name": check.common_name,
+        "issuer": check.issuer,
+        "serial_number": check.serial_number,
+        "error_message": check.error_message,
+        "checked_at": check.checked_at.isoformat() if check.checked_at else None,
+    })
 
 
 @router.get("/monitoring")
