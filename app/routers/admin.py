@@ -1418,6 +1418,7 @@ async def list_checks(
         )
     )
     checks = result.scalars().all()
+    known_groups = await get_known_groups(db)
 
     return templates.TemplateResponse(
         request,
@@ -1425,6 +1426,7 @@ async def list_checks(
         {
             "user": user,
             "checks": checks,
+            "known_groups": known_groups,
             "page_title": "Checks",
             **nav,
         },
@@ -1434,6 +1436,7 @@ async def list_checks(
 @router.post("/checks/create")
 async def create_check(
     service_name: str = Form(...),
+    group_name: str | None = Form(None),
     enable_http: bool = Form(False),
     http_url: str | None = Form(None),
     http_expected_status: int = Form(200),
@@ -1471,7 +1474,7 @@ async def create_check(
             check_interval_seconds=check_interval_seconds if enable_http else None,
             cert_hostname=normalized_cert_hostname,
             is_enabled=True,
-            group_name="Checks",
+            group_name=group_name or "Checks",
         )
         db.add(svc)
         await db.commit()
@@ -1541,6 +1544,30 @@ async def update_check(
     except Exception:
         await db.rollback()
         logger.exception("Failed to update check")
+
+    return RedirectResponse(url="/admin/checks", status_code=303)
+
+
+@router.post("/checks/{service_name}/group")
+async def update_check_group(
+    service_name: str,
+    group_name: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Update check group assignment."""
+    try:
+        result = await db.execute(
+            sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+        )
+        svc = result.scalar_one_or_none()
+        if svc:
+            svc.group_name = group_name or "Checks"
+            await db.commit()
+            logger.info("Updated check group")
+    except Exception:
+        await db.rollback()
+        logger.exception("Failed to update check group")
 
     return RedirectResponse(url="/admin/checks", status_code=303)
 
