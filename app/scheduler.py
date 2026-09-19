@@ -33,7 +33,14 @@ from app.graph_client import (
 )
 from app.http_check_client import check_http_endpoint, get_http_check_severity
 from app.i18n import LABELS
-from app.models import GRAPH_STATUS_MAP, CertificateCheckResult, HttpCheckResult, Incident, MonitoredService, ServiceStatus
+from app.models import (
+    GRAPH_STATUS_MAP,
+    CertificateCheckResult,
+    HttpCheckResult,
+    Incident,
+    MonitoredService,
+    ServiceStatus,
+)
 from app.notifications import dispatch_incident_notifications
 
 logger = logging.getLogger(__name__)

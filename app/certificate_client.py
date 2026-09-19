@@ -2,7 +2,6 @@ import asyncio
 import logging
 import ssl
 from datetime import UTC, datetime
-from ssl import Certificate
 
 logger = logging.getLogger(__name__)
 
