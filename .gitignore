@@ -255,3 +255,4 @@ demo-cert-monitoring/.refresh-demo-state.json
 # panel can link straight to the currently-active incident's roles tab
 # (the incident id changes every re-trigger).
 demo-cert-monitoring/.docuware-disk-incident.json
+test_admin.db*
