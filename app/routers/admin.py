@@ -1595,25 +1595,25 @@ async def get_latest_certificate_check(
     })
 
 
-@router.get("/monitoring")
-async def monitoring_dashboard(
+@router.get("/sensors")
+async def sensors_dashboard(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_admin),
     nav: dict = Depends(admin_nav_context),
 ):
-    """Combined live dashboard for certificate + HTTP-check monitoring."""
+    """Live dashboard for certificate and HTTP check sensors."""
     certificates = await get_certificate_dashboard_data(db)
     http_checks = await get_http_dashboard_data(db)
 
     return templates.TemplateResponse(
         request,
-        "admin/monitoring.html",
+        "admin/sensors.html",
         {
             "user": user,
             "certificates": certificates,
             "http_checks": http_checks,
-            "page_title": "Monitoring",
+            "page_title": "Sensors",
             **nav,
         },
     )
