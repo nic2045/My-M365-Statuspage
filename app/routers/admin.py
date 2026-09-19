@@ -75,6 +75,7 @@ from app.models import MonitoredService
 from app.notifications import dispatch_incident_notifications, send_test_email
 from app.templates import templates
 from app.translate_client import translate_text
+from app.url_utils import normalize_url
 
 logger = logging.getLogger(__name__)
 
@@ -1453,13 +1454,22 @@ async def create_check(
         if existing.scalar_one_or_none() is not None:
             raise ValueError(f"Service '{service_name}' already exists")
 
+        normalized_http_url = None
+        normalized_cert_hostname = None
+
+        if enable_http and http_url:
+            normalized_http_url, _ = normalize_url(http_url)
+
+        if enable_cert and cert_hostname:
+            _, normalized_cert_hostname = normalize_url(cert_hostname)
+
         svc = MonitoredService(
             service_name=service_name,
             service_type="check",
-            http_url=http_url if enable_http else None,
+            http_url=normalized_http_url,
             http_expected_status=http_expected_status if enable_http else None,
             check_interval_seconds=check_interval_seconds if enable_http else None,
-            cert_hostname=cert_hostname if enable_cert else None,
+            cert_hostname=normalized_cert_hostname,
             is_enabled=True,
             group_name="Checks",
         )
@@ -1517,12 +1527,14 @@ async def update_check(
             return RedirectResponse(url="/admin/checks", status_code=303)
 
         if http_url:
-            svc.http_url = http_url
+            normalized_http_url, _ = normalize_url(http_url)
+            svc.http_url = normalized_http_url
             svc.http_expected_status = http_expected_status or 200
             svc.check_interval_seconds = check_interval_seconds
 
         if cert_hostname:
-            svc.cert_hostname = cert_hostname
+            _, normalized_cert_hostname = normalize_url(cert_hostname)
+            svc.cert_hostname = normalized_cert_hostname
 
         await db.commit()
         logger.info(f"Updated check: {service_name}")
