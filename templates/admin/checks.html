@@ -156,16 +156,18 @@
         <input type="text" name="service_name" required placeholder="z.B. API Gateway" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
       </div>
 
-      <div class="space-y-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+      <div>
+        <label class="block text-sm font-medium mb-2">URL / Hostname</label>
+        <input type="text" id="check_url" placeholder="z.B. api.example.com oder https://api.example.com/health" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Wird automatisch für HTTP und Zertifikat normalisiert</p>
+      </div>
+
+      <div class="space-y-3">
         <label class="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" name="enable_http" id="enable_http" onchange="document.getElementById('http-fields').classList.toggle('hidden', !this.checked)">
+          <input type="checkbox" name="enable_http" id="enable_http" onchange="toggleHttpFields(this.checked)">
           HTTP-Check
         </label>
         <div id="http-fields" class="hidden space-y-3 pl-6">
-          <div>
-            <label class="block text-xs font-medium mb-1">URL</label>
-            <input type="url" name="http_url" placeholder="https://api.example.com/health" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
-          </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-medium mb-1">Erwarteter Status</label>
@@ -179,16 +181,15 @@
         </div>
       </div>
 
-      <div class="space-y-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+      <div>
         <label class="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" name="enable_cert" id="enable_cert" onchange="document.getElementById('cert-fields').classList.toggle('hidden', !this.checked)">
-          Zertifikat
+          <input type="checkbox" name="enable_cert" id="enable_cert" onchange="toggleCertFields(this.checked)">
+          Zertifikat-Check
         </label>
-        <div id="cert-fields" class="hidden pl-6">
-          <label class="block text-xs font-medium mb-1">Hostname</label>
-          <input type="text" name="cert_hostname" placeholder="z.B. api.example.com" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
-        </div>
       </div>
+
+      <input type="hidden" id="http_url" name="http_url">
+      <input type="hidden" id="cert_hostname" name="cert_hostname">
 
       <div class="flex gap-2 justify-end">
         <button type="button" onclick="document.getElementById('add-check-modal').classList.add('hidden')" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
@@ -208,6 +209,44 @@
 </style>
 
 <script>
+function toggleHttpFields(show) {
+  document.getElementById('http-fields').classList.toggle('hidden', !show);
+}
+
+function splitAndStoreUrl() {
+  const urlInput = document.getElementById('check_url').value;
+  const enableHttp = document.getElementById('enable_http').checked;
+  const enableCert = document.getElementById('enable_cert').checked;
+
+  if (enableHttp && urlInput) {
+    const normalized = urlInput.trim().startsWith('http') ? urlInput.trim() : `https://${urlInput.trim()}`;
+    document.getElementById('http_url').value = normalized;
+  } else {
+    document.getElementById('http_url').value = '';
+  }
+
+  if (enableCert && urlInput) {
+    const input = urlInput.trim();
+    let hostname = input;
+
+    if (input.includes('://')) {
+      try {
+        const url = new URL(input.startsWith('http') ? input : `https://${input}`);
+        hostname = url.hostname;
+      } catch (e) {
+        hostname = input.replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
+      }
+    } else {
+      hostname = input.split('/')[0].split(':')[0];
+    }
+
+    document.getElementById('cert_hostname').value = hostname;
+  } else {
+    document.getElementById('cert_hostname').value = '';
+  }
+}
+
+
 function openEditModal(serviceName, httpUrl, httpStatus, checkInterval, certHostname) {
   const modal = document.getElementById('edit-check-modal');
   const form = document.getElementById('edit-form');
@@ -303,8 +342,9 @@ async function loadCheckStatus(serviceName, hasHttp, hasCert) {
   }
 }
 
-// Load status for all checks on page load
+// Load status for all checks on page load + setup form handler
 document.addEventListener('DOMContentLoaded', () => {
+  // Load check status
   const rows = document.querySelectorAll('tbody tr');
   rows.forEach(row => {
     const serviceName = row.querySelector('td:first-child').textContent;
@@ -314,6 +354,20 @@ document.addEventListener('DOMContentLoaded', () => {
       loadCheckStatus(serviceName, hasHttp, hasCert);
     }
   });
+
+  // Setup form submission handler for "Neuen Check hinzufügen"
+  const addCheckForm = document.querySelector('form[action="/admin/checks/create"]');
+  if (addCheckForm) {
+    addCheckForm.addEventListener('submit', (e) => {
+      splitAndStoreUrl();
+      const enableHttp = document.getElementById('enable_http').checked;
+      const enableCert = document.getElementById('enable_cert').checked;
+      if (!enableHttp && !enableCert) {
+        e.preventDefault();
+        alert('Bitte mindestens einen Check auswählen');
+      }
+    });
+  }
 });
 </script>
 {% endblock %}
