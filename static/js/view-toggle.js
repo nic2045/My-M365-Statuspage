@@ -16,16 +16,16 @@ function initViewToggle() {
 
   if (!container || !toggleBtn) return;
 
-  const currentView = localStorage.getItem(STORAGE_KEY) || DEFAULT_VIEW;
+  let currentView = localStorage.getItem(STORAGE_KEY) || DEFAULT_VIEW;
 
   // Set initial state
   setView(currentView, container, toggleBtn);
 
   // Toggle on click
   toggleBtn.addEventListener('click', () => {
-    const nextView = currentView === VIEWS.table ? VIEWS.cards : VIEWS.table;
-    localStorage.setItem(STORAGE_KEY, nextView);
-    setView(nextView, container, toggleBtn);
+    currentView = currentView === VIEWS.table ? VIEWS.cards : VIEWS.table;
+    localStorage.setItem(STORAGE_KEY, currentView);
+    setView(currentView, container, toggleBtn);
   });
 }
 
