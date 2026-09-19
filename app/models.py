@@ -164,7 +164,23 @@ class MonitoredService(Base):
     show_sla_on_status_page: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     cert_hostname: Mapped[str | None] = mapped_column(String(256), nullable=True)
     check_interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    http_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    http_expected_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class HttpCheckResult(Base):
+    """History of HTTP uptime-check results, used for the monitoring dashboard's
+    uptime percentage and latency display."""
+    __tablename__ = "http_check_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    service_name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    checked_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    is_up: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    response_time_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
 
 class Subscriber(Base):
