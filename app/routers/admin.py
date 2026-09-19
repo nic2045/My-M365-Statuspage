@@ -1495,6 +1495,43 @@ async def delete_check(
     return RedirectResponse(url="/admin/checks", status_code=303)
 
 
+@router.post("/checks/{service_name}/update")
+async def update_check(
+    service_name: str,
+    http_url: str | None = Form(None),
+    http_expected_status: int | None = Form(None),
+    check_interval_seconds: int | None = Form(None),
+    cert_hostname: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """Update an existing check (HTTP, certificate, or both)."""
+    try:
+        result = await db.execute(
+            sa_select(MonitoredService).where(MonitoredService.service_name == service_name)
+        )
+        svc = result.scalar_one_or_none()
+        if not svc:
+            logger.warning(f"Check not found: {service_name}")
+            return RedirectResponse(url="/admin/checks", status_code=303)
+
+        if http_url:
+            svc.http_url = http_url
+            svc.http_expected_status = http_expected_status or 200
+            svc.check_interval_seconds = check_interval_seconds
+
+        if cert_hostname:
+            svc.cert_hostname = cert_hostname
+
+        await db.commit()
+        logger.info(f"Updated check: {service_name}")
+    except Exception:
+        await db.rollback()
+        logger.exception("Failed to update check")
+
+    return RedirectResponse(url="/admin/checks", status_code=303)
+
+
 @router.get("/monitoring")
 async def monitoring_dashboard(
     request: Request,

@@ -43,7 +43,10 @@
                   {% if check.is_enabled %}✓ Aktiv{% else %}⊘ Inaktiv{% endif %}
                 </span>
               </td>
-              <td class="px-6 py-3 text-right">
+              <td class="px-6 py-3 text-right flex gap-3 justify-end">
+                <button type="button" onclick="openEditModal('{{ check.service_name }}', '{{ check.http_url or '' }}', '{{ check.http_expected_status or 200 }}', '{{ check.check_interval_seconds or '' }}', '{{ check.cert_hostname or '' }}')" class="text-blue-600 hover:text-blue-800 text-sm font-medium transition">
+                  Bearbeiten
+                </button>
                 <form method="post" action="/admin/checks/{{ check.service_name }}/delete" style="display: inline;">
                   <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium transition" onclick="return confirm('Wirklich löschen?')">
                     Löschen
@@ -60,6 +63,59 @@
       Keine Checks konfiguriert.
     </div>
   {% endif %}
+</div>
+
+<!-- Edit Check Modal -->
+<div id="edit-check-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+  <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-md w-full mx-4">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-lg font-semibold">Check bearbeiten: <span id="edit-service-name"></span></h2>
+    </div>
+    <form method="post" id="edit-form" class="p-6 space-y-4">
+      <div class="space-y-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+        <label class="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" id="edit_enable_http" onchange="document.getElementById('edit-http-fields').classList.toggle('hidden', !this.checked)">
+          HTTP-Check
+        </label>
+        <div id="edit-http-fields" class="hidden space-y-3 pl-6">
+          <div>
+            <label class="block text-xs font-medium mb-1">URL</label>
+            <input type="url" id="edit_http_url" name="http_url" placeholder="https://api.example.com/health" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium mb-1">Erwarteter Status</label>
+              <input type="number" id="edit_http_expected_status" name="http_expected_status" value="200" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
+            </div>
+            <div>
+              <label class="block text-xs font-medium mb-1">Intervall (Sek.)</label>
+              <input type="number" id="edit_check_interval_seconds" name="check_interval_seconds" placeholder="300" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+        <label class="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" id="edit_enable_cert" onchange="document.getElementById('edit-cert-fields').classList.toggle('hidden', !this.checked)">
+          Zertifikat
+        </label>
+        <div id="edit-cert-fields" class="hidden pl-6">
+          <label class="block text-xs font-medium mb-1">Hostname</label>
+          <input type="text" id="edit_cert_hostname" name="cert_hostname" placeholder="z.B. api.example.com" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
+        </div>
+      </div>
+
+      <div class="flex gap-2 justify-end">
+        <button type="button" onclick="document.getElementById('edit-check-modal').classList.add('hidden')" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+          Abbrechen
+        </button>
+        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded">
+          Speichern
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- Add Check Modal -->
@@ -122,5 +178,44 @@
 
 <style>
 #add-check-modal.hidden { display: none; }
+#edit-check-modal.hidden { display: none; }
 </style>
+
+<script>
+function openEditModal(serviceName, httpUrl, httpStatus, checkInterval, certHostname) {
+  const modal = document.getElementById('edit-check-modal');
+  const form = document.getElementById('edit-form');
+
+  document.getElementById('edit-service-name').textContent = serviceName;
+  form.action = `/admin/checks/${encodeURIComponent(serviceName)}/update`;
+
+  const enableHttp = document.getElementById('edit_enable_http');
+  const httpFields = document.getElementById('edit-http-fields');
+
+  const enableCert = document.getElementById('edit_enable_cert');
+  const certFields = document.getElementById('edit-cert-fields');
+
+  if (httpUrl) {
+    enableHttp.checked = true;
+    httpFields.classList.remove('hidden');
+    document.getElementById('edit_http_url').value = httpUrl;
+    document.getElementById('edit_http_expected_status').value = httpStatus || 200;
+    document.getElementById('edit_check_interval_seconds').value = checkInterval || '';
+  } else {
+    enableHttp.checked = false;
+    httpFields.classList.add('hidden');
+  }
+
+  if (certHostname) {
+    enableCert.checked = true;
+    certFields.classList.remove('hidden');
+    document.getElementById('edit_cert_hostname').value = certHostname;
+  } else {
+    enableCert.checked = false;
+    certFields.classList.add('hidden');
+  }
+
+  modal.classList.remove('hidden');
+}
+</script>
 {% endblock %}
