@@ -1564,10 +1564,10 @@ async def update_check_group(
         if svc:
             svc.group_name = group_name or "Checks"
             await db.commit()
-            logger.info(f"Updated check group: {service_name} -> {svc.group_name}")
+            logger.info("Updated check group")
     except Exception:
         await db.rollback()
-        logger.exception(f"Failed to update check group: {service_name}")
+        logger.exception("Failed to update check group")
 
     return RedirectResponse(url="/admin/checks", status_code=303)
 
