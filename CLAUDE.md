@@ -163,18 +163,110 @@ See `.env.example` for all env vars. Key ones:
 
 **Change SMTP settings:** Admin → Settings → Email Config. Saves to `app_settings` table. Notifications use these on next send.
 
-## Code Style
+## Code Style & Best Practices
 
+### Type Safety
+- **Type Hints (Required):** All functions, parameters, and returns must have type hints (Python 3.12+)
+  - Use modern syntax: `dict[str, str]`, `list[int]`, `AsyncGenerator[T, None]`
+  - Import from `collections.abc` for generic types: `AsyncGenerator`, `Iterator`, etc.
+  - Example: `async def get_db() -> AsyncGenerator[AsyncSession, None]:`
+- **SQLAlchemy:** Use `Mapped` and `mapped_column` for ORM models (type-safe DB access)
+
+### Dependency Injection (FastAPI Pattern)
+- **Reusable Dependencies:** Create dependencies in `app/dependencies.py` for:
+  - Database sessions: `async def get_db() -> AsyncGenerator[AsyncSession, None]`
+  - Auth checks: `async def require_embed_access(request, token: str | None = Query(...))`
+  - Context data: `async def admin_nav_context(request, db: AsyncSession = Depends(get_db))`
+- **Route Injection:** Use `Depends()` in route signatures, never instantiate manually
+  ```python
+  @router.get("/incidents")
+  async def list_incidents(db: AsyncSession = Depends(get_db)):
+      return await get_incidents(db)
+  ```
+
+### Layered Architecture
+```
+HTTP Layer    → routers/ (status.py, admin.py, api.py, auth_router.py, embed.py)
+              ↓
+Validation    → schemas.py (Pydantic models)
+              ↓
+Business      → crud.py (data access functions)
+Logic         ↓
+Database      → models.py (SQLAlchemy ORM)
+              ↓
+Config        → config.py (Pydantic Settings)
+```
+- Keep each layer focused: don't call routers from crud, don't embed SQL in routers
+- Always validate input at boundaries (routers, subscriptions)
+- Return domain objects from crud (Incident, Service), not raw dicts
+
+### Code Comments
+- **Language:** All comments must be in **English** (code, .env, configs, docstrings)
+  - User-facing UI text (templates) can be German/multi-language
+  - Reason: code changes hands across teams; English is lingua franca
+- **When to comment:** Only when the WHY is non-obvious (hidden constraint, workaround, subtle invariant)
+  - Don't comment WHAT the code does (naming should be clear)
+  - Don't reference current task/PR (belongs in commit message, not code)
+- **Style:** One-line comments max; no multi-paragraph blocks
+  ```python
+  # Good: explains non-obvious constraint
+  incident.is_resolved = (new_status == "resolved")  # Graph's final status
+  
+  # Bad: explains obvious WHAT
+  incident.title = issue.get("title", "")  # Set the title
+  ```
+
+### Async/Await & Error Handling
+- **Async First:** Use `async`/`await` throughout; FastAPI + SQLAlchemy are async-native
+- **Fire-and-Forget Tasks:** Async tasks dispatched after DB commit (notifications, backfills)
+  - Always attach `done_callback()` to capture exceptions (they won't bubble)
+  - Pattern: `task = asyncio.create_task(...); task.add_done_callback(_log_error)`
+  - Why: Unhandled exceptions in fire-and-forget tasks are silently swallowed
+- **DB Transactions:** Rollback on exception; don't leave partial writes
+  ```python
+  try:
+      await db.commit()
+  except Exception:
+      await db.rollback()
+      logger.exception("Failed to sync")
+  ```
+- **HTTP Errors:** Raise `HTTPException(status_code, detail)` for API responses
+- **Logging:** Use `logging.getLogger(__name__)` per module
+  - Log levels: DEBUG (dev), INFO (normal), ERROR (problems), exception() for tracebacks
+
+### Query Optimization
+- **N+1 Prevention:** Don't loop + query. Use subqueries or batch operations
+  - Bad: `for service in services: status = await get_status(service)` (N+1)
+  - Good: Single query with JOIN/subquery + process results in Python
+  - See `crud.py:get_enabled_services_with_status()` for example (uses window function row_number())
+- **Eager Loading:** Use `selectinload()` for relationships that will be accessed
+  ```python
+  query = select(Incident).options(selectinload(Incident.updates))
+  ```
+
+### Linting & Formatting
 - **Linter:** ruff (configured in `ruff.toml`)
-- **Async:** Use `async`/`await` throughout; FastAPI + SQLAlchemy are async-native
-- **Errors:** FastAPI raises `HTTPException(status_code, detail)` for HTTP errors
-- **Logging:** Use `logging.getLogger(__name__)` per module; log levels DEBUG (dev), INFO (normal), ERROR (problems)
 - **Secrets:** Never commit `.env` files; use `.env.example` as template
+
+### Database Export/Import (for Development)
+- **Export current DB:** `make db-export` → creates `db_export.json`
+- **Import into new env:** `make db-import FILE=db_export.json`
+- **Use case:** Transfer data from macOS to Windows, backups, testing
+- **Behavior:** Import merges (doesn't delete); skips duplicates; validates foreign keys
+- **Details:** See `MIGRATION.md` for full workflow
 
 ## Recent Changes & PR Context
 
-The latest PRs added:
+The latest PRs added (in order):
 - **#184**: Severity display in incident cards + state-change recording for new resolved incidents
 - **#185**: Windows WSL2 Docker setup automation (setup-wsl2.ps1, setup-wsl2.bat) + VS Code integration (Start.ps1, .vscode/ config)
+- **#186**: Database export/import scripts + Makefile targets for cross-platform data migration (macOS → Windows)
+
+Recent bug fixes (now merged to main):
+- Fixed critical SQLAlchemy bug: removed incorrect `await` on `db.delete()` (3 locations in crud.py)
+- Fixed N+1 query in `get_enabled_services_with_status()` using SQL window functions
+- Added fire-and-forget error tracking in notification dispatch via `task.add_done_callback()`
+- Fixed race condition on `_pending_poll_task` global with `asyncio.Lock`
+- Standardized all comments/config to English (`.env.example` translated)
 
 Check PR descriptions for context on why specific changes were made (e.g., why state_change is recorded for new incidents that are already resolved = they need a timeline marker).
