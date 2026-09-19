@@ -354,6 +354,59 @@ Aktive Phasen (`active`/`acknowledged`/`monitoring`/`in_progress`) und nicht-ope
 
 ---
 
+## Release Management
+
+Dieses Projekt nutzt **Release Please** für automatisiertes Semantic Versioning basierend auf Conventional Commits:
+
+### Versioning
+
+- **MAJOR:** Breaking changes (inkompatible API, DB-Migration notwendig)
+- **MINOR:** Neue Features rückwärts-kompatibel
+- **PATCH:** Bug-Fixes
+
+### Commit-Format
+
+Commits müssen folgendes Format nutzen:
+
+```
+type(scope): description
+
+feat:     → MINOR version bump
+fix:      → PATCH version bump
+docs:     → kein Release (nur Dokumentation)
+refactor: → kein Release (interne Änderungen)
+chore:    → kein Release (Dependencies, Config)
+```
+
+**Beispiel:**
+```bash
+git commit -m "feat(scheduler): add health check polling"
+git commit -m "fix(admin): resolve race condition on service toggle"
+git commit -m "docs: update Windows setup guide"
+```
+
+**Breaking Changes:**
+```bash
+git commit -m "feat(api)!: remove deprecated v0 endpoint"  # → MAJOR bump
+```
+
+### Workflow
+
+1. Commits mit `feat:`, `fix:`, etc. pushen → main mergen
+2. Release Please erstellt automatisch PR mit:
+   - Versionsbump in `app/__init__.py` + `pyproject.toml`
+   - Auto-generiertes `CHANGELOG.md`
+3. PR mergen → automatisch git tag `v*.*.x` erstellt
+4. Tag löst Release-Workflow aus:
+   - CI full test
+   - Docker images (amd64 + arm64) zu GHCR
+   - Security scans (Trivy + pip-audit)
+   - GitHub Release veröffentlicht
+
+Mehr Details: Siehe [`CLAUDE.md` → Release Lifecycle](CLAUDE.md#release-lifecycle)
+
+---
+
 ## Verwandtes: Zertifikats- & Verfügbarkeits-Monitoring (Demo)
 
 Unter [`demo-cert-monitoring/`](demo-cert-monitoring/) liegt ein eigenständiger Demo-Stack (Prometheus + blackbox_exporter + Grafana + optional OneUptime), der zeigt, wie generisches Website-/TLS-Zertifikats-Monitoring für App-Owner (Grafana-Dashboard) und Endnutzer (öffentliche OneUptime-Statuspage) aussehen kann. Er ist komplett getrennt von dieser App — eigenes Compose-File, eigenes `.env`, kein Einfluss auf CI/Build hier.
