@@ -2,11 +2,17 @@
 
 {% block admin_content %}
 <div class="space-y-6">
-  <div class="flex items-center justify-between">
-    <h1 class="text-3xl font-bold">Checks</h1>
-    <button type="button" onclick="document.getElementById('add-check-modal').classList.remove('hidden')" class="inline-flex items-center rounded-lg bg-green-600 hover:bg-green-700 px-4 py-2 text-sm font-medium text-white transition">
-      + Neuer Check
-    </button>
+  <div>
+    <div class="flex items-center justify-between mb-2">
+      <h1 class="text-3xl font-bold">Checks</h1>
+      <button type="button" onclick="document.getElementById('add-check-modal').classList.remove('hidden')" class="inline-flex items-center rounded-lg bg-green-600 hover:bg-green-700 px-4 py-2 text-sm font-medium text-white transition">
+        + Neuer Check
+      </button>
+    </div>
+    <p class="text-sm text-gray-600 dark:text-gray-400">
+      Verwalte Zertifikats- und HTTP-Überwachung. Für detaillierte Metriken und Live-Status siehe
+      <a href="/admin/monitoring" class="text-blue-600 hover:underline font-medium">Monitoring-Dashboard</a>.
+    </p>
   </div>
 
   {% if checks %}
