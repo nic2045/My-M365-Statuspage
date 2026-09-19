@@ -2,8 +2,22 @@ import asyncio
 import logging
 import ssl
 from datetime import UTC, datetime
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_hostname(input_str: str) -> str:
+    """Extract hostname from a string that might be a URL or just a hostname."""
+    if not input_str:
+        return ""
+
+    input_str = input_str.strip()
+    if input_str.startswith(("http://", "https://")):
+        parsed = urlparse(input_str)
+        return parsed.hostname or parsed.netloc or input_str
+
+    return input_str.split("/")[0].split(":")[0]
 
 
 async def get_certificate_expiration(hostname: str) -> dict[str, object]:
@@ -20,6 +34,8 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
         'serial_number': str,
     }
     """
+    hostname = _extract_hostname(hostname)
+
     loop = asyncio.get_event_loop()
     try:
         context = ssl.create_default_context()
