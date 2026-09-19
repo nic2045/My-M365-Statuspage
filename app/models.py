@@ -48,6 +48,13 @@ STATUS_BADGE_CLASSES: dict[str, str] = {
     "unknown":     "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
 }
 
+STATUS_RING_CLASSES: dict[str, str] = {
+    "operational": "bg-emerald-100 dark:bg-emerald-900/40",
+    "degraded":    "bg-amber-100 dark:bg-amber-900/40",
+    "interrupted": "bg-red-100 dark:bg-red-900/40",
+    "unknown":     "bg-gray-100 dark:bg-gray-800",
+}
+
 INCIDENT_BORDER: dict[str, str] = {
     "incident":    "border-red-500",
     "advisory":    "border-amber-400",

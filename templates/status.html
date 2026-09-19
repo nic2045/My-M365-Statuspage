@@ -80,19 +80,30 @@
     <h2 class="text-sm font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
       {{ L["page.uptime_heading"] }}
     </h2>
-    <div class="flex items-center gap-2" data-range-toggle>
-      <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">{{ L["page.range.label"] }}</span>
-      {% for opt in range_options %}
-        {% set is_active = opt == selected_range %}
-        <button type="button"
-                data-range="{{ opt }}"
-                {% if is_active %}data-active="1" aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
-                class="text-xs px-2.5 py-1 rounded-full border transition-colors
-                  {% if is_active %}border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300
-                  {% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500{% endif %}">
-          {{ L["page.range." ~ opt] }}
-        </button>
-      {% endfor %}
+    <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2" data-range-toggle>
+        <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">{{ L["page.range.label"] }}</span>
+        {% for opt in range_options %}
+          {% set is_active = opt == selected_range %}
+          <button type="button"
+                  data-range="{{ opt }}"
+                  {% if is_active %}data-active="1" aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
+                  class="text-xs px-2.5 py-1 rounded-full border transition-colors
+                    {% if is_active %}border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300
+                    {% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500{% endif %}">
+            {{ L["page.range." ~ opt] }}
+          </button>
+        {% endfor %}
+      </div>
+      <div class="w-px h-5 bg-gray-200 dark:bg-gray-700"></div>
+      <button type="button"
+              data-view-toggle-btn
+              data-label-cards="Karten"
+              data-label-table="Tabelle"
+              aria-label="View toggle"
+              class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+        Karten
+      </button>
     </div>
   </div>
   {# Services are pre-sorted by (group, name) in get_enabled_services.
@@ -101,22 +112,31 @@
      only when there are 2+ distinct groups. #}
   {% set grouped = group_services(data.services, L['page.group_other']) %}
   {% set show_headers = grouped | length > 1 %}
-  {% for group_label, group_services in grouped %}
-    {% set svc_list = group_services | list %}
-    {% if show_headers %}
-    <div class="flex items-baseline justify-between mt-5 mb-2 first:mt-0">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-        {{ group_label }}
-      </h3>
-      <span class="text-[11px] text-gray-400 dark:text-gray-500">
-        {% if svc_list | length == 1 %}{{ L['page.group_count_one'] }}{% else %}{{ L['page.group_count'].format(count=svc_list | length) }}{% endif %}
-      </span>
-    </div>
-    {% endif %}
-    {% for service in svc_list %}
-      {% include "partials/service_row.html" %}
+  <div data-services-container class="flex flex-col">
+    {% for group_label, group_services in grouped %}
+      {% set svc_list = group_services | list %}
+      {% if show_headers %}
+      <div class="flex items-baseline justify-between mt-5 mb-2 first:mt-0">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          {{ group_label }}
+        </h3>
+        <span class="text-[11px] text-gray-400 dark:text-gray-500">
+          {% if svc_list | length == 1 %}{{ L['page.group_count_one'] }}{% else %}{{ L['page.group_count'].format(count=svc_list | length) }}{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% for service in svc_list %}
+        {# Render row variant #}
+        <div data-card-variant="row">
+          {% include "partials/service_row.html" %}
+        </div>
+        {# Render card variant (hidden by default) #}
+        <div data-card-variant="card" style="display: none;">
+          {% include "partials/service_card.html" %}
+        </div>
+      {% endfor %}
     {% endfor %}
-  {% endfor %}
+  </div>
 </section>
 
 {# ── Scheduled maintenances ───────────────────────────────────────────────────── #}
@@ -599,5 +619,7 @@
     }
   })();
 </script>
+
+<script src="/static/js/view-toggle.js"></script>
 
 {% endblock %}

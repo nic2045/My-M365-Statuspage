@@ -53,6 +53,8 @@ LABELS_DE: dict[str, str] = {
     "page.darkmode":              "Dunkel",
     "page.lightmode":             "Hell",
     "page.no_incidents":          "Keine aktiven Störungen gemeldet.",
+    "page.uptime_short":          "Verfügbarkeit",
+    "page.active_incident":       "Aktive Störung",
     # Incidents
     "incident.type.incident":     "Störung",
     "incident.type.advisory":     "Hinweis",
@@ -414,6 +416,8 @@ LABELS_EN: dict[str, str] = {
     "page.darkmode":              "Dark",
     "page.lightmode":             "Light",
     "page.no_incidents":          "No active incidents reported.",
+    "page.uptime_short":          "Uptime",
+    "page.active_incident":       "Active incident",
     # Incidents
     "incident.type.incident":     "Incident",
     "incident.type.advisory":     "Advisory",
