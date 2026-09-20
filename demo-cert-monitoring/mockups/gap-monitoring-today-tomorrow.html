@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Mockup: Monitoring-Gap – Heute vs. Morgen</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --header-bg: #0b3d3d;
+    --header-accent: #14a89d;
+    --border: #dfe2e6;
+    --text: #1c1c1e;
+    --muted: #6b6f76;
+    --card-bg: #ffffff;
+    --ok: #14a89d;
+    --warning: #d97706;
+    --danger: #c4314b;
+    --danger-bg: #fdf2f4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: #ddd;
+    color: var(--text);
+    padding: 40px 24px;
+  }
+  .app {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    background: var(--bg);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    overflow: hidden;
+  }
+  .app-header {
+    background: var(--header-bg);
+    color: #fff;
+    padding: 16px 28px;
+  }
+  .app-header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .body { padding: 32px; }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin-bottom: 32px;
+  }
+  .column { display: flex; flex-direction: column; gap: 20px; }
+  .column-header {
+    font-size: 16px;
+    font-weight: 700;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .column-header.today { color: var(--danger); }
+  .column-header.tomorrow { color: var(--ok); }
+
+  /* Card styles */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 12px 0;
+  }
+
+  /* Status grid */
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+  }
+  .status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.ok { background: var(--ok); }
+  .status-dot.danger { background: var(--danger); }
+  .status-dot.warning { background: var(--warning); }
+  .status-label {
+    font-size: 12px;
+    flex: 1;
+  }
+  .status-value {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #e9e9e9;
+  }
+
+  /* BMC view (blind spots) */
+  .blind-spot {
+    background: var(--danger-bg);
+    border-left: 3px solid var(--danger);
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .blind-spot .label {
+    color: var(--danger);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .blind-spot .text {
+    color: var(--text);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  /* Elastic APM view (gained visibility) */
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .metric-label { flex: 1; }
+  .metric-value {
+    font-weight: 700;
+    min-width: 80px;
+    text-align: right;
+  }
+  .metric-value.good { color: var(--ok); }
+  .metric-value.bad { color: var(--danger); }
+
+  /* Layers */
+  .layers {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .layer {
+    background: #f9f9f9;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+  .layer-name {
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .layer-examples {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 2px;
+  }
+
+  /* Correlation */
+  .correlation {
+    background: #f0f4ff;
+    border-left: 3px solid #3b82f6;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-top: 16px;
+  }
+  .correlation .title {
+    font-weight: 700;
+    color: #3b82f6;
+    margin-bottom: 6px;
+  }
+  .correlation .text {
+    color: var(--text);
+    line-height: 1.4;
+    font-size: 11px;
+  }
+
+  /* Bottom insight */
+  .insight {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    margin-top: 32px;
+  }
+  .insight-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 12px 0;
+    color: var(--text);
+  }
+  .insight-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .insight-item {
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border-left: 3px solid var(--border);
+  }
+  .insight-item.critical {
+    background: #fef1f1;
+    border-left-color: var(--danger);
+  }
+  .insight-item h4 {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .insight-item p {
+    margin: 0;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+
+  @media (max-width: 1000px) {
+    .comparison { grid-template-columns: 1fr; }
+    .insight-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="app-header">
+    <h1>⚡ Monitoring Gap: Heute vs. Morgen</h1>
+  </div>
+
+  <div class="body">
+    <div class="comparison">
+
+      <!-- LEFT: TODAY (BMC TSSA ONLY) -->
+      <div class="column">
+        <div class="column-header today">🔴 HEUTE: Nur Infrastructure (BMC TSSA)</div>
+
+        <div class="card">
+          <h3 class="card-title">DocuWare – Status</h3>
+          <div class="status-grid">
+            <div class="status-item">
+              <div class="status-dot ok"></div>
+              <div class="status-label">DocuWare Hauptserver</div>
+              <div class="status-value">UP</div>
+            </div>
+            <div class="status-item">
+              <div class="status-dot ok"></div>
+              <div class="status-label">CPU-Auslastung</div>
+              <div class="status-value">45%</div>
+            </div>
+            <div class="status-item">
+              <div class="status-dot ok"></div>
+              <div class="status-label">Memory</div>
+              <div class="status-value">62%</div>
+            </div>
+            <div class="status-item">
+              <div class="status-dot ok"></div>
+              <div class="status-label">Disk</div>
+              <div class="status-value">28%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="blind-spot">
+          <div class="label">❓ Blinde Flecken</div>
+          <div class="text">
+            • Wie schnell antwortet DocuWare?<br>
+            • Wie viele Anfragen schlagen fehl?<br>
+            • Wo genau ist der Engpass?<br>
+            • Wie erleben Nutzer das?<br>
+            <strong>→ Keine Sichtbarkeit!</strong>
+          </div>
+        </div>
+
+        <div class="blind-spot">
+          <div class="label">📊 Was BMC zeigt</div>
+          <div class="text">
+            Nur Infrastruktur-Metriken.<br>
+            Server läuft, aber hat das noch was mit<br>
+            Nutzererleben zu tun?<br>
+            <strong>→ Wissen wir nicht.</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: TOMORROW (FULL STACK) -->
+      <div class="column">
+        <div class="column-header tomorrow">🟢 MORGEN: Full-Stack Monitoring</div>
+
+        <div class="card">
+          <h3 class="card-title">Prometheus (Infrastruktur)</h3>
+          <div class="status-grid">
+            <div class="status-item">
+              <div class="status-dot ok"></div>
+              <div class="status-label">CPU</div>
+              <div class="status-value">45%</div>
+            </div>
+            <div class="status-item">
+              <div class="status-dot ok"></div>
+              <div class="status-label">Memory</div>
+              <div class="status-value">62%</div>
+            </div>
+            <div class="status-item">
+              <div class="status-dot ok"></div>
+              <div class="status-label">Disk</div>
+              <div class="status-value">28%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Elastic APM (Application Performance)</h3>
+          <div class="metric-row">
+            <div class="metric-label">Response Time (95th %ile)</div>
+            <div class="metric-value bad">2.100 ms</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">Error Rate</div>
+            <div class="metric-value bad">15,3%</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">Throughput</div>
+            <div class="metric-value">127 req/s</div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">Top Slow Service</div>
+            <div class="metric-value bad">Login (3.400 ms)</div>
+          </div>
+
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text);">
+            <strong>Top Error:</strong> "Database Connection Timeout"<br>
+            <strong>Root Cause Trace:</strong> SELECT * FROM documents (Index Missing)<br>
+            <strong>Trace:</strong> Frontend (200ms) → API Gateway (150ms) → DocuWare-Service (2.400ms) → DB (timeout)
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">OneUptime (Service Health)</h3>
+          <div class="status-grid">
+            <div class="status-item">
+              <div class="status-dot danger"></div>
+              <div class="status-label">DocuWare Service</div>
+              <div class="status-value" style="background: var(--danger-bg); color: var(--danger);">DEGRADED</div>
+            </div>
+            <div class="status-item">
+              <div class="status-dot danger"></div>
+              <div class="status-label">SLA Breach</div>
+              <div class="status-value">99,2% (target: 99,9%)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="correlation">
+          <div class="title">🔗 Korrelation & Ursachenanalyse</div>
+          <div class="text">
+            <strong>Was passiert:</strong><br>
+            Infra sieht OK (CPU 45%), aber Nutzer bekommen Timeouts. Warum?<br>
+            <br>
+            <strong>Elastic zeigt:</strong> Index-Fehler in DB-Query, nicht Ressourcen-Problem.<br>
+            <br>
+            <strong>Sofort behebbar:</strong> DBA kann zielgenau Index neu erstellen,<br>
+            statt blind Ressourcen hochzufahren (hätte nichts geholfen).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSIGHT SECTION -->
+    <div class="insight">
+      <h3 class="insight-title">📌 Was ändert sich mit Full-Stack Monitoring?</h3>
+      <div class="insight-grid">
+        <div class="insight-item critical">
+          <h4>Fehlerrate sichtbar</h4>
+          <p>Heute: "Server läuft" ✓<br>
+             Morgen: "Server läuft, aber 15% der Anfragen schlagen fehl" ⚠️</p>
+        </div>
+        <div class="insight-item critical">
+          <h4>Performance gemessen</h4>
+          <p>Heute: "Speicher ist da"<br>
+             Morgen: "Nutzer warten 2,1s auf eine einfache Suche"</p>
+        </div>
+        <div class="insight-item critical">
+          <h4>Root Cause klar</h4>
+          <p>Heute: "Problem irgendwo" → 2h Debugging<br>
+             Morgen: "Index fehlt" → 5min Fix</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
