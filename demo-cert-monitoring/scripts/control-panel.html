@@ -833,7 +833,7 @@
         </svg>
         <div>
           <h2>Monitoring-Gap: Heute vs. Morgen</h2>
-          <span class="status healthy"><span class="dot"></span>Mockup + echter Trace</span>
+          <span class="status healthy"><span class="dot"></span>Mockup + echte Traces</span>
           <span class="cat-badge process">Prozessdemo</span>
         </div>
       </div>
@@ -841,21 +841,23 @@
         <strong>Zeigt:</strong> den Unterschied zwischen reinem
         Infrastructure-Monitoring (BMC TSSA - Server "läuft", aber keine
         Aussage zu Performance oder Fehlerrate) und einem Full-Stack-Zielbild
-        (Prometheus + Elastic APM + Service-Health). Am DocuWare-Beispiel: BMC
-        zeigt "UP", während APM 2100ms Latenz, 15% Fehlerrate und den echten
-        Root Cause (fehlender DB-Index) sichtbar macht.<br>
-        <strong>Zur Gegenüberstellung:</strong> "Vorfall auslösen" sendet
-        denselben DocuWare-Request (Frontend → API-Gateway → DocuWare-Service
-        → DB) als echten OTel-Trace in OneUptime - dort mit Timeout-Fehler im
-        DB-Span, genau wie im Mockup beschrieben. "Beheben" sendet zur
-        Kontrastierung denselben Trace nochmal gesund (42ms, alle Spans OK).
-        Zeigt, was OneUptimes eigene Traces-Ansicht aus reiner
-        Telemetrie-Ingestion bereits liefert - Ausgangspunkt für den
-        Vergleich mit einem dedizierten APM-Tool.
+        (Prometheus + dediziertes APM + Service-Health). Am DocuWare-Beispiel:
+        BMC zeigt "UP", während APM 2100ms Latenz, 15% Fehlerrate und den
+        echten Root Cause (fehlender DB-Index) sichtbar macht.<br>
+        <strong>Zur Gegenüberstellung, in zwei echten Tools:</strong> "Vorfall
+        auslösen" sendet denselben DocuWare-Request (Frontend → API-Gateway →
+        DocuWare-Service → DB) als echten OTel-Trace sowohl an
+        <strong>Grafana Tempo</strong> (dediziertes APM/Tracing - Trace-Waterfall
+        + Suche in Grafana Explore) als auch an <strong>OneUptime</strong>
+        (Basis-Ansicht aus reiner Ingestion, falls seeded) - beide mit
+        Timeout-Fehler im DB-Span. "Beheben" sendet denselben Trace zum
+        Kontrast nochmal gesund (42ms, alle Spans OK). Zeigt konkret, wie viel
+        mehr Tiefe ein dediziertes APM-Tool gegenüber Basis-Ingestion bietet.
       </p>
       <div class="links">
         <div class="link-row">
           <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/explore" target="_blank">Grafana: Explore (Tempo)</a>
           <a class="disabled" id="link-monitoring-gap-traces" href="#" target="_blank">OneUptime: Traces</a>
         </div>
         <div class="link-row">

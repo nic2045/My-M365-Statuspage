@@ -1,0 +1,28 @@
+# Minimal single-binary Tempo config for this demo: local disk storage, no
+# metrics-generator/service-graph (that would need its own remote_write
+# target into Prometheus - out of scope here, the point of this piece of
+# the demo is trace waterfalls/search, not another metrics pipeline).
+# OTLP is the only receiver enabled - matches how the rest of this demo
+# already sends traces (docuware_apm_tempo_trace.py, and OneUptime's own
+# OTLP ingestion in cascading_incident.py/docuware_apm_trace.py).
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+        grpc:
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/traces
+    wal:
+      path: /var/tempo/wal
+
+compactor:
+  compaction:
+    block_retention: 24h

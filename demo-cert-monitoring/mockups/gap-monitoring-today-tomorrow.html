@@ -134,7 +134,7 @@
     line-height: 1.4;
   }
 
-  /* Elastic APM view (gained visibility) */
+  /* Grafana Tempo view (gained visibility) */
   .metric-row {
     display: flex;
     justify-content: space-between;
@@ -334,28 +334,27 @@
         </div>
 
         <div class="card">
-          <h3 class="card-title">Elastic APM (Application Performance)</h3>
+          <h3 class="card-title">Grafana Tempo (dediziertes APM/Tracing)</h3>
           <div class="metric-row">
-            <div class="metric-label">Response Time (95th %ile)</div>
+            <div class="metric-label">Trace-Dauer (gesamt)</div>
             <div class="metric-value bad">2.100 ms</div>
           </div>
           <div class="metric-row">
-            <div class="metric-label">Error Rate</div>
-            <div class="metric-value bad">15,3%</div>
+            <div class="metric-label">Fehlerhafte Spans</div>
+            <div class="metric-value bad">3 von 4</div>
           </div>
           <div class="metric-row">
-            <div class="metric-label">Throughput</div>
-            <div class="metric-value">127 req/s</div>
+            <div class="metric-label">Span-Anzahl</div>
+            <div class="metric-value">4</div>
           </div>
           <div class="metric-row">
-            <div class="metric-label">Top Slow Service</div>
-            <div class="metric-value bad">Login (3.400 ms)</div>
+            <div class="metric-label">Langsamster Span</div>
+            <div class="metric-value bad">docuware-db (2.130 ms)</div>
           </div>
 
           <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text);">
-            <strong>Top Error:</strong> "Database Connection Timeout"<br>
-            <strong>Root Cause Trace:</strong> SELECT * FROM documents (Index Missing)<br>
-            <strong>Trace:</strong> Frontend (200ms) → API Gateway (150ms) → DocuWare-Service (2.400ms) → DB (timeout)
+            <strong>Fehler im DB-Span:</strong> "Database Connection Timeout - Index auf documents.customer_id fehlt"<br>
+            <strong>Trace-Waterfall:</strong> docuware-frontend (2.200ms) → docuware-api-gateway (2.180ms) → docuware-service (2.150ms) → docuware-db (2.130ms, Timeout)
           </div>
         </div>
 
@@ -381,7 +380,7 @@
             <strong>Was passiert:</strong><br>
             Infra sieht OK (CPU 45%), aber Nutzer bekommen Timeouts. Warum?<br>
             <br>
-            <strong>Elastic zeigt:</strong> Index-Fehler in DB-Query, nicht Ressourcen-Problem.<br>
+            <strong>Tempo zeigt:</strong> Index-Fehler in DB-Query, nicht Ressourcen-Problem.<br>
             <br>
             <strong>Sofort behebbar:</strong> DBA kann zielgenau Index neu erstellen,<br>
             statt blind Ressourcen hochzufahren (hätte nichts geholfen).
