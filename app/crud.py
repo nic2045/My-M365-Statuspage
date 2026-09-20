@@ -1123,6 +1123,9 @@ async def get_sla_breach_reasons(
             exclude = True
         if service.sla_exclude_advisory and inc.classification == "advisory":
             exclude = True
+        # Only count high/critical severity incidents for SLA breach (exclude low/medium)
+        if inc.severity and inc.severity not in ("high", "critical"):
+            exclude = True
 
         if exclude:
             continue
