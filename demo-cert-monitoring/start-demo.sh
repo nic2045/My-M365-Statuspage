@@ -8,9 +8,9 @@
 # Flow:
 #   1. preflight  - docker present, daemon reachable, host ports free
 #   2. .env       - created from .env.example on first run
-#   3. core stack - Prometheus + blackbox_exporter + Grafana + Tempo +
+#   3. core stack - Prometheus + blackbox_exporter + Grafana + Tempo + Loki +
 #                   the demo-broken-site fixture (docker-compose.yml)
-#   4. readiness  - wait for Prometheus/Grafana/Tempo HTTP + first successful probe
+#   4. readiness  - wait for Prometheus/Grafana/Tempo/Loki HTTP + first successful probe
 #   5. OneUptime  - only with --with-oneuptime (separate, much heavier stack),
 #                   including seeding a demo account, monitors and a ready
 #                   public status page (skip with --no-seed)
@@ -113,13 +113,14 @@ BLACKBOX_PORT="$(env_value BLACKBOX_EXPORTER_PORT)";   BLACKBOX_PORT="${BLACKBOX
 BROKEN_SITE_PORT="$(env_value DEMO_BROKEN_SITE_PORT)"; BROKEN_SITE_PORT="${BROKEN_SITE_PORT:-8443}"
 MAILPIT_WEB_PORT="$(env_value MAILPIT_WEB_PORT)";      MAILPIT_WEB_PORT="${MAILPIT_WEB_PORT:-8025}"
 TEMPO_HTTP_PORT="$(env_value TEMPO_HTTP_PORT)";        TEMPO_HTTP_PORT="${TEMPO_HTTP_PORT:-3200}"
+LOKI_HTTP_PORT="$(env_value LOKI_HTTP_PORT)";           LOKI_HTTP_PORT="${LOKI_HTTP_PORT:-3100}"
 
 # Ports already bound by *our own* running containers are fine - compose
 # will reuse them. Only warn about ports held by something else.
 echo "==> Checking host ports ..."
 for spec in "$GRAFANA_PORT:Grafana" "$PROMETHEUS_PORT:Prometheus" \
             "$BLACKBOX_PORT:blackbox_exporter" "$BROKEN_SITE_PORT:demo-broken-site" \
-            "$TEMPO_HTTP_PORT:Tempo"; do
+            "$TEMPO_HTTP_PORT:Tempo" "$LOKI_HTTP_PORT:Loki"; do
   p="${spec%%:*}"; name="${spec#*:}"
   # 'ps -q' lists container IDs only - plain 'ps' prints a header row even
   # when nothing runs, which would make this test always true.
@@ -140,6 +141,7 @@ wait_for_http "http://localhost:$GRAFANA_PORT/api/health" 90 "Grafana"    || tru
 # Tempo's /ready (same convention as Loki/Mimir/Cortex) - APM/tracing
 # comparison target for break-docuware-apm.sh, see README "Grafana Tempo".
 wait_for_http "http://localhost:$TEMPO_HTTP_PORT/ready" 60 "Tempo"        || true
+wait_for_http "http://localhost:$LOKI_HTTP_PORT/ready" 60 "Loki"          || true
 
 # A green HTTP endpoint isn't enough for a demo - Prometheus must also have
 # actually scraped the blackbox targets at least once.
@@ -217,6 +219,7 @@ echo "  blackbox ......... http://localhost:$BLACKBOX_PORT"
 echo "  Demo fixture ..... https://localhost:$BROKEN_SITE_PORT (self-signed on purpose)"
 echo "  Mailpit .......... http://localhost:$MAILPIT_WEB_PORT (live email demo inbox)"
 echo "  Tempo ............ http://localhost:$TEMPO_HTTP_PORT (query API; browse via Grafana Explore)"
+echo "  Loki ............. http://localhost:$LOKI_HTTP_PORT (query API; browse via Grafana Explore)"
 if [ "$WITH_ONEUPTIME" = "1" ]; then
   echo "  OneUptime ........ ${ONEUPTIME_URL:-http://localhost}"
   if [ "${SEEDED:-0}" = "1" ] && [ -f .oneuptime-demo-summary ]; then

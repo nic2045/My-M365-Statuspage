@@ -7,3 +7,17 @@ datasources:
     access: proxy
     url: http://tempo:3200
     editable: false
+    jsonData:
+      # Reverse direction of loki.yml's derivedFields: from an open trace,
+      # jump straight to its logs. Custom LogQL instead of Tempo's built-in
+      # filterByTraceID (which assumes a "trace_id" *label*) because these
+      # demo log streams are labelled by service_name, with the trace_id
+      # embedded in the line text instead (see
+      # scripts/docuware_apm_loki_logs.py) - low-cardinality labels, one
+      # stream per service rather than one per trace.
+      tracesToLogsV2:
+        datasourceUid: loki
+        customQuery: true
+        query: '{service_name=~"docuware.*"} |= "trace_id=${__trace.traceId}"'
+        spanStartTimeShift: "-5m"
+        spanEndTimeShift: "5m"

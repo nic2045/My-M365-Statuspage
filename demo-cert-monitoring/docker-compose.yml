@@ -207,6 +207,43 @@ services:
       - "${TEMPO_OTLP_GRPC_PORT:-4317}:4317"
       - "${TEMPO_OTLP_HTTP_PORT:-4318}:4318"
 
+  loki:
+    # Dedicated log backend, completing the observability trio next to
+    # Prometheus (metrics) and Tempo (traces) - for the same DocuWare
+    # request, logs carry the same trace_id as the Tempo trace
+    # (scripts/docuware_apm_loki_logs.py), so a log line links straight to
+    # its trace and vice versa (see Grafana datasource provisioning:
+    # tempo.yml's tracesToLogsV2 / loki.yml's derivedFields). Single-process
+    # mode, local filesystem storage - see loki/loki-config.yaml.
+    image: grafana/loki:3.0.0
+    container_name: cert-demo-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "${LOKI_HTTP_PORT:-3100}:3100"
+
+  docuware-apm-telemetry-generator:
+    # Continuous "busy but healthy" baseline for the DocuWare APM story -
+    # same principle as docuware-metrics-exporter.py, but pushes a fresh
+    # trace+matching logs (shared trace id) to Tempo/Loki every ~10s
+    # instead of serving a scraped /metrics endpoint. Opening Grafana
+    # Explore or the APM dashboard right after startup already shows real,
+    # moving data - break-docuware-apm.sh's slow/error trace stays a clear,
+    # attributable deviation instead of the only data point around. See
+    # scripts/docuware-apm-telemetry-generator.py.
+    image: python:3.12-alpine
+    container_name: cert-demo-docuware-apm-telemetry-generator
+    restart: unless-stopped
+    depends_on:
+      - tempo
+      - loki
+    volumes:
+      - ./scripts/docuware-apm-telemetry-generator.py:/docuware-apm-telemetry-generator.py:ro
+    entrypoint: ["python3", "/docuware-apm-telemetry-generator.py"]
+
   grafana:
     image: grafana/grafana:11.3.1
     container_name: cert-demo-grafana
@@ -214,6 +251,7 @@ services:
     depends_on:
       - prometheus
       - tempo
+      - loki
     environment:
       GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
@@ -255,3 +293,4 @@ volumes:
   grafana_data:
   demo_cert_data:
   tempo_data:
+  loki_data:
