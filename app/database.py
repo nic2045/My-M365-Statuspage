@@ -81,6 +81,7 @@ async def init_db() -> None:
             "ALTER TABLE monitored_services ADD COLUMN check_interval_seconds INTEGER",
             "ALTER TABLE monitored_services ADD COLUMN http_url VARCHAR(512)",
             "ALTER TABLE monitored_services ADD COLUMN http_expected_status INTEGER",
+            "ALTER TABLE monitored_services ADD COLUMN enterprise_app_id VARCHAR(256)",
             # subscribers table is created by metadata.create_all above;
             # these stmts only fire if it already existed without the column
         ]:
