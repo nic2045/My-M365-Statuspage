@@ -47,21 +47,70 @@
   }
   .body { padding: 32px; }
 
-  .comparison {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 28px;
-    margin-bottom: 32px;
-  }
-  .column { display: flex; flex-direction: column; gap: 20px; }
-  .column-header {
+  .section { margin-bottom: 28px; }
+  .section-header {
     font-size: 16px;
     font-weight: 700;
     padding-bottom: 12px;
+    margin-bottom: 16px;
     border-bottom: 2px solid var(--border);
   }
-  .column-header.today { color: var(--danger); }
-  .column-header.tomorrow { color: var(--ok); }
+  .section-header.today { color: var(--danger); }
+  .section-header.tomorrow { color: var(--ok); }
+
+  /* HEUTE: compact 3-up row instead of a tall stacked column - the
+     "before" side needs to read in seconds, not compete for space with
+     the pillar grid below. */
+  .today-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Divider between HEUTE and MORGEN - a visual "jump", not just another
+     section title, so the gap itself is the thing you notice first. */
+  .gap-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 28px 0;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .gap-divider::before, .gap-divider::after {
+    content: "";
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, var(--danger), var(--ok));
+  }
+
+  /* MORGEN: the three observability pillars as equal, full-width cards -
+     each one gets real room instead of being squeezed into a half-page
+     column. */
+  .pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .pillar-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 9px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+    width: fit-content;
+  }
+  .pillar-badge.metrics { background: #eef6ff; color: #0f6cbd; }
+  .pillar-badge.traces  { background: #fff4e5; color: #b45309; }
+  .pillar-badge.logs    { background: #eafaf1; color: #0e7a4d; }
 
   /* Card styles */
   .card {
@@ -178,6 +227,25 @@
     margin-top: 2px;
   }
 
+  /* Loki log lines */
+  .log-line {
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 10.5px;
+    padding: 7px 9px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    line-height: 1.5;
+    word-break: break-word;
+    border-left: 3px solid var(--border);
+  }
+  .log-line.error {
+    background: var(--danger-bg);
+    border-left-color: var(--danger);
+  }
+  .log-line .svc { color: #0e7a4d; font-weight: 700; }
+  .log-line .traceid { color: #3b82f6; font-weight: 600; }
+
   /* Correlation */
   .correlation {
     background: #f0f4ff;
@@ -214,7 +282,7 @@
   }
   .insight-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 16px;
   }
   .insight-item {
@@ -241,7 +309,8 @@
   }
 
   @media (max-width: 1000px) {
-    .comparison { grid-template-columns: 1fr; }
+    .today-row { grid-template-columns: 1fr; }
+    .pillars { grid-template-columns: 1fr; }
     .insight-grid { grid-template-columns: 1fr; }
   }
 </style>
@@ -254,12 +323,11 @@
   </div>
 
   <div class="body">
-    <div class="comparison">
 
-      <!-- LEFT: TODAY (BMC TSSA ONLY) -->
-      <div class="column">
-        <div class="column-header today">🔴 HEUTE: Nur Infrastructure (BMC TSSA)</div>
-
+    <!-- HEUTE: compact 3-up row -->
+    <div class="section">
+      <div class="section-header today">🔴 HEUTE: Nur Infrastructure (BMC TSSA)</div>
+      <div class="today-row">
         <div class="card">
           <h3 class="card-title">DocuWare – Status</h3>
           <div class="status-grid">
@@ -307,12 +375,17 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- RIGHT: TOMORROW (FULL STACK) -->
-      <div class="column">
-        <div class="column-header tomorrow">🟢 MORGEN: Full-Stack Monitoring</div>
+    <div class="gap-divider">Der Sprung: 3 Säulen der Observability, korreliert</div>
 
+    <!-- MORGEN: three equal pillars, full width -->
+    <div class="section">
+      <div class="section-header tomorrow">🟢 MORGEN: Full-Stack Observability</div>
+
+      <div class="pillars">
         <div class="card">
+          <div class="pillar-badge metrics">📊 Metrics</div>
           <h3 class="card-title">Prometheus (Infrastruktur)</h3>
           <div class="status-grid">
             <div class="status-item">
@@ -331,10 +404,15 @@
               <div class="status-value">28%</div>
             </div>
           </div>
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted);">
+            Tempos Metrics-Generator leitet zusätzlich Request-Rate,
+            Latenz-Perzentile &amp; Fehlerquote direkt aus den Traces ab.
+          </div>
         </div>
 
         <div class="card">
-          <h3 class="card-title">Grafana Tempo (dediziertes APM/Tracing)</h3>
+          <div class="pillar-badge traces">🔎 Traces</div>
+          <h3 class="card-title">Grafana Tempo</h3>
           <div class="metric-row">
             <div class="metric-label">Trace-Dauer (gesamt)</div>
             <div class="metric-value bad">2.100 ms</div>
@@ -344,47 +422,56 @@
             <div class="metric-value bad">3 von 4</div>
           </div>
           <div class="metric-row">
-            <div class="metric-label">Span-Anzahl</div>
-            <div class="metric-value">4</div>
-          </div>
-          <div class="metric-row">
             <div class="metric-label">Langsamster Span</div>
-            <div class="metric-value bad">docuware-db (2.130 ms)</div>
+            <div class="metric-value bad">docuware-db</div>
           </div>
-
           <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text);">
-            <strong>Fehler im DB-Span:</strong> "Database Connection Timeout - Index auf documents.customer_id fehlt"<br>
-            <strong>Trace-Waterfall:</strong> docuware-frontend (2.200ms) → docuware-api-gateway (2.180ms) → docuware-service (2.150ms) → docuware-db (2.130ms, Timeout)
+            <strong>Waterfall:</strong> docuware-frontend (2.200ms) →
+            docuware-api-gateway (2.180ms) → docuware-service (2.150ms) →
+            docuware-db (2.130ms, Timeout)<br>
+            <strong>Trace-ID:</strong> <span class="traceid" style="font-family: 'SF Mono', Consolas, monospace; background: #eef4ff; padding: 1px 6px; border-radius: 3px;">8562ce5f…</span>
           </div>
         </div>
 
         <div class="card">
-          <h3 class="card-title">OneUptime (Service Health)</h3>
-          <div class="status-grid">
-            <div class="status-item">
-              <div class="status-dot danger"></div>
-              <div class="status-label">DocuWare Service</div>
-              <div class="status-value" style="background: var(--danger-bg); color: var(--danger);">DEGRADED</div>
-            </div>
-            <div class="status-item">
-              <div class="status-dot danger"></div>
-              <div class="status-label">SLA Breach</div>
-              <div class="status-value">99,2% (target: 99,9%)</div>
-            </div>
+          <div class="pillar-badge logs">📄 Logs</div>
+          <h3 class="card-title">Grafana Loki</h3>
+          <div class="log-line error"><span class="svc">docuware-api-gateway</span> Timeout nach 2180ms <span class="traceid">trace_id=8562ce5f…</span></div>
+          <div class="log-line error"><span class="svc">docuware-service</span> DB-Abfrage überschreitet Zeitlimit (2150ms) <span class="traceid">trace_id=8562ce5f…</span></div>
+          <div class="log-line error"><span class="svc">docuware-db</span> Query-Timeout - Index auf customer_id fehlt <span class="traceid">trace_id=8562ce5f…</span></div>
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted);">
+            Gleiche Trace-ID wie im Tempo-Trace → Log-Zeile anklicken
+            springt direkt zur Waterfall, und umgekehrt.
           </div>
         </div>
+      </div>
 
-        <div class="correlation">
-          <div class="title">🔗 Korrelation & Ursachenanalyse</div>
-          <div class="text">
-            <strong>Was passiert:</strong><br>
-            Infra sieht OK (CPU 45%), aber Nutzer bekommen Timeouts. Warum?<br>
-            <br>
-            <strong>Tempo zeigt:</strong> Index-Fehler in DB-Query, nicht Ressourcen-Problem.<br>
-            <br>
-            <strong>Sofort behebbar:</strong> DBA kann zielgenau Index neu erstellen,<br>
-            statt blind Ressourcen hochzufahren (hätte nichts geholfen).
+      <div class="card" style="margin-bottom: 16px;">
+        <h3 class="card-title">OneUptime (Service Health)</h3>
+        <div class="status-grid">
+          <div class="status-item">
+            <div class="status-dot danger"></div>
+            <div class="status-label">DocuWare Service</div>
+            <div class="status-value" style="background: var(--danger-bg); color: var(--danger);">DEGRADED</div>
           </div>
+          <div class="status-item">
+            <div class="status-dot danger"></div>
+            <div class="status-label">SLA Breach</div>
+            <div class="status-value">99,2% (target: 99,9%)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="correlation">
+        <div class="title">🔗 Korrelation & Ursachenanalyse</div>
+        <div class="text">
+          <strong>Was passiert:</strong> Infra sieht OK (CPU 45%), aber Nutzer bekommen Timeouts. Warum?<br>
+          <br>
+          <strong>Trace + Logs zusammen zeigen:</strong> Index-Fehler in der DB-Query, nicht Ressourcen-Problem -
+          die Trace-Waterfall zeigt WO die Zeit verloren geht, die verlinkten Log-Zeilen zeigen WARUM.<br>
+          <br>
+          <strong>Sofort behebbar:</strong> DBA kann zielgenau den Index neu erstellen,
+          statt blind Ressourcen hochzufahren (hätte nichts geholfen).
         </div>
       </div>
     </div>
@@ -407,6 +494,11 @@
           <h4>Root Cause klar</h4>
           <p>Heute: "Problem irgendwo" → 2h Debugging<br>
              Morgen: "Index fehlt" → 5min Fix</p>
+        </div>
+        <div class="insight-item critical">
+          <h4>Trace + Log korreliert</h4>
+          <p>Heute: Logs durchsuchen, ohne zu wissen wonach<br>
+             Morgen: Ein Klick von der Trace zur passenden Log-Zeile</p>
         </div>
       </div>
     </div>
