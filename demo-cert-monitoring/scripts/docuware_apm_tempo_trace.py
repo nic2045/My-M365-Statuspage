@@ -95,7 +95,11 @@ def send_docuware_trace(healthy):
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             resp.read()
-    except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode(errors="replace")[:500]
+        sys.exit(f"ERROR: Tempo trace ingest failed ({TEMPO_BASE}/v1/traces) - "
+                  f"HTTP {exc.code}: {body or exc.reason}")
+    except urllib.error.URLError as exc:
         sys.exit(f"ERROR: Tempo trace ingest failed ({TEMPO_BASE}/v1/traces) - {exc}")
 
     kind_label = "gesund (42ms, alle Spans OK)" if healthy else "verlangsamt (2,2s, DB-Span mit Timeout-Fehler)"

@@ -343,6 +343,10 @@
       <div class="hub-icon" style="background:#8a8f98;">P</div>
       <div class="hub-text"><div class="t">Prometheus</div><div class="d">Rohdaten &amp; Alerts</div></div>
     </a>
+    <a class="hub-card" href="http://localhost:3000/explore" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">T</div>
+      <div class="hub-text"><div class="t">Grafana Explore (Tempo)</div><div class="d">Trace-Suche &amp; Waterfall, dediziertes APM</div></div>
+    </a>
 
     <div class="hub-group">OneUptime – weitere Bereiche</div>
     <a class="hub-card disabled" id="hub-service-catalog" href="#" target="_blank">
@@ -367,7 +371,7 @@
     </a>
     <a class="hub-card disabled" id="hub-traces" href="#" target="_blank">
       <div class="hub-icon" style="background:#5b5fc7;">T</div>
-      <div class="hub-text"><div class="t">Traces</div><div class="d">Service Map der Kettenreaktion (Leipzig)</div></div>
+      <div class="hub-text"><div class="t">Traces</div><div class="d">Kettenreaktion (Leipzig) &amp; DocuWare-APM-Vergleich</div></div>
     </a>
   </div>
 
@@ -841,9 +845,9 @@
         <strong>Zeigt:</strong> den Unterschied zwischen reinem
         Infrastructure-Monitoring (BMC TSSA - Server "läuft", aber keine
         Aussage zu Performance oder Fehlerrate) und einem Full-Stack-Zielbild
-        (Prometheus + dediziertes APM + Service-Health). Am DocuWare-Beispiel:
-        BMC zeigt "UP", während APM 2100ms Latenz, 15% Fehlerrate und den
-        echten Root Cause (fehlender DB-Index) sichtbar macht.<br>
+        (Prometheus + Grafana Tempo + Service-Health). Am DocuWare-Beispiel:
+        BMC zeigt "UP", während Tempo 2100ms Trace-Dauer, 3 von 4 fehlerhafte
+        Spans und den echten Root Cause (fehlender DB-Index) sichtbar macht.<br>
         <strong>Zur Gegenüberstellung, in zwei echten Tools:</strong> "Vorfall
         auslösen" sendet denselben DocuWare-Request (Frontend → API-Gateway →
         DocuWare-Service → DB) als echten OTel-Trace sowohl an

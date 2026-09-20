@@ -143,6 +143,7 @@ docker compose up -d
 | Prometheus | http://localhost:9090 | Rohdaten, Targets (`/targets`), Alert-Regeln (`/alerts`) |
 | blackbox_exporter | http://localhost:9115 | Debug: `/probe?target=https://...&module=http_2xx` |
 | demo-broken-site | https://localhost:8443 | Feste Demo-Fixture, siehe unten. Browser warnt vor dem selbstsignierten Zertifikat - das ist erwartet, einfach fortfahren |
+| Tempo | http://localhost:3200 | Dediziertes APM/Tracing (siehe Abschnitt "Grafana Tempo" unten) - Query-API, tatsächlich genutzt wird es über Grafana Explore |
 
 Das Grafana-Dashboard zeigt: Anzahl erreichbarer Websites, kürzeste
 verbleibende Zertifikatslaufzeit, eine Statustabelle je URL sowie
