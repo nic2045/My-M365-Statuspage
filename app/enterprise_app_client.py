@@ -1,7 +1,9 @@
 import logging
 from datetime import UTC, datetime
 
-from app.graph_client import get_authenticated_client
+import httpx
+
+from app.graph_client import _get_access_token
 
 logger = logging.getLogger(__name__)
 
@@ -12,39 +14,46 @@ async def get_service_principal_details(app_id: str) -> dict[str, object]:
     Returns dict with status, credentials expiration, owner info, and last sign-in.
     """
     try:
-        client = await get_authenticated_client()
-
-        # Get service principal by appId
-        sp_query = f"$filter=appId eq '{app_id}'"
-        sp_response = await client.get(
-            f"https://graph.microsoft.com/v1.0/servicePrincipals?{sp_query}&$select=id,appId,displayName,accountEnabled,createdDateTime,keyCredentials,passwordCredentials"
-        )
-        sp_list = sp_response.json().get("value", [])
-
-        if not sp_list:
-            raise ValueError(f"Service principal not found for appId: {app_id}")
-
-        sp = sp_list[0]
-        sp_id = sp.get("id")
-
-        # Get owners
-        owners_response = await client.get(
-            f"https://graph.microsoft.com/v1.0/servicePrincipals/{sp_id}/owners?$select=id,displayName,userPrincipalName"
-        )
-        owners = owners_response.json().get("value", [])
-
-        # Get last sign-in activity (from auditLogs)
+        token = await _get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
         now = datetime.now(UTC)
 
-        try:
-            activity_response = await client.get(
-                f"https://graph.microsoft.com/v1.0/auditLogs/signIns?$filter=servicePrincipalId eq '{sp_id}'&$top=1&$orderby=createdDateTime desc"
+        async with httpx.AsyncClient(timeout=30) as client:
+            # Get service principal by appId
+            sp_query = f"$filter=appId eq '{app_id}'"
+            sp_response = await client.get(
+                f"https://graph.microsoft.com/v1.0/servicePrincipals?{sp_query}&$select=id,appId,displayName,accountEnabled,createdDateTime,keyCredentials,passwordCredentials",
+                headers=headers,
             )
-            sign_ins = activity_response.json().get("value", [])
-            last_sign_in = sign_ins[0].get("createdDateTime") if sign_ins else None
-        except Exception as e:
-            logger.warning(f"Could not fetch sign-in activity for {app_id}: {e}")
+            sp_response.raise_for_status()
+            sp_list = sp_response.json().get("value", [])
+
+            if not sp_list:
+                raise ValueError(f"Service principal not found for appId: {app_id}")
+
+            sp = sp_list[0]
+            sp_id = sp.get("id")
+
+            # Get owners
+            owners_response = await client.get(
+                f"https://graph.microsoft.com/v1.0/servicePrincipals/{sp_id}/owners?$select=id,displayName,userPrincipalName",
+                headers=headers,
+            )
+            owners_response.raise_for_status()
+            owners = owners_response.json().get("value", [])
+
+            # Get last sign-in activity (from auditLogs)
             last_sign_in = None
+            try:
+                activity_response = await client.get(
+                    f"https://graph.microsoft.com/v1.0/auditLogs/signIns?$filter=servicePrincipalId eq '{sp_id}'&$top=1&$orderby=createdDateTime desc",
+                    headers=headers,
+                )
+                activity_response.raise_for_status()
+                sign_ins = activity_response.json().get("value", [])
+                last_sign_in = sign_ins[0].get("createdDateTime") if sign_ins else None
+            except Exception as e:
+                logger.warning(f"Could not fetch sign-in activity for {app_id}: {e}")
 
         # Parse credentials (both key and password)
         key_creds = sp.get("keyCredentials", [])
