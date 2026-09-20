@@ -535,9 +535,11 @@
         Vergleich). Alle mit Timeout-Fehler im DB-Span, genau wie im Mockup
         beschrieben. "Beheben" sendet dieselbe Kette zum Kontrast nochmal
         gesund (42ms, alle Spans OK). Im Hintergrund läuft außerdem
-        kontinuierlich eine gesunde Baseline (alle ~10s), damit Tempo/Loki
-        beim Öffnen nie leer sind - der ausgelöste Vorfall bleibt eine klar
-        erkennbare Abweichung, kein Rauschen. Zeigt konkret, wie viel mehr
+        kontinuierlich eine gesunde Baseline (alle ~10s) an Tempo/Loki
+        <strong>und</strong> (falls geseedet) OneUptime, damit der
+        Werkzeug-Vergleich jederzeit sichtbar ist, nicht nur direkt nach
+        einem Auslösen - der ausgelöste Vorfall bleibt eine klar erkennbare
+        Abweichung, kein Rauschen. Zeigt konkret, wie viel mehr
         Tiefe ein dediziertes APM-Tool (Metrics + Traces + Logs, korreliert)
         gegenüber reiner Basis-Ingestion bietet.
       </p>

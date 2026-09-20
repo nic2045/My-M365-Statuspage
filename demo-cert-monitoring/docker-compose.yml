@@ -232,7 +232,15 @@ services:
     # instead of serving a scraped /metrics endpoint. Opening Grafana
     # Explore or the APM dashboard right after startup already shows real,
     # moving data - break-docuware-apm.sh's slow/error trace stays a clear,
-    # attributable deviation instead of the only data point around. See
+    # attributable deviation instead of the only data point around.
+    # Best-effort also sends the same trace+logs to OneUptime on a more
+    # relaxed, decoupled interval (OU_INTERVAL_SECONDS, default 60s - same
+    # idea as oneuptime-sync.sh's SYNC_INTERVAL_SECONDS) if
+    # --with-oneuptime was used and it's seeded - auth is cached for the
+    # process lifetime, never repeated per attempt, to stay well clear of
+    # OneUptime's own sign-in rate limit (see README). extra_hosts is the
+    # same host.docker.internal mapping oneuptime-sync uses to reach
+    # OneUptime's separate compose project. See
     # scripts/docuware-apm-telemetry-generator.py.
     image: python:3.12-alpine
     container_name: cert-demo-docuware-apm-telemetry-generator
@@ -240,6 +248,11 @@ services:
     depends_on:
       - tempo
       - loki
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      INTERVAL_SECONDS: "${DOCUWARE_APM_INTERVAL_SECONDS:-10}"
+      OU_INTERVAL_SECONDS: "${DOCUWARE_APM_OU_INTERVAL_SECONDS:-60}"
     volumes:
       - ./scripts/docuware-apm-telemetry-generator.py:/docuware-apm-telemetry-generator.py:ro
     entrypoint: ["python3", "/docuware-apm-telemetry-generator.py"]
