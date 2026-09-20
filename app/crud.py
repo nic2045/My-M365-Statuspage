@@ -1123,9 +1123,6 @@ async def get_sla_breach_reasons(
             exclude = True
         if service.sla_exclude_advisory and inc.classification == "advisory":
             exclude = True
-        # Only count high/critical severity incidents for SLA breach (exclude low/medium/none)
-        if not inc.severity or inc.severity not in ("high", "critical"):
-            exclude = True
 
         if exclude:
             continue
@@ -1137,12 +1134,16 @@ async def get_sla_breach_reasons(
         days = (inc_end - inc_start).days + 1
         minutes = days * 24 * 60
 
-        if inc.severity in ("critical",) or inc.status == "interrupted":
-            weighted_minutes = minutes
-        elif inc.status == "degraded":
-            weighted_minutes = minutes * 0.5
+        # Only weight incidents with high/critical severity; others show 0 weighted impact
+        if inc.severity and inc.severity in ("critical", "high"):
+            if inc.severity == "critical" or inc.status == "interrupted":
+                weighted_minutes = minutes
+            elif inc.status == "degraded":
+                weighted_minutes = minutes * 0.5
+            else:
+                weighted_minutes = minutes
         else:
-            weighted_minutes = minutes
+            weighted_minutes = 0.0
 
         breach_reasons.append({
             "id": inc.id,
