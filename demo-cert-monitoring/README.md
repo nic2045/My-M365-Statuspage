@@ -1606,12 +1606,12 @@ Default), per `?oneuptime=<url>` in der Adresszeile der Übersichtsseite
   Monitoring-Gap Heute vs. Morgen**: Split-Screen-Vergleich zwischen
   reinem Infrastructure-Monitoring (BMC TSSA - Server "läuft", aber keine
   Aussage zu Performance oder Fehlerrate) und einem Full-Stack-Zielbild
-  (Prometheus + Elastic APM + Service-Health). Am DocuWare-Beispiel: BMC
-  zeigt "UP", während APM 2100ms Antwortzeit, 15,3% Fehlerrate und den
-  echten Root Cause (fehlender Index auf `documents.customer_id`, DB-Query
-  läuft in ein Timeout) sichtbar macht - inklusive einer schematischen
-  Trace-Kette (Frontend → API-Gateway → DocuWare-Service → DB). Rein
-  statisches Mockup, kein Backend.
+  (Prometheus + Grafana Tempo + Service-Health). Am DocuWare-Beispiel: BMC
+  zeigt "UP", während Tempo 2100ms Trace-Dauer, 3 von 4 fehlerhafte Spans
+  und den echten Root Cause (fehlender Index auf `documents.customer_id`,
+  DB-Query läuft in ein Timeout) sichtbar macht - inklusive einer
+  schematischen Trace-Waterfall (docuware-frontend → docuware-api-gateway →
+  docuware-service → docuware-db). Rein statisches Mockup, kein Backend.
 
   **Dieselbe Trace-Kette auch als echte Telemetrie, in zwei Tools zur
   Gegenüberstellung:** `./break-docuware-apm.sh` sendet exakt die vier
