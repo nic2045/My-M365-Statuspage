@@ -677,13 +677,11 @@ wäre an den Metriknamen gescheitert.
 mit einem echten, browsbaren Trace statt nur einer Behauptung im Mockup.
 
 **Setup:** Single-Binary-Modus, lokaler Festplatten-Storage (kein
-S3/GCS/Azure-Backend nötig für eine lokale Demo), nur der OTLP-Receiver
-aktiv (HTTP :4318, gRPC :4317) - kein Metrics-Generator/Service-Graph, da
-der eine eigene `remote_write`-Anbindung an Prometheus bräuchte und außerhalb
-des Zwecks hier liegt (Trace-Waterfall/-Suche, keine weitere
-Metrik-Pipeline). Grafana bekommt Tempo automatisch als weitere
-Datenquelle (`grafana/provisioning/datasources/tempo.yml`, uid `tempo`) -
-kein manueller Schritt nötig.
+S3/GCS/Azure-Backend nötig für eine lokale Demo), OTLP-Receiver aktiv
+(HTTP :4318, gRPC :4317) plus Metrics-Generator (siehe eigener Abschnitt
+unten). Grafana bekommt Tempo automatisch als weitere Datenquelle
+(`grafana/provisioning/datasources/tempo.yml`, uid `tempo`) - kein
+manueller Schritt nötig.
 
 **Traces reinbringen:** `./break-docuware-apm.sh` / `./fix-docuware-apm.sh`
 (siehe oben, Abschnitt "Benachrichtigungs-Mockups" → `gap-monitoring-
@@ -756,6 +754,75 @@ APM-Metriken" auf der Monitoring-Gap-Karte, sowie eigene Kachel unter
 `TEMPO_HTTP_PORT` (3200, Tempos Query-API - das ist es, worüber Grafana
 intern spricht), `TEMPO_OTLP_GRPC_PORT` (4317), `TEMPO_OTLP_HTTP_PORT`
 (4318, der Port, den die Break/Fix-Skripte vom Host aus ansprechen).
+
+### Grafana Loki: Logs, per Trace-ID mit Tempo verknüpft
+
+`loki/loki-config.yaml` + der `loki`-Dienst in `docker-compose.yml` -
+ebenfalls Teil des Kern-Stacks. Vervollständigt die drei Säulen der
+Observability (Metrics via Prometheus/Tempo-Metrics-Generator, Traces via
+Tempo, jetzt Logs via Loki) für dieselbe DocuWare-Story. Single-Process-
+Modus, lokaler Filesystem-Storage, Schema v13/tsdb (aktueller
+Standard-Loki-Config-Zuschnitt für eine lokale Demo, kein Object-Storage
+nötig).
+
+**Logs reinbringen:** `./break-docuware-apm.sh` / `./fix-docuware-apm.sh`
+senden zusätzlich zum Tempo-Trace über `scripts/docuware_apm_loki_logs.py`
+eine Log-Zeile pro Service (`docuware-frontend`/`-api-gateway`/`-service`/
+`-db`) an Lokis Push-API (`POST /loki/api/v1/push`, reines
+`urllib`-`POST`, kein Promtail/Grafana-Agent nötig). **Korrelation:** beide
+Skripte teilen sich dieselbe Trace-ID - die Break/Fix-Wrapper-Skripte
+erzeugen sie einmal (`DOCUWARE_TRACE_ID_HEX`, `os.urandom(16).hex()`) und
+reichen sie per Env-Var an `docuware_apm_tempo_trace.py` UND
+`docuware_apm_loki_logs.py` weiter. Jede Log-Zeile enthält
+`trace_id=<hex>` als Text (bewusst nicht als Loki-Label - das würde pro
+Trace einen eigenen Log-Stream anlegen und die Cardinality sprengen).
+Grafana verbindet beide Richtungen automatisch:
+
+- **Log → Trace**: `grafana/provisioning/datasources/loki.yml`s
+  `derivedFields` (Regex `trace_id=(\w+)` gegen die Tempo-Datenquelle) -
+  eine Log-Zeile in Explore zeigt einen anklickbaren "TraceID"-Link.
+- **Trace → Logs**: `grafana/provisioning/datasources/tempo.yml`s
+  `tracesToLogsV2` mit einer eigenen LogQL-Query
+  (`{service_name=~"docuware.*"} |= "trace_id=${__trace.traceId}"`) statt
+  Tempos eingebautem `filterByTraceID` (das einen `trace_id`-*Label*
+  voraussetzt, den es hier absichtlich nicht gibt).
+
+**Falls OneUptime geseedet ist**, sendet `docuware_apm_trace.py` dieselben
+vier Log-Zeilen (mit derselben `trace_id`) zusätzlich über OneUptimes
+OTLP/HTTP-Logs-Endpunkt (`POST /otlp/v1/logs`, gleicher "Demo Log
+Ingest"-Key wie die `docuware-login`-Logs) - best-effort, bricht
+Trace-Versand/Break/Fix nicht ab, falls das fehlschlägt. Damit bekommt
+OneUptime für denselben Vorfall Trace **und** Logs, exakt wie
+Tempo/Loki - der Ausgangspunkt für den Vergleich bleibt vollständig.
+
+**Ansehen:** Grafana → Explore → Datenquelle "Loki" → LogQL
+`{service_name=~"docuware.*"}`.
+
+**Kontinuierliche Baseline:** `docuware-apm-telemetry-generator`
+(`scripts/docuware-apm-telemetry-generator.py`, eigener Dienst im
+Kern-Stack, `python:3.12-alpine`) sendet alle ~10s (mit Jitter) einen
+frischen, **immer gesunden** Trace+Log-Satz an Tempo/Loki - dieselbe
+"geschäftig, aber gesund"-Idee wie bei den übrigen
+`*-metrics-exporter.py`-Diensten, hier als aktiver Push-Loop statt
+gescraptem `/metrics`-Endpoint. Zweck: Explore/Dashboard zeigen direkt
+nach `./start-demo.sh` echte, sich bewegende Daten statt einer leeren
+Seite - `break-docuware-apm.sh`s Fehler-Trace bleibt dadurch eine klar
+erkennbare Abweichung von der Baseline statt der einzige Datenpunkt
+überhaupt. Sendet nie die Fehler-Variante selbst - die bleibt exklusiv
+dem manuellen Auslösen vorbehalten, damit der Vorfall in der Vorführung
+eindeutig zuordenbar bleibt.
+
+**Ports** (`.env`): `LOKI_HTTP_PORT` (3100).
+
+> **Nicht live verifiziert** (gleiche Einschränkung wie beim
+> Metrics-Generator oben, siehe dort für den Grund): das
+> `derivedFields`/`tracesToLogsV2`-Zusammenspiel folgt Grafanas
+> dokumentiertem Schema, konnte aber nicht gegen eine echte
+> Tempo+Loki+Grafana-Kombination durchgeklickt werden. Falls der
+> Log→Trace- oder Trace→Logs-Link nicht direkt funktioniert: beide Log-
+> und Trace-Datensätze lassen sich unabhängig davon immer manuell über
+> die jeweilige Trace-ID in Explore gegenchecken (die Zeilen zeigen sie
+> im Klartext).
 
 ## Customer Care: Standortübersicht für den technischen Owner (Grafana)
 
@@ -1658,39 +1725,49 @@ Default), per `?oneuptime=<url>` in der Adresszeile der Übersichtsseite
   schematischen Trace-Waterfall (docuware-frontend → docuware-api-gateway →
   docuware-service → docuware-db). Rein statisches Mockup, kein Backend.
 
-  **Dieselbe Trace-Kette auch als echte Telemetrie, in zwei Tools zur
-  Gegenüberstellung:** `./break-docuware-apm.sh` sendet exakt die vier
-  Spans aus dem Mockup (`docuware-frontend` → `docuware-api-gateway` →
-  `docuware-service` → `docuware-db`, gleiche traceId, per `parentSpanId`
-  verkettet, DB-Span in `STATUS_CODE_ERROR` - "Database Connection Timeout
-  - Index auf documents.customer_id fehlt", Gesamtlaufzeit ~2,2s) sowohl an
-  **Grafana Tempo** (`scripts/docuware_apm_tempo_trace.py`, Teil des
-  Kern-Stacks, siehe Abschnitt "Grafana Tempo" unten) als auch, falls
-  bereits geseedet, an **OneUptime** (`scripts/docuware_apm_trace.py`,
-  gleiches Login/Query-Vorgehen wie `cascading_incident.py`, kein Import
-  von `seed_oneuptime.py`, sendet über `POST /otlp/v1/traces` mit demselben
-  "Demo Log Ingest"-Ingestion-Key wie die `docuware-login`-Logs weiter
-  oben - best-effort übersprungen, wenn OneUptime noch nicht mit
-  `--with-oneuptime` gestartet wurde). `./fix-docuware-apm.sh` sendet zum
-  Kontrast denselben vierspännigen Trace an beide Tools nochmal gesund
-  (~42ms, alle Spans `STATUS_CODE_OK`) - anders als bei den übrigen
-  Break/Fix-Skripten gibt es hier keinen Monitor/Incident-Zustand, der
-  zurückgesetzt wird, nur einen zweiten, sichtbar anderen Trace zum
-  direkten Vergleich. Zweck: konkret zeigen, wie viel mehr Tiefe ein
-  dediziertes APM-Tool (Trace-Waterfall + Suche in Grafana) gegenüber
-  OneUptimes Basis-Ansicht aus reiner OTLP-Ingestion (Trace-Liste, aus
-  Parent-/Child-Spans abgeleitete Service Map) bietet.
+  **Dieselbe Kette auch als echte Telemetrie, alle drei
+  Observability-Säulen:** `./break-docuware-apm.sh` sendet exakt die vier
+  Schritte aus dem Mockup (`docuware-frontend` → `docuware-api-gateway` →
+  `docuware-service` → `docuware-db`) als **Trace** an
+  **Grafana Tempo** (`scripts/docuware_apm_tempo_trace.py`, gleiche
+  traceId, per `parentSpanId` verkettet, DB-Span in `STATUS_CODE_ERROR` -
+  "Database Connection Timeout - Index auf documents.customer_id fehlt",
+  Gesamtlaufzeit ~2,2s) und als passende **Logs** an **Grafana Loki**
+  (`scripts/docuware_apm_loki_logs.py`, `POST /loki/api/v1/push`) - beide
+  mit derselben, einmal pro Lauf generierten Trace-ID
+  (`DOCUWARE_TRACE_ID_HEX`, vom Wrapper-Skript erzeugt und an beide
+  Python-Skripte durchgereicht), sodass Grafana Log↔Trace-Sprünge anbietet
+  (siehe Abschnitt "Grafana Loki" unten für die Korrelations-Details).
+  Tempo leitet daraus zusätzlich echte **Metriken** ab (Metrics-Generator,
+  siehe dort). Falls OneUptime bereits geseedet ist, gehen Trace und Logs
+  zusätzlich dorthin (`scripts/docuware_apm_trace.py`, gleiches
+  Login/Query-Vorgehen wie `cascading_incident.py`, kein Import von
+  `seed_oneuptime.py`, `POST /otlp/v1/traces` + `POST /otlp/v1/logs` mit
+  demselben "Demo Log Ingest"-Ingestion-Key wie die `docuware-login`-Logs
+  weiter oben) - best-effort übersprungen, wenn OneUptime noch nicht mit
+  `--with-oneuptime` gestartet wurde. `./fix-docuware-apm.sh` sendet zum
+  Kontrast dieselbe Kette an alle drei Ziele nochmal gesund (~42ms, alle
+  Spans `STATUS_CODE_OK`) - anders als bei den übrigen Break/Fix-Skripten
+  gibt es hier keinen Monitor/Incident-Zustand, der zurückgesetzt wird, nur
+  einen zweiten, sichtbar anderen Datensatz zum direkten Vergleich. Im
+  Hintergrund läuft außerdem kontinuierlich eine gesunde Baseline
+  (`docuware-apm-telemetry-generator`, siehe Abschnitt "Grafana Loki"),
+  damit Tempo/Loki beim Öffnen nie leer sind. Zweck: konkret zeigen, wie
+  viel mehr Tiefe ein dediziertes APM-Tool (Metrics + Traces + Logs,
+  korreliert) gegenüber OneUptimes Basis-Ansicht aus reiner OTLP-Ingestion
+  bietet.
 
   Im Demo-Kontrollzentrum sauber in zwei Bereiche getrennt: das statische
   Mockup selbst liegt unter "Alle Seiten" → Werkzeuge → Karte
   "Monitoring-Gap-Mockup" (direkter Link, wie die übrigen
-  Vergleichs-Mockups); der Live-Prozess (Trace an Tempo/OneUptime senden)
-  ist eine eigene, **immer sichtbare** Karte "Monitoring-Gap: Heute vs.
-  Morgen" direkt unter "Vorfall- & Prozess-Szenarien" - bewusst nicht im
-  eingeklappten "Weitere Szenarien"-Bereich, da sie den Mehrwert-Pitch der
-  ganzen Demo live belegt statt nur ein Szenario unter vielen zu sein.
+  Vergleichs-Mockups); der Live-Prozess (Trace+Logs an Tempo/Loki/OneUptime
+  senden) ist eine eigene, **immer sichtbare** Karte "Monitoring-Gap: Heute
+  vs. Morgen" direkt unter "Vorfall- & Prozess-Szenarien" - bewusst nicht
+  im eingeklappten "Weitere Szenarien"-Bereich, da sie den Mehrwert-Pitch
+  der ganzen Demo live belegt statt nur ein Szenario unter vielen zu sein.
   Eigene Auslösen-/Beheben-Knöpfe plus Direktlinks zu Grafana Explore
-  (Tempo) und OneUptimes Traces-Übersicht.
+  (Tempo/Loki), dem APM-Metriken-Dashboard und OneUptimes
+  Traces-Übersicht.
 
 ## Demo-Kontrollzentrum
 

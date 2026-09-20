@@ -34,13 +34,28 @@ def random_hex_id(num_bytes):
     return base64.b64encode(os.urandom(num_bytes)).decode()
 
 
+def trace_id_bytes():
+    """DOCUWARE_TRACE_ID_HEX, when set, is the same trace id break-/fix-
+    docuware-apm.sh generated for docuware_apm_loki_logs.py (and, best-
+    effort, docuware_apm_trace.py's OneUptime logs) - sharing one id across
+    all three back ends is what makes "click a log line, land on its
+    trace" (loki.yml's derivedFields / tempo.yml's tracesToLogsV2) work.
+    Standalone invocation without the wrapper script falls back to a fresh
+    random id."""
+    hex_override = os.environ.get("DOCUWARE_TRACE_ID_HEX")
+    if hex_override:
+        return bytes.fromhex(hex_override)
+    return os.urandom(16)
+
+
 def build_trace_payload(healthy):
     """Same four-span shape as docuware_apm_trace.py's OneUptime version:
     docuware-frontend -> docuware-api-gateway -> docuware-service ->
     docuware-db. `healthy=False` reproduces the mockup's numbers (~2.2s,
     DB span errors out on a missing index); `healthy=True` sends a fast,
     all-OK variant of the same shape for contrast."""
-    trace_id = random_hex_id(16)
+    trace_id_raw = trace_id_bytes()
+    trace_id = base64.b64encode(trace_id_raw).decode()
     now_ns = int(time.time() * 1e9)
 
     if healthy:
@@ -84,11 +99,11 @@ def build_trace_payload(healthy):
             "scopeSpans": [{"scope": {"name": "demo-seed"}, "spans": [span]}],
         })
 
-    return trace_id, {"resourceSpans": resource_spans_list}
+    return trace_id, trace_id_raw.hex(), {"resourceSpans": resource_spans_list}
 
 
 def send_docuware_trace(healthy):
-    trace_id, payload = build_trace_payload(healthy)
+    trace_id, trace_id_hex, payload = build_trace_payload(healthy)
     req = urllib.request.Request(
         f"{TEMPO_BASE}/v1/traces", data=json.dumps(payload).encode(), method="POST")
     req.add_header("Content-Type", "application/json")
@@ -105,7 +120,7 @@ def send_docuware_trace(healthy):
     kind_label = "gesund (42ms, alle Spans OK)" if healthy else "verlangsamt (2,2s, DB-Span mit Timeout-Fehler)"
     print(f"    Trace an Tempo gesendet: docuware-frontend -> docuware-api-gateway -> "
           f"docuware-service -> docuware-db ({kind_label})")
-    print(f"    Trace-ID: {trace_id}")
+    print(f"    Trace-ID: {trace_id_hex}")
     print("    Ansehen: Grafana -> Explore -> Datenquelle 'Tempo' -> TraceQL "
           "'{resource.service.name=\"docuware-frontend\"}', oder direkt per Trace-ID.")
 

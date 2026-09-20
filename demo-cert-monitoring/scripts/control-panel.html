@@ -355,6 +355,10 @@
       <div class="hub-icon" style="background:#f46800;">T</div>
       <div class="hub-text"><div class="t">Grafana Explore (Tempo)</div><div class="d">Trace-Suche &amp; Waterfall, dediziertes APM</div></div>
     </a>
+    <a class="hub-card" href="http://localhost:3000/explore" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">L</div>
+      <div class="hub-text"><div class="t">Grafana Explore (Loki)</div><div class="d">DocuWare-Logs, per trace_id mit Tempo verlinkt</div></div>
+    </a>
 
     <div class="hub-group">OneUptime – weitere Bereiche</div>
     <a class="hub-card disabled" id="hub-service-catalog" href="#" target="_blank">
@@ -363,7 +367,7 @@
     </a>
     <a class="hub-card disabled" id="hub-telemetry-logs" href="#" target="_blank">
       <div class="hub-icon" style="background:#5b5fc7;">T</div>
-      <div class="hub-text"><div class="t">Telemetry – Logs</div><div class="d">Echte Log-Zeilen zur DocuWare-Story</div></div>
+      <div class="hub-text"><div class="t">Telemetry – Logs</div><div class="d">docuware-login-Story + Monitoring-Gap-Vergleichslogs</div></div>
     </a>
     <a class="hub-card disabled" id="hub-security-events" href="#" target="_blank">
       <div class="hub-icon" style="background:#5b5fc7;">E</div>
@@ -509,32 +513,38 @@
         </svg>
         <div>
           <h2>Monitoring-Gap: Heute vs. Morgen</h2>
-          <span class="status healthy"><span class="dot"></span>echte Traces, zwei Tools</span>
+          <span class="status healthy"><span class="dot"></span>Metrics + Traces + Logs, live</span>
           <span class="cat-badge process">Prozessdemo</span>
         </div>
       </div>
       <p class="story">
         <strong>Vorführung des Mehrwert-Pitches, live statt nur als Bild:</strong>
         die statische Gegenüberstellung dazu liegt unter Werkzeuge →
-        "Monitoring-Gap-Mockup". Hier passiert dasselbe mit echter Telemetrie:
-        "Vorfall auslösen" sendet einen DocuWare-Request (Frontend →
-        API-Gateway → DocuWare-Service → DB) als echten OTel-Trace an
-        <strong>Grafana Tempo</strong> (dediziertes APM/Tracing -
-        Trace-Waterfall + Suche in Grafana Explore) und, falls OneUptime
-        geseedet ist, zusätzlich an <strong>OneUptime</strong> (Basis-Ansicht
-        aus reiner Ingestion) - beide mit Timeout-Fehler im DB-Span, genau
-        wie im Mockup beschrieben. "Beheben" sendet denselben Trace zum
-        Kontrast nochmal gesund (42ms, alle Spans OK). Tempo leitet aus
-        jedem Trace zusätzlich echte Prometheus-Metriken ab (Request-Rate,
-        Latenz-Perzentile, Fehlerquote, Service-Graph-Traffic) - sichtbar im
-        Dashboard "Grafana: APM-Metriken" unten. Zeigt konkret, wie viel
-        mehr Tiefe ein dediziertes APM-Tool (Traces + abgeleitete Metriken)
+        "Monitoring-Gap-Mockup". Hier passiert dasselbe mit echter Telemetrie,
+        alle drei Säulen der Observability: "Vorfall auslösen" sendet einen
+        DocuWare-Request (Frontend → API-Gateway → DocuWare-Service → DB) als
+        echten OTel-<strong>Trace</strong> an <strong>Grafana Tempo</strong>
+        (dediziertes APM/Tracing) und die passenden <strong>Logs</strong> an
+        <strong>Grafana Loki</strong> - beide mit derselben Trace-ID verknüpft,
+        eine Log-Zeile anklicken springt direkt zur Trace-Waterfall und
+        umgekehrt. Tempo leitet daraus zusätzlich echte
+        <strong>Metriken</strong> ab (Request-Rate, Latenz-Perzentile,
+        Fehlerquote, Service-Graph) - sichtbar im Dashboard "Grafana:
+        APM-Metriken" unten. Falls OneUptime geseedet ist, gehen Trace und
+        Logs zusätzlich dorthin (Basis-Ansicht aus reiner Ingestion, zum
+        Vergleich). Alle mit Timeout-Fehler im DB-Span, genau wie im Mockup
+        beschrieben. "Beheben" sendet dieselbe Kette zum Kontrast nochmal
+        gesund (42ms, alle Spans OK). Im Hintergrund läuft außerdem
+        kontinuierlich eine gesunde Baseline (alle ~10s), damit Tempo/Loki
+        beim Öffnen nie leer sind - der ausgelöste Vorfall bleibt eine klar
+        erkennbare Abweichung, kein Rauschen. Zeigt konkret, wie viel mehr
+        Tiefe ein dediziertes APM-Tool (Metrics + Traces + Logs, korreliert)
         gegenüber reiner Basis-Ingestion bietet.
       </p>
       <div class="links">
         <div class="link-row">
           <span class="role-label">Admin</span>
-          <a href="http://localhost:3000/explore" target="_blank">Grafana: Explore (Tempo)</a>
+          <a href="http://localhost:3000/explore" target="_blank">Grafana: Explore (Tempo/Loki)</a>
           <a href="http://localhost:3000/d/docuware-apm-tempo-metrics" target="_blank">Grafana: APM-Metriken</a>
           <a class="disabled" id="link-monitoring-gap-traces" href="#" target="_blank">OneUptime: Traces</a>
         </div>

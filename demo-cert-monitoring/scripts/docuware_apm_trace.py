@@ -94,6 +94,18 @@ def random_hex_id(num_bytes):
     return base64.b64encode(os.urandom(num_bytes)).decode()
 
 
+def trace_id_bytes():
+    """DOCUWARE_TRACE_ID_HEX, when set by break-/fix-docuware-apm.sh, is
+    the same trace id docuware_apm_tempo_trace.py and
+    docuware_apm_loki_logs.py use - one id shared across all three back
+    ends. Standalone invocation without the wrapper script falls back to a
+    fresh random id."""
+    hex_override = os.environ.get("DOCUWARE_TRACE_ID_HEX")
+    if hex_override:
+        return bytes.fromhex(hex_override)
+    return os.urandom(16)
+
+
 def send_docuware_trace(healthy):
     """Sends one 4-span trace (docuware-frontend -> docuware-api-gateway ->
     docuware-service -> docuware-db) matching the DocuWare example in
@@ -109,7 +121,8 @@ def send_docuware_trace(healthy):
     if not secret_key:
         sys.exit(f"ERROR: '{TELEMETRY_KEY_NAME}' hat keinen secretKey.")
 
-    trace_id = random_hex_id(16)
+    trace_id_raw = trace_id_bytes()
+    trace_id = base64.b64encode(trace_id_raw).decode()
     now_ns = int(time.time() * 1e9)
 
     if healthy:
@@ -176,8 +189,72 @@ def send_docuware_trace(healthy):
     kind_label = "gesund (42ms, alle Spans OK)" if healthy else "verlangsamt (2,2s, DB-Span mit Timeout-Fehler)"
     print(f"    Trace gesendet: docuware-frontend -> docuware-api-gateway -> "
           f"docuware-service -> docuware-db ({kind_label})")
+    print(f"    Trace-ID: {trace_id_raw.hex()}")
     print("    Ansehen: OneUptime -> Traces (bzw. Traces -> Service Map für "
           "die abgeleitete Abhängigkeitskette)")
+
+
+def send_docuware_logs(healthy):
+    """Best-effort companion to send_docuware_trace(): the same four log
+    lines docuware_apm_loki_logs.py sends to Loki, here via OneUptime's
+    OTLP/HTTP logs endpoint (same 'Demo Log Ingest' key as the
+    docuware-login logs from seed_oneuptime.py) - so OneUptime's Telemetry
+    -> Logs gets the identical DocuWare story as Loki, for the same
+    three-way comparison the Tempo trace already has. A missing key or
+    failed push is reported but must not abort break/fix - the trace part
+    above is the primary payload."""
+    try:
+        key = find_by_name("telemetry-ingestion-key", TELEMETRY_KEY_NAME,
+                            select={"_id": True, "name": True, "secretKey": True})
+        if not key:
+            print(f"    (keine Logs gesendet - Ingestion-Key '{TELEMETRY_KEY_NAME}' nicht gefunden)")
+            return
+        secret_key = (key.get("secretKey") or {}).get("value")
+        if not secret_key:
+            print(f"    (keine Logs gesendet - '{TELEMETRY_KEY_NAME}' hat keinen secretKey)")
+            return
+
+        trace_hex = os.environ.get("DOCUWARE_TRACE_ID_HEX") or os.urandom(16).hex()
+        now_ns = int(time.time() * 1e9)
+        if healthy:
+            lines = [
+                ("docuware-frontend", "GET /login - 200 OK (42ms)"),
+                ("docuware-api-gateway", "POST /api/documents/search -> docuware-service OK (38ms)"),
+                ("docuware-service", "search-documents: 24 Treffer gefunden (30ms)"),
+                ("docuware-db", "SELECT * FROM documents - 24 Zeilen (18ms)"),
+            ]
+        else:
+            lines = [
+                ("docuware-frontend", "GET /login - Antwort von docuware-api-gateway verzögert (2200ms)"),
+                ("docuware-api-gateway", "POST /api/documents/search -> docuware-service: Timeout nach 2180ms"),
+                ("docuware-service", "search-documents: Datenbankabfrage an docuware-db überschreitet Zeitlimit (2150ms)"),
+                ("docuware-db", "SELECT * FROM documents: Query-Timeout nach 2130ms - Index auf documents.customer_id fehlt"),
+            ]
+
+        resource_logs = []
+        for i, (service_name, message) in enumerate(lines):
+            line = f"{message} (trace_id={trace_hex})"
+            resource_logs.append({
+                "resource": {"attributes": [
+                    {"key": "service.name", "value": {"stringValue": service_name}}]},
+                "scopeLogs": [{"scope": {"name": "demo-seed"}, "logRecords": [{
+                    "timeUnixNano": str(now_ns + i * 1_000_000),
+                    "severityNumber": 17 if not healthy else 9,  # ERROR : INFO
+                    "body": {"stringValue": line},
+                }]}],
+            })
+
+        log_req = urllib.request.Request(
+            f"{BASE}/otlp/v1/logs", data=json.dumps({"resourceLogs": resource_logs}).encode(),
+            method="POST")
+        log_req.add_header("Content-Type", "application/json")
+        log_req.add_header("x-oneuptime-token", secret_key)
+        with urllib.request.urlopen(log_req, timeout=30) as resp:
+            resp.read()
+        print("    Logs gesendet: docuware-frontend/-api-gateway/-service/-db "
+              f"(trace_id={trace_hex})")
+    except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+        print(f"    (Log-Versand übersprungen - {exc})")
 
 
 login = call("/api/identity/login", {"data": {
@@ -195,7 +272,9 @@ project_id = project["_id"]
 mode = sys.argv[1] if len(sys.argv) > 1 else ""
 if mode == "break":
     send_docuware_trace(healthy=False)
+    send_docuware_logs(healthy=False)
 elif mode == "fix":
     send_docuware_trace(healthy=True)
+    send_docuware_logs(healthy=True)
 else:
     sys.exit("Usage: docuware_apm_trace.py break|fix")

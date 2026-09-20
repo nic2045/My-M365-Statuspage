@@ -1,0 +1,19 @@
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      # Every DocuWare demo log line embeds "trace_id=<hex>" (see
+      # scripts/docuware_apm_loki_logs.py) - this turns that text into a
+      # clickable link straight to the matching Tempo trace, no manual
+      # copy-pasting between Explore tabs.
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "trace_id=(\\w+)"
+          name: TraceID
+          url: "$${__value.raw}"
