@@ -1556,6 +1556,40 @@ Default), per `?oneuptime=<url>` in der Adresszeile der Übersichtsseite
   Nachbarschaftstabelle. Statische Daten (keine echte SNMP-/LLDP-MIB-
   Abfrage möglich, da die Switches synthetisch sind) - Zweck ist der
   visuelle Konzeptvergleich, nicht eine funktionierende Discovery.
+- `mockups/gap-monitoring-today-tomorrow.html` - **Mehrwert-Pitch:
+  Monitoring-Gap Heute vs. Morgen**: Split-Screen-Vergleich zwischen
+  reinem Infrastructure-Monitoring (BMC TSSA - Server "läuft", aber keine
+  Aussage zu Performance oder Fehlerrate) und einem Full-Stack-Zielbild
+  (Prometheus + Elastic APM + Service-Health). Am DocuWare-Beispiel: BMC
+  zeigt "UP", während APM 2100ms Antwortzeit, 15,3% Fehlerrate und den
+  echten Root Cause (fehlender Index auf `documents.customer_id`, DB-Query
+  läuft in ein Timeout) sichtbar macht - inklusive einer schematischen
+  Trace-Kette (Frontend → API-Gateway → DocuWare-Service → DB). Rein
+  statisches Mockup, kein Backend.
+
+  **Dieselbe Trace-Kette auch als echte Telemetrie in OneUptime, zur
+  Gegenüberstellung:** `./break-docuware-apm.sh` (Skript:
+  `scripts/docuware_apm_trace.py`, gleiches Login/Query-Vorgehen wie
+  `cascading_incident.py`, kein Import von `seed_oneuptime.py`) sendet
+  exakt die vier Spans aus dem Mockup (`docuware-frontend` →
+  `docuware-api-gateway` → `docuware-service` → `docuware-db`, gleiche
+  traceId, per `parentSpanId` verkettet) über `POST /otlp/v1/traces` an
+  OneUptime - mit demselben "Demo Log Ingest"-Ingestion-Key wie die
+  `docuware-login`-Logs weiter oben. Der DB-Span landet dabei wie im
+  Mockup in `STATUS_CODE_ERROR` ("Database Connection Timeout - Index auf
+  documents.customer_id fehlt"), Gesamtlaufzeit ~2,2s. `./fix-docuware-apm.sh`
+  sendet zum Kontrast denselben vierspännigen Trace nochmal gesund (~42ms,
+  alle Spans `STATUS_CODE_OK`) - anders als bei den übrigen
+  Break/Fix-Skripten gibt es hier keinen Monitor/Incident-Zustand, der
+  zurückgesetzt wird, nur einen zweiten, sichtbar anderen Trace zum
+  direkten Vergleich in OneUptimes Traces-Ansicht. Zweck: zeigen, was
+  OneUptimes eigene Traces-Ansicht bereits aus reiner
+  OTLP-Telemetrie-Ingestion liefert (Trace-Liste, aus Parent-/Child-Spans
+  abgeleitete Service Map) - der Ausgangspunkt, gegen den sich ein
+  dediziertes APM-Tool (siehe Grafana-Tempo-Abschnitt) messen lassen muss.
+  Auch im Demo-Kontrollzentrum als Karte "Monitoring-Gap: Heute vs.
+  Morgen" mit eigenen Auslösen-/Beheben-Knöpfen und einem Direktlink zu
+  OneUptimes Traces-Übersicht.
 
 ## Demo-Kontrollzentrum
 

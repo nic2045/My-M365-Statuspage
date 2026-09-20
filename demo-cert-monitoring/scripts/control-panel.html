@@ -493,8 +493,8 @@
 
   <details class="scenario-more">
     <summary>
-      <span class="more-icon">+9</span>
-      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge, Kettenreaktion Leipzig, DDoS auf shop.pyur.com</span></span>
+      <span class="more-icon">+10</span>
+      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge, Kettenreaktion Leipzig, DDoS auf shop.pyur.com, Monitoring-Gap</span></span>
       <span class="more-arrow">⌄</span>
     </summary>
     <div class="grid">
@@ -825,6 +825,50 @@
       </div>
     </div>
 
+    <div class="card" id="card-monitoring-gap" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f6cbd"/>
+          <path d="M10 34 L18 22 L26 28 L38 12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="38" cy="12" r="3" fill="#fff"/>
+        </svg>
+        <div>
+          <h2>Monitoring-Gap: Heute vs. Morgen</h2>
+          <span class="status healthy"><span class="dot"></span>Mockup + echter Trace</span>
+          <span class="cat-badge process">Prozessdemo</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Zeigt:</strong> den Unterschied zwischen reinem
+        Infrastructure-Monitoring (BMC TSSA - Server "läuft", aber keine
+        Aussage zu Performance oder Fehlerrate) und einem Full-Stack-Zielbild
+        (Prometheus + Elastic APM + Service-Health). Am DocuWare-Beispiel: BMC
+        zeigt "UP", während APM 2100ms Latenz, 15% Fehlerrate und den echten
+        Root Cause (fehlender DB-Index) sichtbar macht.<br>
+        <strong>Zur Gegenüberstellung:</strong> "Vorfall auslösen" sendet
+        denselben DocuWare-Request (Frontend → API-Gateway → DocuWare-Service
+        → DB) als echten OTel-Trace in OneUptime - dort mit Timeout-Fehler im
+        DB-Span, genau wie im Mockup beschrieben. "Beheben" sendet zur
+        Kontrastierung denselben Trace nochmal gesund (42ms, alle Spans OK).
+        Zeigt, was OneUptimes eigene Traces-Ansicht aus reiner
+        Telemetrie-Ingestion bereits liefert - Ausgangspunkt für den
+        Vergleich mit einem dedizierten APM-Tool.
+      </p>
+      <div class="links">
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a class="disabled" id="link-monitoring-gap-traces" href="#" target="_blank">OneUptime: Traces</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a href="/mockups/gap-monitoring-today-tomorrow.html" target="_blank">Mockup öffnen</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-docuware-apm', 'monitoring-gap')">Vorfall auslösen (Trace)</button>
+        <button class="btn-fix" onclick="run('fix-docuware-apm', 'monitoring-gap')">Beheben (Trace)</button>
+      </div>
+    </div>
+
     </div>
   </details>
 
@@ -947,6 +991,7 @@
           "hub-monitor-groups": data.monitorGroupsUrl,
           "hub-traces": data.tracesUrl,
           "link-leipzig-cascade-traces": data.tracesUrl,
+          "link-monitoring-gap-traces": data.tracesUrl,
         };
         for (const [elId, url] of Object.entries(directLinks)) {
           const a = document.getElementById(elId);

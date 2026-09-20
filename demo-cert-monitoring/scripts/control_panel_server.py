@@ -59,6 +59,8 @@ ACTIONS = {
     "fix-leipzig-cascade": ("fix-leipzig-cascade.sh", "Kettenreaktion beheben"),
     "break-ddos-shop": ("break-ddos-shop.sh", "DDoS-Vorfall auslösen"),
     "fix-ddos-shop": ("fix-ddos-shop.sh", "DDoS-Vorfall beheben"),
+    "break-docuware-apm": ("break-docuware-apm.sh", "DocuWare-APM-Vergleichstrace (verlangsamt) senden"),
+    "fix-docuware-apm": ("fix-docuware-apm.sh", "DocuWare-APM-Vergleichstrace (gesund) senden"),
 }
 
 
