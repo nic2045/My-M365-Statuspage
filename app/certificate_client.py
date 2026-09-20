@@ -1,7 +1,6 @@
 import asyncio
 import logging
-import socket
-import ssl
+import subprocess
 from datetime import UTC, datetime
 from urllib.parse import urlparse
 
@@ -40,14 +39,59 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
     loop = asyncio.get_event_loop()
     try:
         def _get_cert() -> dict[str, object]:
-            context = ssl.create_default_context()
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
-            context.minimum_version = ssl.TLSVersion.TLSv1_2
+            # Use openssl to fetch certificate info (most reliable method)
+            cmd = ["openssl", "s_client", "-servername", hostname, "-connect", f"{hostname}:443", "-showcerts"]
+            result = subprocess.run(cmd, input="", capture_output=True, text=True, timeout=10)  # noqa: S603
 
-            with socket.create_connection((hostname, 443), timeout=10) as sock:
-                with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                    cert = ssock.getpeercert()
+            if result.returncode != 0:
+                raise ValueError(f"openssl failed: {result.stderr}")
+
+            output = result.stdout
+            cert = {
+                "issuer": [[("commonName", "Unknown")]],
+                "subject": [[("commonName", hostname)]],
+                "notAfter": "",
+                "notBefore": "",
+                "serialNumber": "Unknown",
+            }
+
+            # Parse only the first certificate (server cert), stop at first PEM block
+            for line in output.split('\n'):
+                if '-----BEGIN CERTIFICATE-----' in line:
+                    break  # Stop after first certificate metadata
+
+                line_stripped = line.strip()
+                if line_stripped.startswith('i:'):
+                    # Format: i:O = Anthropic, CN = Egress Gateway SDS Issuing CA (production)
+                    issuer_str = line_stripped[2:].strip()
+                    if 'CN = ' in issuer_str:
+                        cn = issuer_str.split('CN = ')[-1].split(',')[0].strip()
+                        cert["issuer"] = [[("commonName", cn)]]
+                    elif 'O = ' in issuer_str:
+                        # Fallback: use Organization if CN not available
+                        org = issuer_str.split('O = ')[-1].split(',')[0].strip()
+                        cert["issuer"] = [[("commonName", org)]]
+                    else:
+                        # Last resort: use entire issuer string
+                        cert["issuer"] = [[("commonName", issuer_str[:100])]]
+                elif line_stripped.startswith('s:'):
+                    # Format: s:CN = pyur.com
+                    subject_str = line_stripped[2:].strip()
+                    if 'CN = ' in subject_str:
+                        cn = subject_str.split('CN = ')[-1].split(',')[0]
+                        cert["subject"] = [[("commonName", cn)]]
+                elif line_stripped.startswith('v:'):
+                    # Format: v:NotBefore: Sep 19 23:26:46 2026 GMT; NotAfter: Oct 19 23:27:46 2026 GMT
+                    v_str = line_stripped[2:].strip()
+                    if 'NotBefore:' in v_str and 'NotAfter:' in v_str:
+                        before_part = v_str.split('NotBefore:')[1].split(';')[0].strip()
+                        after_part = v_str.split('NotAfter:')[1].strip()
+                        cert["notBefore"] = before_part
+                        cert["notAfter"] = after_part
+
+            if not cert["notAfter"]:
+                raise ValueError("Could not extract certificate expiration date")
+
             return cert
 
         cert = await loop.run_in_executor(None, _get_cert)
