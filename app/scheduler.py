@@ -25,6 +25,12 @@ from app.crud import (
     upsert_service_status,
 )
 from app.database import AsyncSessionLocal
+from app.enterprise_app_client import (
+    get_service_principal_details,
+)
+from app.enterprise_app_client import (
+    get_status_display as get_app_status_display,
+)
 from app.event_bus import StatusEvent, get_event_bus
 from app.graph_client import (
     fetch_active_issues,
@@ -36,6 +42,7 @@ from app.i18n import LABELS
 from app.models import (
     GRAPH_STATUS_MAP,
     CertificateCheckResult,
+    EnterpriseAppCheckResult,
     HttpCheckResult,
     Incident,
     MonitoredService,
@@ -515,6 +522,138 @@ async def poll_certificates() -> None:
             logger.exception("Certificate poll failed")
 
 
+async def poll_enterprise_apps() -> None:
+    """Monitor Azure AD/Entra service principals for credentials, owners, and activity."""
+    logger.info("Starting enterprise apps poll...")
+    async with AsyncSessionLocal() as db:
+        try:
+            result = await db.execute(
+                sa_select(MonitoredService).where(
+                    MonitoredService.enterprise_app_id.is_not(None)
+                    & MonitoredService.is_enabled
+                )
+            )
+            app_services = result.scalars().all()
+
+            for service in app_services:
+                service_name = service.service_name
+                if not service.enterprise_app_id:
+                    logger.warning(f"Enterprise app service {service_name} missing app_id")
+                    continue
+
+                try:
+                    app_info = await get_service_principal_details(service.enterprise_app_id)
+                except Exception as app_error:
+                    error_msg = str(app_error)
+                    logger.exception(f"Failed to poll enterprise app {service_name}")
+                    check_result = EnterpriseAppCheckResult(
+                        app_id=service.enterprise_app_id,
+                        app_display_name=service_name,
+                        status="error",
+                        account_enabled=False,
+                        severity="high",
+                        error_message=error_msg,
+                    )
+                    db.add(check_result)
+                    await db.commit()
+                    continue
+
+                try:
+                    status = app_info["status"]
+                    severity = app_info["severity"]
+
+                    # Record enterprise app check result for dashboard
+                    check_result = EnterpriseAppCheckResult(
+                        app_id=service.enterprise_app_id,
+                        app_display_name=app_info.get("app_display_name", service_name),
+                        status=status,
+                        account_enabled=app_info.get("account_enabled", False),
+                        owner_count=app_info.get("owner_count", 0),
+                        has_no_owners=app_info.get("has_no_owners", False),
+                        nearest_expiration_date=app_info.get("nearest_expiration_date"),
+                        days_until_expiration=app_info.get("days_until_expiration"),
+                        expiring_credential_type=app_info.get("expiring_credential_type"),
+                        expiring_credential_name=app_info.get("expiring_credential_name"),
+                        last_sign_in_datetime=app_info.get("last_sign_in_datetime"),
+                        days_since_last_activity=app_info.get("days_since_last_activity"),
+                        severity=severity,
+                    )
+                    db.add(check_result)
+
+                    # Determine incident status based on app status
+                    if status == "ok":
+                        result = await db.execute(
+                            sa_select(Incident).where(
+                                (Incident.service_name == service_name)
+                                & (Incident.source == "enterprise_app")
+                                & ~Incident.is_resolved
+                            )
+                        )
+                        existing = result.scalar_one_or_none()
+                        if existing is not None:
+                            existing.is_resolved = True
+                            existing.status = "resolved"
+                            existing.end_datetime = datetime.utcnow()
+                            await db.flush()
+                    else:
+                        # Create or update incident for app security/credential issues
+                        title = f"Enterprise App Alert: {app_info.get('app_display_name', service_name)}"
+                        if status == "no_owners":
+                            title = f"Enterprise App Without Owners: {app_info.get('app_display_name', service_name)}"
+                        elif status == "secret_expired":
+                            title = f"Enterprise App Credential Expired: {app_info.get('app_display_name', service_name)}"
+                        elif status.startswith("secret_warning"):
+                            title = f"Enterprise App Credential Expiring: {app_info.get('app_display_name', service_name)}"
+
+                        description = f"App ID: {service.enterprise_app_id}\n"
+                        if app_info.get("has_no_owners"):
+                            description += "⚠️ No owners assigned\n"
+                        if app_info.get("days_until_expiration") is not None:
+                            description += f"Credential expires in {app_info.get('days_until_expiration')} days ({app_info.get('expiring_credential_type')})\n"
+                        if app_info.get("days_since_last_activity") is not None:
+                            description += f"No activity for {app_info.get('days_since_last_activity')} days\n"
+
+                        incident_phase = "active" if severity == "critical" else "monitoring"
+
+                        incident = await upsert_incident(
+                            db,
+                            graph_issue_id=f"app_{service.enterprise_app_id}",
+                            title=title,
+                            service_name=service_name,
+                            classification="incident",
+                            status=incident_phase,
+                            source="enterprise_app",
+                            severity=severity,
+                            description=description,
+                            start_datetime=datetime.utcnow(),
+                            is_resolved=False,
+                        )
+
+                        # Add update with current status
+                        await upsert_incident_updates(
+                            db,
+                            incident.id,
+                            [
+                                {
+                                    "title": get_app_status_display(status),
+                                    "body": description,
+                                    "createdDateTime": datetime.utcnow().isoformat(),
+                                    "postCreatedDateTime": datetime.utcnow().isoformat(),
+                                }
+                            ],
+                            auto_publish=True,
+                        )
+
+                    await db.commit()
+                except Exception:
+                    await db.rollback()
+                    logger.exception(f"Failed to poll enterprise app {service_name}")
+
+            logger.info(f"Enterprise apps poll completed for {len(app_services)} services")
+        except Exception:
+            logger.exception("Enterprise apps poll failed")
+
+
 async def poll_http_checks() -> None:
     """Check HTTP endpoints and create/update incidents based on reachability.
 
@@ -629,6 +768,13 @@ def start_scheduler() -> None:
         poll_certificates,
         trigger=IntervalTrigger(hours=1),
         id="cert_poll",
+        replace_existing=True,
+        next_run_time=datetime.now(),
+    )
+    scheduler.add_job(
+        poll_enterprise_apps,
+        trigger=IntervalTrigger(hours=1),
+        id="enterprise_apps_poll",
         replace_existing=True,
         next_run_time=datetime.now(),
     )

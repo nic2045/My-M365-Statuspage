@@ -163,6 +163,7 @@ class MonitoredService(Base):
     sla_exclude_advisory: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     show_sla_on_status_page: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     cert_hostname: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    enterprise_app_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
     check_interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     http_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     http_expected_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -197,6 +198,28 @@ class CertificateCheckResult(Base):
     common_name: Mapped[str] = mapped_column(String(256), nullable=False)
     issuer: Mapped[str] = mapped_column(String(512), nullable=False)
     serial_number: Mapped[str] = mapped_column(String(128), nullable=False)
+    error_message: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
+
+class EnterpriseAppCheckResult(Base):
+    """Azure AD/Entra service principal monitoring: credentials, owners, activity."""
+    __tablename__ = "enterprise_app_check_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    app_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    app_display_name: Mapped[str] = mapped_column(String(256), nullable=False)
+    checked_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    account_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    owner_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    has_no_owners: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    nearest_expiration_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    days_until_expiration: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    expiring_credential_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    expiring_credential_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    last_sign_in_datetime: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    days_since_last_activity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    severity: Mapped[str] = mapped_column(String(32), nullable=False, default="low")
     error_message: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
 
