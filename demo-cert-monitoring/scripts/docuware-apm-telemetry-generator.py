@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Continuous background telemetry for the DocuWare APM story: sends one
 healthy docuware-frontend -> docuware-api-gateway -> docuware-service ->
-docuware-db trace (+ matching log lines, same trace id) to Tempo, Loki AND
-(best-effort, if seeded) OneUptime every few seconds, forever - same "busy
-but healthy" baseline principle as
+docuware-db trace (+ matching log lines, same trace id) to Tempo/Loki every
+~10s, and the same trace+logs to OneUptime on a much more relaxed,
+decoupled interval (OU_INTERVAL_SECONDS, default 60s) - same "busy but
+healthy" baseline principle as
 docuware-metrics-exporter.py/customer-care-metrics-exporter.py, just pushed
 telemetry instead of a scraped /metrics endpoint.
 
@@ -18,14 +19,17 @@ incident (break-docuware-apm.sh/fix-docuware-apm.sh) stays a deliberate
 deviation from this baseline in all three - this script never sends the
 slow/error variant itself.
 
-OneUptime auth is cached for the life of the process (login + project
-lookup + telemetry-ingestion-key lookup happen at most once, retried only
-after a failure) - OneUptime enforces a sign-in rate limit
-(IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW, see README) that a
-fresh login every ~10s would blow through in minutes. Only the telemetry
-POSTs themselves (no auth) repeat every tick. If OneUptime isn't set up
-(--with-oneuptime never run) or unreachable, this half is silently skipped
-- same best-effort principle as the Tempo/Loki sends.
+The OneUptime side deliberately doesn't need Tempo/Loki's tight cadence -
+same "cascade from the dedicated stack at a relaxed interval" idea as
+oneuptime-sync.sh (SYNC_INTERVAL_SECONDS, also 60s by default there): it
+only has to be recognizably populated whenever someone actually looks, not
+live-live. On top of that, OneUptime auth is cached for the life of the
+process (login + project lookup + telemetry-ingestion-key lookup happen at
+most once, retried only after a failure) - OneUptime enforces a sign-in
+rate limit (IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW, see README)
+that frequent fresh logins would blow through in minutes. If OneUptime
+isn't set up (--with-oneuptime never run) or unreachable, this half is
+silently skipped - same best-effort principle as the Tempo/Loki sends.
 
 Runs inside the docker-compose network - TEMPO_BASE/LOKI_BASE default to
 the service DNS names; OU_BASE defaults to host.docker.internal (OneUptime
@@ -49,6 +53,13 @@ OU_PASSWORD = os.environ.get("OU_PASSWORD", "DemoDemo123!")
 OU_PROJECT = os.environ.get("OU_PROJECT", "Zertifikats-Monitoring Demo")
 OU_TELEMETRY_KEY_NAME = "Demo Log Ingest"  # created once by seed_oneuptime.py
 INTERVAL_SECONDS = float(os.environ.get("INTERVAL_SECONDS", "10"))
+# OneUptime doesn't need the same tight cadence as Tempo/Loki - same
+# "cascade from the dedicated stack at a relaxed interval" idea as
+# oneuptime-sync.sh (SYNC_INTERVAL_SECONDS, default 60s there too): it
+# only has to be recognizably populated whenever someone actually looks,
+# not live-live. A longer, decoupled interval also means fewer requests
+# against OneUptime overall, on top of the auth caching below.
+OU_INTERVAL_SECONDS = float(os.environ.get("OU_INTERVAL_SECONDS", "60"))
 
 SPAN_NAMES = [
     ("docuware-frontend", "GET /login", 3),
@@ -128,6 +139,7 @@ def send_logs(trace_id_raw, durations_ms, hits):
 
 # ── OneUptime: cached auth, best-effort sends ───────────────────────────────
 _ou = {"token": None, "project_id": None, "secret_key": None}
+_last_ou_emit = 0.0  # monotonic timestamp of the last OneUptime attempt (success or failure)
 
 
 def ou_call(path, payload, token=None, project_id=None):
@@ -245,10 +257,14 @@ def emit_once():
         send_logs(trace_id_raw, durations_ms, hits)
     except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
         print(f"(loki push skipped: {exc})", flush=True)
-    try:
-        ou_emit(trace_id_raw, durations_ms, hits)
-    except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
-        print(f"(oneuptime push skipped: {exc})", flush=True)
+    global _last_ou_emit
+    now = time.monotonic()
+    if now - _last_ou_emit >= OU_INTERVAL_SECONDS:
+        _last_ou_emit = now
+        try:
+            ou_emit(trace_id_raw, durations_ms, hits)
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+            print(f"(oneuptime push skipped: {exc})", flush=True)
 
 
 if __name__ == "__main__":

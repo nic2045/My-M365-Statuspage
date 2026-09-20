@@ -815,8 +815,13 @@ eindeutig zuordenbar bleibt.
 **Dieselbe Baseline auch in OneUptime, für den durchgehenden
 Vergleich:** best-effort, damit "OneUptime vs. Tempo/Loki" nicht nur
 direkt nach einem manuellen `break-docuware-apm.sh`-Lauf sichtbar ist,
-sondern jederzeit. Login, Projekt- und Ingestion-Key-Lookup werden dabei
-**einmalig für die Prozesslaufzeit gecacht** (nicht pro Tick wiederholt) -
+sondern jederzeit. Läuft dabei bewusst **entkoppelt und entspannter** als
+der Tempo/Loki-Takt - `OU_INTERVAL_SECONDS` (Default 60s, gleicher
+Standardwert wie `oneuptime-sync.sh`s `SYNC_INTERVAL_SECONDS`) statt der
+10s für Tempo/Loki, da OneUptime nur erkennbar befüllt sein muss, wenn
+man nachschaut, nicht sekundengenau live sein muss. Zusätzlich werden
+Login, Projekt- und Ingestion-Key-Lookup **einmalig für die
+Prozesslaufzeit gecacht** (nicht pro Versuch wiederholt) -
 OneUptime hat ein eigenes Sign-in-Rate-Limit
 (`IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW`, siehe weiter unten im
 OneUptime-Abschnitt zu genau diesem Problem beim wiederholten
