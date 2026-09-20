@@ -347,6 +347,102 @@ gh workflow run release-please.yml --ref main
 - **One feature per commit** when possible (easier to revert if needed)
 - **No docs-only commits before release** (they don't trigger a release; batch them with a code change)
 
+## Git Workflow (Solo Development)
+
+**Strategy:** Linear feature branches with rebase + fast-forward merge. Prevents merge conflicts and keeps history clean.
+
+### Standard Feature Branch Workflow
+
+```bash
+# 1. START: Ensure main is fresh
+git checkout main
+git pull origin main
+
+# 2. CREATE feature branch
+git checkout -b feat/feature-name
+
+# 3. WORK: Make commits (use conventional format)
+git commit -m "feat(scope): description"
+
+# 4. BEFORE PUSHING: Rebase on any main changes
+git fetch origin main
+git rebase -i origin/main  # interactive: squash/reorder if needed
+
+# 5. PUSH to remote
+git push -u origin feat/feature-name
+
+# 6. CREATE PR on GitHub (mark as ready, not draft)
+
+# 7. MERGE with Fast-Forward (once approved + CI green)
+# Option A: Via GitHub UI → Set to "Rebase and merge"
+# Option B: Via CLI:
+git checkout main
+git pull origin main
+git rebase feat/feature-name  # brings main up to feature tip
+git push origin main
+git branch -d feat/feature-name
+```
+
+### Handling Rebase Conflicts
+
+If `git rebase origin/main` shows conflicts:
+
+```bash
+# 1. See which files have conflicts
+git status
+
+# 2. Fix conflicts in editor (remove <<<<<<, ======, >>>>>> markers)
+
+# 3. Stage the fixed files
+git add <conflicted-file>
+
+# 4. Continue rebase
+git rebase --continue
+
+# 5. If it gets messy: abort and restart
+git rebase --abort
+git rebase -i origin/main
+```
+
+### Key Rules (Solo Dev)
+
+| ✅ DO | ❌ DON'T |
+|------|---------|
+| 1 feature branch at a time | Multiple branches editing same files |
+| Rebase before push | Merge main into feature (creates extra commits) |
+| Fast-forward merge to main | Regular merge (clutters history) |
+| Squash WIP commits before PR | Push every tiny commit |
+| Merge same day feature is done | Leave branches open 2+ weeks |
+
+### Example: Daily Workflow
+
+```bash
+# Morning: Start new feature
+git checkout main && git pull origin main
+git checkout -b feat/enterprise-apps
+
+# Throughout day: Work + commit
+git commit -m "feat(enterprise): add service principal monitoring"
+git commit -m "feat(enterprise): implement polling scheduler"
+
+# Evening: Before push
+git rebase -i origin/main  # Clean up if needed
+git push -u origin feat/enterprise-apps
+# → Create PR
+
+# Next morning (once approved):
+# Merge PR via GitHub (Rebase and merge)
+# Or via CLI (see step 7 above)
+# Then: Start next feature
+```
+
+### Why This Works
+
+- **Rebase:** Applies your commits on top of main's latest → no divergence
+- **Fast-forward:** main's history stays linear → easy to read `git log`
+- **No parallel branches:** No conflicts between features
+- **Clean CI:** Each PR has exactly your changes, nothing else
+
 ## Recent Changes & PR Context
 
 The latest PRs added (in order):
