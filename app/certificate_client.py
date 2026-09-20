@@ -65,8 +65,15 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
                     # Format: i:O = Anthropic, CN = Egress Gateway SDS Issuing CA (production)
                     issuer_str = line_stripped[2:].strip()
                     if 'CN = ' in issuer_str:
-                        cn = issuer_str.split('CN = ')[-1].split(',')[0]
+                        cn = issuer_str.split('CN = ')[-1].split(',')[0].strip()
                         cert["issuer"] = [[("commonName", cn)]]
+                    elif 'O = ' in issuer_str:
+                        # Fallback: use Organization if CN not available
+                        org = issuer_str.split('O = ')[-1].split(',')[0].strip()
+                        cert["issuer"] = [[("commonName", org)]]
+                    else:
+                        # Last resort: use entire issuer string
+                        cert["issuer"] = [[("commonName", issuer_str[:100])]]
                 elif line_stripped.startswith('s:'):
                     # Format: s:CN = pyur.com
                     subject_str = line_stripped[2:].strip()
