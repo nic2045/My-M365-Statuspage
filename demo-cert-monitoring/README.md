@@ -666,6 +666,52 @@ wäre an den Metriknamen gescheitert.
 > `./break-demo.sh`/`./fix-demo.sh` durchgetestet: "Zertifikate
 > abgelaufen" sprang korrekt von 0 auf 1 und zurück.
 
+## Grafana Tempo – dediziertes APM/Tracing
+
+`tempo/tempo.yaml` + der `tempo`-Dienst in `docker-compose.yml` - Teil des
+**Kern-Stacks** (kein `--with-oneuptime`-Flag nötig, läuft mit jedem
+`./start-demo.sh`). Zweck: die Gegenfrage zum Monitoring-Gap-Mockup
+(siehe Abschnitt "Benachrichtigungs-Mockups" oben) konkret beantworten -
+"was würde ein dediziertes APM-Tool zeigen, das BMC TSSA nicht kann?" -
+mit einem echten, browsbaren Trace statt nur einer Behauptung im Mockup.
+
+**Setup:** Single-Binary-Modus, lokaler Festplatten-Storage (kein
+S3/GCS/Azure-Backend nötig für eine lokale Demo), nur der OTLP-Receiver
+aktiv (HTTP :4318, gRPC :4317) - kein Metrics-Generator/Service-Graph, da
+der eine eigene `remote_write`-Anbindung an Prometheus bräuchte und außerhalb
+des Zwecks hier liegt (Trace-Waterfall/-Suche, keine weitere
+Metrik-Pipeline). Grafana bekommt Tempo automatisch als weitere
+Datenquelle (`grafana/provisioning/datasources/tempo.yml`, uid `tempo`) -
+kein manueller Schritt nötig.
+
+**Traces reinbringen:** `./break-docuware-apm.sh` / `./fix-docuware-apm.sh`
+(siehe oben, Abschnitt "Benachrichtigungs-Mockups" → `gap-monitoring-
+today-tomorrow.html`) senden denselben vierspännigen DocuWare-Beispieltrace
+(`docuware-frontend` → `docuware-api-gateway` → `docuware-service` →
+`docuware-db`) über `scripts/docuware_apm_tempo_trace.py` direkt an Tempos
+OTLP/HTTP-Endpunkt - kein OpenTelemetry-SDK nötig, reines
+`POST /v1/traces` mit stdlib `urllib`, keine Authentifizierung (rein lokaler
+Demo-Stack, kein Auth-Layer vor Tempo konfiguriert). Anders als bei
+OneUptime ist hier kein Login/Projekt-Lookup nötig - Tempo nimmt Traces
+ungefiltert entgegen.
+
+**Ansehen:** Grafana (`http://localhost:${GRAFANA_PORT:-3000}`) → Explore →
+Datenquelle "Tempo" → TraceQL-Suche
+`{resource.service.name="docuware-frontend"}` zeigt beide gesendeten
+Traces (verlangsamt + gesund) in der Liste; anklicken öffnet die volle
+Waterfall-Ansicht mit allen vier Spans, ihrer Verschachtelung und - beim
+verlangsamten Trace - den Fehlermeldungen an jedem betroffenen Span
+(API-Gateway/DocuWare-Service/DB, jeweils mit eigenem Text zum
+propagierenden Timeout). Bewusst kein fertiges Dashboard mit
+eingebettetem Tempo-Panel gebaut - das Such-/Waterfall-Erlebnis in Explore
+ist bereits vollständig nutzbar und stabiler über Grafana-Versionen hinweg
+als ein selbstgebautes Panel-JSON für einen Tracing-Datentyp.
+
+**Ports** (`.env`, alle mit sinnvollen Defaults):
+`TEMPO_HTTP_PORT` (3200, Tempos Query-API - das ist es, worüber Grafana
+intern spricht), `TEMPO_OTLP_GRPC_PORT` (4317), `TEMPO_OTLP_HTTP_PORT`
+(4318, der Port, den die Break/Fix-Skripte vom Host aus ansprechen).
+
 ## Customer Care: Standortübersicht für den technischen Owner (Grafana)
 
 Reines Grafana-Dashboard (kein OneUptime-Anteil diesmal) für den
@@ -1567,29 +1613,31 @@ Default), per `?oneuptime=<url>` in der Adresszeile der Übersichtsseite
   Trace-Kette (Frontend → API-Gateway → DocuWare-Service → DB). Rein
   statisches Mockup, kein Backend.
 
-  **Dieselbe Trace-Kette auch als echte Telemetrie in OneUptime, zur
-  Gegenüberstellung:** `./break-docuware-apm.sh` (Skript:
-  `scripts/docuware_apm_trace.py`, gleiches Login/Query-Vorgehen wie
-  `cascading_incident.py`, kein Import von `seed_oneuptime.py`) sendet
-  exakt die vier Spans aus dem Mockup (`docuware-frontend` →
-  `docuware-api-gateway` → `docuware-service` → `docuware-db`, gleiche
-  traceId, per `parentSpanId` verkettet) über `POST /otlp/v1/traces` an
-  OneUptime - mit demselben "Demo Log Ingest"-Ingestion-Key wie die
-  `docuware-login`-Logs weiter oben. Der DB-Span landet dabei wie im
-  Mockup in `STATUS_CODE_ERROR` ("Database Connection Timeout - Index auf
-  documents.customer_id fehlt"), Gesamtlaufzeit ~2,2s. `./fix-docuware-apm.sh`
-  sendet zum Kontrast denselben vierspännigen Trace nochmal gesund (~42ms,
-  alle Spans `STATUS_CODE_OK`) - anders als bei den übrigen
+  **Dieselbe Trace-Kette auch als echte Telemetrie, in zwei Tools zur
+  Gegenüberstellung:** `./break-docuware-apm.sh` sendet exakt die vier
+  Spans aus dem Mockup (`docuware-frontend` → `docuware-api-gateway` →
+  `docuware-service` → `docuware-db`, gleiche traceId, per `parentSpanId`
+  verkettet, DB-Span in `STATUS_CODE_ERROR` - "Database Connection Timeout
+  - Index auf documents.customer_id fehlt", Gesamtlaufzeit ~2,2s) sowohl an
+  **Grafana Tempo** (`scripts/docuware_apm_tempo_trace.py`, Teil des
+  Kern-Stacks, siehe Abschnitt "Grafana Tempo" unten) als auch, falls
+  bereits geseedet, an **OneUptime** (`scripts/docuware_apm_trace.py`,
+  gleiches Login/Query-Vorgehen wie `cascading_incident.py`, kein Import
+  von `seed_oneuptime.py`, sendet über `POST /otlp/v1/traces` mit demselben
+  "Demo Log Ingest"-Ingestion-Key wie die `docuware-login`-Logs weiter
+  oben - best-effort übersprungen, wenn OneUptime noch nicht mit
+  `--with-oneuptime` gestartet wurde). `./fix-docuware-apm.sh` sendet zum
+  Kontrast denselben vierspännigen Trace an beide Tools nochmal gesund
+  (~42ms, alle Spans `STATUS_CODE_OK`) - anders als bei den übrigen
   Break/Fix-Skripten gibt es hier keinen Monitor/Incident-Zustand, der
   zurückgesetzt wird, nur einen zweiten, sichtbar anderen Trace zum
-  direkten Vergleich in OneUptimes Traces-Ansicht. Zweck: zeigen, was
-  OneUptimes eigene Traces-Ansicht bereits aus reiner
-  OTLP-Telemetrie-Ingestion liefert (Trace-Liste, aus Parent-/Child-Spans
-  abgeleitete Service Map) - der Ausgangspunkt, gegen den sich ein
-  dediziertes APM-Tool (siehe Grafana-Tempo-Abschnitt) messen lassen muss.
-  Auch im Demo-Kontrollzentrum als Karte "Monitoring-Gap: Heute vs.
-  Morgen" mit eigenen Auslösen-/Beheben-Knöpfen und einem Direktlink zu
-  OneUptimes Traces-Übersicht.
+  direkten Vergleich. Zweck: konkret zeigen, wie viel mehr Tiefe ein
+  dediziertes APM-Tool (Trace-Waterfall + Suche in Grafana) gegenüber
+  OneUptimes Basis-Ansicht aus reiner OTLP-Ingestion (Trace-Liste, aus
+  Parent-/Child-Spans abgeleitete Service Map) bietet. Auch im
+  Demo-Kontrollzentrum als Karte "Monitoring-Gap: Heute vs. Morgen" mit
+  eigenen Auslösen-/Beheben-Knöpfen und Direktlinks zu Grafana Explore
+  (Tempo) und OneUptimes Traces-Übersicht.
 
 ## Demo-Kontrollzentrum
 

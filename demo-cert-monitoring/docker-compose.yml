@@ -178,12 +178,32 @@ services:
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
 
+  tempo:
+    # Dedicated APM/tracing backend, for direct comparison against
+    # OneUptime's own basic OTLP trace ingestion (see
+    # scripts/docuware_apm_trace.py / docuware_apm_tempo_trace.py) - shows
+    # a real trace waterfall/search UI in Grafana, the kind of depth the
+    # gap-monitoring mockup argues for. Single-binary mode, local disk
+    # storage - see tempo/tempo.yaml.
+    image: grafana/tempo:2.6.1
+    container_name: cert-demo-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "${TEMPO_HTTP_PORT:-3200}:3200"
+      - "${TEMPO_OTLP_GRPC_PORT:-4317}:4317"
+      - "${TEMPO_OTLP_HTTP_PORT:-4318}:4318"
+
   grafana:
     image: grafana/grafana:11.3.1
     container_name: cert-demo-grafana
     restart: unless-stopped
     depends_on:
       - prometheus
+      - tempo
     environment:
       GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
@@ -224,3 +244,4 @@ volumes:
   prometheus_data:
   grafana_data:
   demo_cert_data:
+  tempo_data:
