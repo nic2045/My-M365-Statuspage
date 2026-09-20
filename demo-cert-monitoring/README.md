@@ -703,10 +703,54 @@ Traces (verlangsamt + gesund) in der Liste; anklicken öffnet die volle
 Waterfall-Ansicht mit allen vier Spans, ihrer Verschachtelung und - beim
 verlangsamten Trace - den Fehlermeldungen an jedem betroffenen Span
 (API-Gateway/DocuWare-Service/DB, jeweils mit eigenem Text zum
-propagierenden Timeout). Bewusst kein fertiges Dashboard mit
-eingebettetem Tempo-Panel gebaut - das Such-/Waterfall-Erlebnis in Explore
-ist bereits vollständig nutzbar und stabiler über Grafana-Versionen hinweg
-als ein selbstgebautes Panel-JSON für einen Tracing-Datentyp.
+propagierenden Timeout). Bewusst kein Dashboard-Panel für die *Traces
+selbst* gebaut - das Such-/Waterfall-Erlebnis in Explore ist bereits
+vollständig nutzbar und stabiler über Grafana-Versionen hinweg als ein
+selbstgebautes Panel-JSON für einen Tracing-Datentyp. Für die *aus den
+Traces abgeleiteten Metriken* gibt es dagegen ein normales
+Prometheus-Dashboard - siehe direkt unten.
+
+### Metrics-Generator: echte APM-Metriken aus den Traces
+
+Tempos `metrics_generator` (`tempo/tempo.yaml`) leitet aus jedem
+eingehenden Span zwei Metrik-Familien ab, ganz ohne zusätzliche
+Instrumentierung - dieselben DocuWare-Traces, die die Waterfall-Ansicht
+oben füllen, erzeugen automatisch:
+
+- **`span-metrics`**: `traces_spanmetrics_calls_total` (Counter, Labels
+  `service`/`span_name`/`span_kind`/`status_code`) und
+  `traces_spanmetrics_latency` (Histogramm) - daraus lassen sich
+  Request-Rate, Fehlerquote und Latenz-Perzentile je Service/Span
+  berechnen.
+- **`service-graphs`**: `traces_service_graph_request_total` /
+  `_failed_total` / `_server_seconds` (Labels `client`/`server`) - aus
+  Parent-/Child-Span-Paaren abgeleiteter Traffic zwischen Services, das
+  Metrik-Äquivalent zu OneUptimes Trace Service Map.
+
+Beide werden per `remote_write` an Prometheus geschickt
+(`http://prometheus:9090/api/v1/write`) - dafür läuft Prometheus mit
+`--web.enable-remote-write-receiver` (`docker-compose.yml`, expliziter
+`command:`-Block mit den Standard-Flags des Images plus dieser einen
+zusätzlichen). Ohne dieses Flag lehnt Prometheus die Pushes von Tempo ab.
+
+**Dashboard:** `grafana/dashboards/docuware-apm-tempo-metrics.json` -
+Übersicht (Request-Rate/Fehlerquote/p95-Latenz als Stat-Kacheln), Verlauf
+je Service (drei Zeitreihen) und Service-Graph-Traffic (Requests/Fehler
+zwischen Services). Bleibt leer, bis `./break-docuware-apm.sh` mindestens
+einmal gelaufen ist. Auch im Demo-Kontrollzentrum verlinkt ("Grafana:
+APM-Metriken" auf der Monitoring-Gap-Karte, sowie eigene Kachel unter
+"Alle Seiten" → Dashboards).
+
+> **Nicht live verifiziert:** Metrik- und Label-Namen (`traces_spanmetrics_*`,
+> `traces_service_graph_*`) folgen Tempos offiziell dokumentiertem Schema,
+> konnten in dieser Sandbox aber nicht gegen eine echte Tempo-Instanz
+> geprüft werden (Docker-Hub-Pull blockiert, siehe oben). Vor einer echten
+> Vorführung einmal `./break-docuware-apm.sh` laufen lassen und im
+> Dashboard gegenchecken, dass Daten ankommen - falls ein Panel leer
+> bleibt, liegt es am ehesten an einem leicht abweichenden Metriknamen,
+> nicht an der Grundkonstruktion (remote_write selbst lässt sich mit
+> `curl http://localhost:9090/api/v1/query?query=traces_spanmetrics_calls_total`
+> gegenprüfen).
 
 **Ports** (`.env`, alle mit sinnvollen Defaults):
 `TEMPO_HTTP_PORT` (3200, Tempos Query-API - das ist es, worüber Grafana
@@ -1635,9 +1679,17 @@ Default), per `?oneuptime=<url>` in der Adresszeile der Übersichtsseite
   direkten Vergleich. Zweck: konkret zeigen, wie viel mehr Tiefe ein
   dediziertes APM-Tool (Trace-Waterfall + Suche in Grafana) gegenüber
   OneUptimes Basis-Ansicht aus reiner OTLP-Ingestion (Trace-Liste, aus
-  Parent-/Child-Spans abgeleitete Service Map) bietet. Auch im
-  Demo-Kontrollzentrum als Karte "Monitoring-Gap: Heute vs. Morgen" mit
-  eigenen Auslösen-/Beheben-Knöpfen und Direktlinks zu Grafana Explore
+  Parent-/Child-Spans abgeleitete Service Map) bietet.
+
+  Im Demo-Kontrollzentrum sauber in zwei Bereiche getrennt: das statische
+  Mockup selbst liegt unter "Alle Seiten" → Werkzeuge → Karte
+  "Monitoring-Gap-Mockup" (direkter Link, wie die übrigen
+  Vergleichs-Mockups); der Live-Prozess (Trace an Tempo/OneUptime senden)
+  ist eine eigene, **immer sichtbare** Karte "Monitoring-Gap: Heute vs.
+  Morgen" direkt unter "Vorfall- & Prozess-Szenarien" - bewusst nicht im
+  eingeklappten "Weitere Szenarien"-Bereich, da sie den Mehrwert-Pitch der
+  ganzen Demo live belegt statt nur ein Szenario unter vielen zu sein.
+  Eigene Auslösen-/Beheben-Knöpfe plus Direktlinks zu Grafana Explore
   (Tempo) und OneUptimes Traces-Übersicht.
 
 ## Demo-Kontrollzentrum

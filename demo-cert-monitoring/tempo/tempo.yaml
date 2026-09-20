@@ -1,10 +1,10 @@
-# Minimal single-binary Tempo config for this demo: local disk storage, no
-# metrics-generator/service-graph (that would need its own remote_write
-# target into Prometheus - out of scope here, the point of this piece of
-# the demo is trace waterfalls/search, not another metrics pipeline).
-# OTLP is the only receiver enabled - matches how the rest of this demo
-# already sends traces (docuware_apm_tempo_trace.py, and OneUptime's own
-# OTLP ingestion in cascading_incident.py/docuware_apm_trace.py).
+# Single-binary Tempo config for this demo: local disk storage for traces,
+# plus the metrics-generator so trace data also produces real Prometheus
+# metrics (request rate, latency histograms, error rate, service graph) -
+# not just individual trace waterfalls. OTLP is the only receiver enabled -
+# matches how the rest of this demo already sends traces
+# (docuware_apm_tempo_trace.py, and OneUptime's own OTLP ingestion in
+# cascading_incident.py/docuware_apm_trace.py).
 server:
   http_listen_port: 3200
 
@@ -22,6 +22,29 @@ storage:
       path: /var/tempo/traces
     wal:
       path: /var/tempo/wal
+
+# Derives metrics directly from ingested spans - no separate instrumentation
+# needed, the same DocuWare traces sent for the waterfall view also feed
+# this. "span-metrics" turns every span into request-rate/latency/error-rate
+# counters+histograms (traces_spanmetrics_*); "service-graphs" correlates
+# parent/child spans across services into a dependency graph with its own
+# request/error/latency metrics (traces_service_graph_*). Requires
+# Prometheus to accept remote_write - see --web.enable-remote-write-receiver
+# on the prometheus service in docker-compose.yml.
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics]
 
 compactor:
   compaction:
