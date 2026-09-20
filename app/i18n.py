@@ -307,7 +307,10 @@ LABELS_DE: dict[str, str] = {
     # Source / reference on incidents
     "admin.source_label":            "Quelle",
     "admin.source_microsoft":        "Microsoft (Graph)",
+    "admin.source_graph":            "Microsoft (Graph)",
     "admin.source_manual":           "Manuell",
+    "admin.source_certificate":      "Zertifikat",
+    "admin.source_http_check":       "HTTP-Check",
     "admin.source_other":            "Sonstige",
     "admin.external_id_label":       "Referenz / ID",
     "admin.external_id_placeholder": "z. B. MO1310977",
@@ -678,7 +681,10 @@ LABELS_EN: dict[str, str] = {
     # Source / reference on incidents
     "admin.source_label":            "Source",
     "admin.source_microsoft":        "Microsoft (Graph)",
+    "admin.source_graph":            "Microsoft (Graph)",
     "admin.source_manual":           "Manual",
+    "admin.source_certificate":      "Certificate",
+    "admin.source_http_check":       "HTTP Check",
     "admin.source_other":            "Other",
     "admin.external_id_label":       "Reference / ID",
     "admin.external_id_placeholder": "e.g. MO1310977",
