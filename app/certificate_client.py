@@ -43,6 +43,7 @@ async def get_certificate_expiration(hostname: str) -> dict[str, object]:
             context = ssl.create_default_context()
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
 
             with socket.create_connection((hostname, 443), timeout=10) as sock:
                 with context.wrap_socket(sock, server_hostname=hostname) as ssock:
