@@ -812,6 +812,26 @@ erkennbare Abweichung von der Baseline statt der einzige Datenpunkt
 dem manuellen Auslösen vorbehalten, damit der Vorfall in der Vorführung
 eindeutig zuordenbar bleibt.
 
+**Dieselbe Baseline auch in OneUptime, für den durchgehenden
+Vergleich:** best-effort, damit "OneUptime vs. Tempo/Loki" nicht nur
+direkt nach einem manuellen `break-docuware-apm.sh`-Lauf sichtbar ist,
+sondern jederzeit. Login, Projekt- und Ingestion-Key-Lookup werden dabei
+**einmalig für die Prozesslaufzeit gecacht** (nicht pro Tick wiederholt) -
+OneUptime hat ein eigenes Sign-in-Rate-Limit
+(`IDENTITY_LOGIN_RATE_LIMIT_PER_ACCOUNT_PER_WINDOW`, siehe weiter unten im
+OneUptime-Abschnitt zu genau diesem Problem beim wiederholten
+Seed/Break/Fix), das ein Login alle 10s in Minuten gesprengt hätte. Ist
+OneUptime beim Login erreichbar, aber noch nicht geseedet (kein
+passendes Projekt/Kein Ingestion-Key gefunden), wird nur der günstige
+Projekt-/Key-Lookup pro Tick wiederholt, nie das Login selbst erneut -
+sobald `--with-oneuptime && ./seed-oneuptime.sh` nachgeholt wird, greift
+die Baseline beim nächsten Tick automatisch. Ein `401` auf eine
+Telemetrie-Anfrage verwirft den gecachten Token, sodass sich genau ein
+erneutes Login beim nächsten Tick selbst heilt. Erreicht via
+`host.docker.internal` (`extra_hosts`, gleicher Mechanismus wie
+`oneuptime-sync`) - OneUptime läuft in einem eigenen Compose-Projekt,
+nicht im selben Docker-Netzwerk.
+
 **Ports** (`.env`): `LOKI_HTTP_PORT` (3100).
 
 > **Nicht live verifiziert** (gleiche Einschränkung wie beim
