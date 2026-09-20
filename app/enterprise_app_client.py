@@ -94,6 +94,7 @@ async def get_service_principal_details(app_id: str) -> dict[str, object]:
                 last_sign_dt = datetime.fromisoformat(last_sign_in.replace("Z", "+00:00"))
                 days_since_activity = (now - last_sign_dt).days
             except ValueError:
+                # Invalid datetime format from Graph API; skip activity calculation
                 pass
 
         # Determine status
