@@ -295,6 +295,10 @@
       <div class="hub-icon" style="background:#f46800;">G</div>
       <div class="hub-text"><div class="t">Avaya Callcenter-Betrieb</div><div class="d">Grafana</div></div>
     </a>
+    <a class="hub-card" href="http://localhost:3000/d/docuware-apm-tempo-metrics" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">DocuWare APM – Tempo-Metriken</div><div class="d">Request-Rate, Latenz, Fehlerquote, Service-Graph</div></div>
+    </a>
     <a class="hub-card" href="http://localhost:3000/d/webshop-overview" target="_blank">
       <div class="hub-icon" style="background:#f46800;">G</div>
       <div class="hub-text"><div class="t">Webshop – Cross-funktional</div><div class="d">Grafana: Marketing, Web, Middleware, Infra</div></div>
@@ -338,6 +342,10 @@
     <a class="hub-card" href="/mockups/monitoring-checkmk.html" target="_blank">
       <div class="hub-icon" style="background:#1a3c34;">C</div>
       <div class="hub-text"><div class="t">CheckMK-Vergleichsmockup</div><div class="d">DocuWare-Stack, Werkzeug-Vergleich</div></div>
+    </a>
+    <a class="hub-card" href="/mockups/gap-monitoring-today-tomorrow.html" target="_blank">
+      <div class="hub-icon" style="background:#0f6cbd;">G</div>
+      <div class="hub-text"><div class="t">Monitoring-Gap-Mockup</div><div class="d">Heute (BMC) vs. Morgen (Full-Stack), Mehrwert-Pitch</div></div>
     </a>
     <a class="hub-card" href="http://localhost:9090" target="_blank">
       <div class="hub-icon" style="background:#8a8f98;">P</div>
@@ -493,12 +501,56 @@
       </div>
     </div>
 
+    <div class="card" id="card-monitoring-gap" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f6cbd"/>
+          <path d="M10 34 L18 22 L26 28 L38 12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="38" cy="12" r="3" fill="#fff"/>
+        </svg>
+        <div>
+          <h2>Monitoring-Gap: Heute vs. Morgen</h2>
+          <span class="status healthy"><span class="dot"></span>echte Traces, zwei Tools</span>
+          <span class="cat-badge process">Prozessdemo</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Vorführung des Mehrwert-Pitches, live statt nur als Bild:</strong>
+        die statische Gegenüberstellung dazu liegt unter Werkzeuge →
+        "Monitoring-Gap-Mockup". Hier passiert dasselbe mit echter Telemetrie:
+        "Vorfall auslösen" sendet einen DocuWare-Request (Frontend →
+        API-Gateway → DocuWare-Service → DB) als echten OTel-Trace an
+        <strong>Grafana Tempo</strong> (dediziertes APM/Tracing -
+        Trace-Waterfall + Suche in Grafana Explore) und, falls OneUptime
+        geseedet ist, zusätzlich an <strong>OneUptime</strong> (Basis-Ansicht
+        aus reiner Ingestion) - beide mit Timeout-Fehler im DB-Span, genau
+        wie im Mockup beschrieben. "Beheben" sendet denselben Trace zum
+        Kontrast nochmal gesund (42ms, alle Spans OK). Tempo leitet aus
+        jedem Trace zusätzlich echte Prometheus-Metriken ab (Request-Rate,
+        Latenz-Perzentile, Fehlerquote, Service-Graph-Traffic) - sichtbar im
+        Dashboard "Grafana: APM-Metriken" unten. Zeigt konkret, wie viel
+        mehr Tiefe ein dediziertes APM-Tool (Traces + abgeleitete Metriken)
+        gegenüber reiner Basis-Ingestion bietet.
+      </p>
+      <div class="links">
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/explore" target="_blank">Grafana: Explore (Tempo)</a>
+          <a href="http://localhost:3000/d/docuware-apm-tempo-metrics" target="_blank">Grafana: APM-Metriken</a>
+          <a class="disabled" id="link-monitoring-gap-traces" href="#" target="_blank">OneUptime: Traces</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-docuware-apm', 'monitoring-gap')">Vorfall auslösen (Trace)</button>
+        <button class="btn-fix" onclick="run('fix-docuware-apm', 'monitoring-gap')">Beheben (Trace)</button>
+      </div>
+    </div>
+
   </div>
 
   <details class="scenario-more">
     <summary>
-      <span class="more-icon">+10</span>
-      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge, Kettenreaktion Leipzig, DDoS auf shop.pyur.com, Monitoring-Gap</span></span>
+      <span class="more-icon">+9</span>
+      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge, Kettenreaktion Leipzig, DDoS auf shop.pyur.com</span></span>
       <span class="more-arrow">⌄</span>
     </summary>
     <div class="grid">
@@ -826,52 +878,6 @@
       <div class="actions">
         <button class="btn-break" onclick="run('break-ddos-shop', 'ddos-shop')">Vorfall auslösen</button>
         <button class="btn-fix" onclick="run('fix-ddos-shop', 'ddos-shop')">Beheben</button>
-      </div>
-    </div>
-
-    <div class="card" id="card-monitoring-gap" style="--accent:#0f6cbd; --accent-bg:#f2f8fd;">
-      <div class="card-head">
-        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f6cbd"/>
-          <path d="M10 34 L18 22 L26 28 L38 12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="38" cy="12" r="3" fill="#fff"/>
-        </svg>
-        <div>
-          <h2>Monitoring-Gap: Heute vs. Morgen</h2>
-          <span class="status healthy"><span class="dot"></span>Mockup + echte Traces</span>
-          <span class="cat-badge process">Prozessdemo</span>
-        </div>
-      </div>
-      <p class="story">
-        <strong>Zeigt:</strong> den Unterschied zwischen reinem
-        Infrastructure-Monitoring (BMC TSSA - Server "läuft", aber keine
-        Aussage zu Performance oder Fehlerrate) und einem Full-Stack-Zielbild
-        (Prometheus + Grafana Tempo + Service-Health). Am DocuWare-Beispiel:
-        BMC zeigt "UP", während Tempo 2100ms Trace-Dauer, 3 von 4 fehlerhafte
-        Spans und den echten Root Cause (fehlender DB-Index) sichtbar macht.<br>
-        <strong>Zur Gegenüberstellung, in zwei echten Tools:</strong> "Vorfall
-        auslösen" sendet denselben DocuWare-Request (Frontend → API-Gateway →
-        DocuWare-Service → DB) als echten OTel-Trace sowohl an
-        <strong>Grafana Tempo</strong> (dediziertes APM/Tracing - Trace-Waterfall
-        + Suche in Grafana Explore) als auch an <strong>OneUptime</strong>
-        (Basis-Ansicht aus reiner Ingestion, falls seeded) - beide mit
-        Timeout-Fehler im DB-Span. "Beheben" sendet denselben Trace zum
-        Kontrast nochmal gesund (42ms, alle Spans OK). Zeigt konkret, wie viel
-        mehr Tiefe ein dediziertes APM-Tool gegenüber Basis-Ingestion bietet.
-      </p>
-      <div class="links">
-        <div class="link-row">
-          <span class="role-label">Admin</span>
-          <a href="http://localhost:3000/explore" target="_blank">Grafana: Explore (Tempo)</a>
-          <a class="disabled" id="link-monitoring-gap-traces" href="#" target="_blank">OneUptime: Traces</a>
-        </div>
-        <div class="link-row">
-          <span class="role-label">Nutzer</span>
-          <a href="/mockups/gap-monitoring-today-tomorrow.html" target="_blank">Mockup öffnen</a>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn-break" onclick="run('break-docuware-apm', 'monitoring-gap')">Vorfall auslösen (Trace)</button>
-        <button class="btn-fix" onclick="run('fix-docuware-apm', 'monitoring-gap')">Beheben (Trace)</button>
       </div>
     </div>
 
