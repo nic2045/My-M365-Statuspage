@@ -1,0 +1,227 @@
+{
+ "title": "Netzwerk-Auslastung – VPN & Core (Netzwerk-Team)",
+ "uid": "network-utilization-overview",
+ "description": "Kombinierte Auslastungssicht über beide Netzwerk-Exporter: die 6 Customer-Care-Standorte auf ihrer S2S-VPN-Strecke ins RZ Leipzig (scripts/customer-care-metrics-exporter.py) und das LAN am Standort Leipzig selbst (Router/Core/Access-Switches, scripts/leipzig-network-exporter.py) - bislang nur getrennt in customer-care-overview.json bzw. leipzig-network-topology.json sichtbar. Diese Ansicht stellt nur die Auslastungszahlen nebeneinander, ohne Callcenter-/Topologie-Details.",
+ "timezone": "browser",
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "schemaVersion": 39,
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "VPN Ø-Bandbreitenauslastung",
+   "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    {
+     "expr": "avg(100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps)",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": { "calcs": ["lastNotNull"] },
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "decimals": 0,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "green", "value": null },
+       { "color": "yellow", "value": 70 },
+       { "color": "red", "value": 90 }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "VPN-Standorte gestört",
+   "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    {
+     "expr": "count(cc_site_vpn_up == 0) or vector(0)",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": { "calcs": ["lastNotNull"] },
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "green", "value": null },
+       { "color": "red", "value": 1 }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Core-Netz Ø Port-Auslastung",
+   "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    {
+     "expr": "avg(net_port_utilization_percent)",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": { "calcs": ["lastNotNull"] },
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "decimals": 0,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "green", "value": null },
+       { "color": "yellow", "value": 70 },
+       { "color": "red", "value": 90 }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Core-Switches offline",
+   "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    {
+     "expr": "sum(net_device_up < bool 1)",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "options": {
+    "reduceOptions": { "calcs": ["lastNotNull"] },
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "green", "value": null },
+       { "color": "red", "value": 1 }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "VPN-Bandbreitenauslastung je Standort (%)",
+   "description": "Site-to-site VPN, 6 Standorte -> RZ Leipzig (cc_site_vpn_bandwidth_used_mbps / _capacity_mbps)",
+   "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    {
+     "expr": "100 * cc_site_vpn_bandwidth_used_mbps / cc_site_vpn_bandwidth_capacity_mbps",
+     "legendFormat": "{{site}}",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": { "lineInterpolation": "smooth" }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "VPN-Latenz zum RZ Leipzig je Standort (ms)",
+   "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    {
+     "expr": "cc_site_vpn_latency_ms",
+     "legendFormat": "{{site}}",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": { "lineInterpolation": "smooth" }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 7,
+   "type": "timeseries",
+   "title": "Core-Netz Port-Auslastung je Access-Switch (%)",
+   "description": "Standort Leipzig, eigenes LAN (net_port_utilization_percent, nur Access-Switches - Router/Core haben keine Access-Ports)",
+   "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    {
+     "expr": "net_port_utilization_percent",
+     "legendFormat": "{{device}}",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": { "lineInterpolation": "smooth" }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "Core-Netz CPU-Auslastung je Gerät (%)",
+   "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    {
+     "expr": "net_device_cpu_percent",
+     "legendFormat": "{{device}}",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": { "lineInterpolation": "smooth" }
+    },
+    "overrides": []
+   }
+  }
+ ]
+}

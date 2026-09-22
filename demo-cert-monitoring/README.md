@@ -624,6 +624,34 @@ Live-Status, gleiches Prinzip wie bei den anderen Prometheus-Karten).
 Bewusst Grafana-only wie die DocuWare-Cluster- und Customer-Care-Karten -
 reine Facility-IT-Beobachtung ohne OneUptime-Incident.
 
+**Auslastungs-Zeitreihen ergänzt:** die Übersicht oben hatte nur
+Stat-Kacheln (Ø CPU, max. Temperatur) und die Topologie, aber keine
+Zeitreihe für `net_port_utilization_percent`/`net_device_cpu_percent` -
+zwei neue Panels ("Port-Auslastung je Access-Switch (%)",
+"CPU-Auslastung je Gerät (%)") schließen die Lücke.
+
+## Netzwerk-Auslastung – VPN & Core (Grafana, Netzwerk-Team)
+
+`grafana/dashboards/network-utilization-overview.json` - bündelt die
+Auslastungszahlen beider Netzwerk-Exporter, die bislang nur getrennt in
+den jeweiligen Fach-Dashboards sichtbar waren:
+
+- **Customer-Care-S2S-VPN** (6 Standorte → RZ Leipzig,
+  `cc_site_vpn_*` aus `customer-care-metrics-exporter.py`):
+  Ø-Bandbreitenauslastung, gestörte Standorte, Bandbreitenauslastung
+  und Latenz je Standort als Zeitreihe
+- **Standort-Leipzig-LAN** (Router/Core/Access-Switches,
+  `net_*` aus `leipzig-network-exporter.py`): Ø Port-Auslastung,
+  offline Switches, Port-Auslastung und CPU je Gerät als Zeitreihe
+
+Bewusst kein Ersatz für `customer-care-overview.json` (Callcenter-
+Kontext, Karte, Node-Graph) oder `leipzig-network-topology.json`
+(Topologie, Geräte-Tabelle) - nur die Auslastungssicht beider Exporter
+nebeneinander, für ein Netzwerk-Team, das nicht beide Fach-Dashboards
+durchsuchen will. Nicht live gegen eine echte Grafana-Instanz
+verifiziert (nur `docker compose config`/JSON-Syntax), gleiches Muster
+wie die anderen Panels in diesem Stack.
+
 ## Website & Zertifikats-Dashboard (Grafana, App-Owner)
 
 `grafana/dashboards/website-cert-monitoring.json` - technisches

@@ -488,6 +488,69 @@
      }
     ]
    }
+  },
+  {
+   "id": 7,
+   "type": "timeseries",
+   "title": "Port-Auslastung je Access-Switch (%)",
+   "description": "net_port_utilization_percent - nur Access-Switches (Router/Core haben keine Access-Ports)",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 28
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "net_port_utilization_percent",
+     "legendFormat": "{{device}}",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "CPU-Auslastung je Gerät (%)",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 28
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "net_device_cpu_percent",
+     "legendFormat": "{{device}}",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": {
+      "lineInterpolation": "smooth"
+     }
+    },
+    "overrides": []
+   }
   }
  ]
 }
