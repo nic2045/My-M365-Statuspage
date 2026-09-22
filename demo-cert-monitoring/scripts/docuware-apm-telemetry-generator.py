@@ -75,17 +75,26 @@ LOG_TEMPLATES = [
 ]
 
 
-def build_resource_spans(trace_id_b64, durations_ms, token_header=None):
+def build_resource_spans(trace_id_str, durations_ms, id_encode):
     """Shared span-building logic for Tempo and OneUptime - same shape,
-    same trace id, just a different wire endpoint/auth. See send_trace()'s
-    docstring for the nesting rationale (durations_ms decreasing index
-    0..3, all spans sharing one end point)."""
+    same trace id, just a different wire endpoint/auth/id-encoding. See
+    send_trace()'s docstring for the nesting rationale (durations_ms
+    decreasing index 0..3, all spans sharing one end point).
+
+    id_encode picks the wire encoding for traceId/spanId: the OTLP/HTTP
+    JSON spec requires hex here (not base64, unlike standard protobuf JSON
+    bytes fields - https://opentelemetry.io/docs/specs/otlp/#json-protobuf-
+    encoding), and Tempo enforces that strictly (400 Bad Request on
+    base64). OneUptime's own ingestion is more lenient and already accepts
+    base64 (see docuware_apm_trace.py's convertBase64ToHexSafe() note), so
+    it keeps using that encoding here to match what's already verified
+    against it."""
     now_ns = int(time.time() * 1e9)
-    span_ids = [base64.b64encode(os.urandom(8)).decode() for _ in SPAN_NAMES]
+    span_ids = [id_encode(os.urandom(8)) for _ in SPAN_NAMES]
     resource_spans = []
     for i, (service_name, span_name, kind) in enumerate(SPAN_NAMES):
         span = {
-            "traceId": trace_id_b64,
+            "traceId": trace_id_str,
             "spanId": span_ids[i],
             "name": span_name,
             "kind": kind,
@@ -119,8 +128,8 @@ def send_trace(trace_id_raw, durations_ms):
     wait on its child, a shorter child duration nests cleanly inside its
     longer parent's window this way (child starts later, same end), with
     no timestamp-overlap bugs to get wrong."""
-    trace_id = base64.b64encode(trace_id_raw).decode()
-    resource_spans = build_resource_spans(trace_id, durations_ms)
+    trace_id_hex = trace_id_raw.hex()
+    resource_spans = build_resource_spans(trace_id_hex, durations_ms, lambda b: b.hex())
     post_json(f"{TEMPO_BASE}/v1/traces", {"resourceSpans": resource_spans})
 
 
@@ -209,12 +218,13 @@ def ou_emit(trace_id_raw, durations_ms, hits):
     stale token."""
     if not ou_authenticate():
         return
-    trace_id = base64.b64encode(trace_id_raw).decode()
+    trace_id_b64 = base64.b64encode(trace_id_raw).decode()
     trace_hex = trace_id_raw.hex()
     now_ns = int(time.time() * 1e9)
     headers = {"x-oneuptime-token": _ou["secret_key"]}
     try:
-        resource_spans = build_resource_spans(trace_id, durations_ms)
+        resource_spans = build_resource_spans(
+            trace_id_b64, durations_ms, lambda b: base64.b64encode(b).decode())
         post_json(f"{OU_BASE}/otlp/v1/traces", {"resourceSpans": resource_spans}, headers=headers)
 
         resource_logs = []

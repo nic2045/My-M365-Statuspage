@@ -15,7 +15,6 @@ Usage: python3 docuware_apm_tempo_trace.py break|fix
 Invoked by ../break-docuware-apm.sh / ../fix-docuware-apm.sh, which set
 TEMPO_BASE (http://localhost:<TEMPO_OTLP_HTTP_PORT>, default 4318).
 """
-import base64
 import json
 import os
 import sys
@@ -27,11 +26,14 @@ TEMPO_BASE = os.environ.get("TEMPO_BASE", "http://localhost:4318")
 
 
 def random_hex_id(num_bytes):
-    """OTLP JSON encodes trace/span ids as base64 on the wire; Tempo (like
-    OneUptime, see docuware_apm_trace.py) decodes them back to raw bytes -
-    only the wire encoding is base64, the ids themselves are plain random
-    bytes."""
-    return base64.b64encode(os.urandom(num_bytes)).decode()
+    """The OTLP/HTTP JSON spec deliberately deviates from standard protobuf
+    JSON mapping for traceId/spanId: they're case-insensitive HEX strings,
+    not base64 (https://opentelemetry.io/docs/specs/otlp/#json-protobuf-
+    encoding). Tempo's OTLP receiver enforces this strictly and returns 400
+    Bad Request for base64-encoded ids. OneUptime's own ingestion is more
+    lenient (see docuware_apm_trace.py's convertBase64ToHexSafe() note),
+    which is why only the Tempo side needs this."""
+    return os.urandom(num_bytes).hex()
 
 
 def trace_id_bytes():
@@ -55,7 +57,7 @@ def build_trace_payload(healthy):
     DB span errors out on a missing index); `healthy=True` sends a fast,
     all-OK variant of the same shape for contrast."""
     trace_id_raw = trace_id_bytes()
-    trace_id = base64.b64encode(trace_id_raw).decode()
+    trace_id = trace_id_raw.hex()
     now_ns = int(time.time() * 1e9)
 
     if healthy:
