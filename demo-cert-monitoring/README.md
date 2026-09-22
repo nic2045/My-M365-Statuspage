@@ -1552,6 +1552,27 @@ Szenario **komplett durch** - Grafana ist hier nur der Anfang:
   verifiziert (nur Mock-Server-Roundtrip, gleiche Sandbox-Einschränkung
   wie der Rest dieser Demo-Serie), aber dieselben, seit dem Hex-Encoding-
   Fix bestätigt korrekten OTLP-Konventionen wie `docuware_apm_tempo_trace.py`.
+- **Dieselbe Ursache jetzt auch als Prometheus-Metrik**: neue
+  `docuware_rechnungslauf_documents_written_total` (Counter) in
+  `docuware-metrics-exporter.py` - normaler Nachtlauf-Schreibrate vs.
+  deutlich höhere Rate während `break-docuware-disk.sh`
+  (`disk_full`-State, gleicher State-File-Mechanismus wie
+  `docuware_disk_usage_percent`). Neues Panel 19 "Rechnungslauf –
+  Dokumente geschrieben (Rate/Min)" in
+  `grafana/dashboards/docuware-cluster-status.json`, direkt unter dem
+  Speicherplatz-Panel - Anstieg der Schreibrate und Anstieg der
+  SAN-Auslastung sind so auch ohne den Sprung nach Explore auf einen
+  Blick korreliert sichtbar, der Tempo-Trace bleibt für die Detailsicht.
+- **Root-Cause-Update auf der öffentlichen Statusseite**:
+  `docuware_disk_incident.py` postet bei `break` jetzt zusätzlich eine
+  öffentliche Incident-Notiz ("Update (Ursachenanalyse)") mit derselben
+  Rechnungslauf-RL-2026-09-Begründung und denselben Zahlen wie der
+  Tempo-Trace - `shouldStatusPageSubscribersBeNotifiedOnNoteCreated:
+  true`, geht also auch als Abonnenten-E-Mail (Mailpit) raus, gleiches
+  Prinzip wie die bestehende Resolution-Notiz bei `fix`. Idempotent
+  (prüft vorhandene `incident-public-note`-Einträge vor dem Posten,
+  gleiche Guard wie bei der Resolution-Notiz), damit ein erneutes
+  `break` auf einem bereits aktiven Incident keine Duplikate erzeugt.
 
 ## IT-Ops – Gesamtübersicht (Grafana, alle Bereiche)
 

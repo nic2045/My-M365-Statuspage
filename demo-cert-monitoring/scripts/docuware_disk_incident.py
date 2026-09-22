@@ -201,9 +201,34 @@ if mode == "break":
             }})
             assigned_names.append(f"{role_name}: {user['name']['value']}")
 
+    # Root-cause update for subscribers: the description above says WHAT
+    # is happening, this says WHY - the same Rechnungslauf story the Tempo
+    # trace/Loki logs show (docuware_disk_rechnungslauf_trace.py), now on
+    # the public status page timeline too. Idempotent like the resolution
+    # note in "fix" below - break can be called again on an already-active
+    # incident (documented no-op re-trigger case above).
+    root_cause_note = (
+        "**Update (Ursachenanalyse):** Tempo/Loki zeigen die Ursache: ein "
+        "Batch-Chunk des neuen Rechnungslaufs **RL-2026-09** hat innerhalb "
+        "weniger Minuten deutlich mehr Dokumente geschrieben als der "
+        "übliche Nachtlauf (Gesamtlauf bislang 84.560 Dokumente gegenüber "
+        "ca. 12.000 in einer normalen Nacht). IT-Betrieb bereinigt "
+        "Archivdateien und erweitert den Speicherplatz."
+    )
+    existing_root_cause_notes = get_list("incident-public-note", query={"incidentId": incident_id},
+                                         select={"_id": True, "note": True})
+    if not any(n.get("note") == root_cause_note for n in existing_root_cause_notes):
+        call("/api/incident-public-note", {"data": {
+            "projectId": project_id,
+            "incidentId": incident_id,
+            "note": root_cause_note,
+            "shouldStatusPageSubscribersBeNotifiedOnNoteCreated": True,
+        }})
+
     set_monitor_status(degraded_status_id)
     print(f"==> '{INCIDENT_TITLE}' ist jetzt aktiv (Status: Identified).")
     print(f"    Monitor '{MONITOR_NAME}' auf Degraded gesetzt, On-Call-Eskalation verknüpft.")
+    print("    Root-Cause-Update (Rechnungslauf RL-2026-09) auf der Statusseite veröffentlicht.")
     if assigned_names:
         print("    Vorfallsrollen neu zugewiesen: " + ", ".join(assigned_names))
     roles_url = f"{BASE}/dashboard/{project_id}/incidents/{incident_id}/roles"
