@@ -45,6 +45,7 @@ _waf_requests_total = 0.0
 _waf_blocked_total = 0.0
 _portal_requests_total = 0.0
 _invoices_retrieved_total = 0.0
+_rechnungslauf_documents_written_total = 0.0
 _burst_until = 0.0  # monotonic time.time() the current traffic burst ends
 
 
@@ -86,6 +87,7 @@ def maybe_burst():
 def render_metrics():
     global _waf_requests_total, _waf_blocked_total
     global _portal_requests_total, _invoices_retrieved_total
+    global _rechnungslauf_documents_written_total
     unhealthy = is_unhealthy()
     disk_full = is_disk_full()
     bursting = maybe_burst()
@@ -101,6 +103,14 @@ def render_metrics():
     _portal_requests_total += portal_rate
     _invoices_retrieved_total += portal_rate * random.uniform(0.4, 0.7)
     portal_sessions = wave(50, 80, 260, phase=0.6) * (1.8 if bursting else 1)
+
+    # ── Rechnungslauf-Batch (schreibt in den Dokumentenspeicher, nicht das
+    # Kundenportal oben - dessen Zugriffe lesen bereits abgelegte Rechnungen)
+    # - normaler Nachtlauf vs. deutlich höheres Volumen während
+    # break-docuware-disk.sh, gleiche Root-Cause-Erzählung wie der
+    # Tempo-Trace in docuware_disk_rechnungslauf_trace.py. ────────────────
+    rechnungslauf_rate = random.uniform(180, 320) if disk_full else random.uniform(20, 45)
+    _rechnungslauf_documents_written_total += rechnungslauf_rate
 
     # ── DocuWare-Anwendungsdienste (echte Komponentennamen) - RAM-Nutzung
     # gegen manuell gesetztes Limit. ─────────────────────────────────────
@@ -230,6 +240,9 @@ def render_metrics():
         f'{(wave(60, 92, 98, phase=0.3) if disk_full else wave(90, 55, 70, phase=0.3)):.1f}',
         f'docuware_disk_usage_percent{{volume="Datenbank"}} {wave(100, 40, 60, phase=1.1):.1f}',
         f'docuware_disk_usage_percent{{volume="Log"}} {wave(80, 20, 35, phase=1.7):.1f}',
+        "# HELP docuware_rechnungslauf_documents_written_total Documents written to the Dokumentenspeicher by invoice-run batches - root cause of the disk usage above during break-docuware-disk.sh (see docuware_disk_rechnungslauf_trace.py for the matching Tempo/Loki trace).",
+        "# TYPE docuware_rechnungslauf_documents_written_total counter",
+        f"docuware_rechnungslauf_documents_written_total {_rechnungslauf_documents_written_total:.0f}",
     ]
     return "\n".join(lines) + "\n"
 

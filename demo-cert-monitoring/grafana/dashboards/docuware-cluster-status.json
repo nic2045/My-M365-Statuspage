@@ -838,6 +838,55 @@
     },
     "overrides": []
    }
+  },
+  {
+   "id": 19,
+   "type": "timeseries",
+   "title": "Rechnungslauf – Dokumente geschrieben (Rate/Min)",
+   "description": "Root-Cause-Korrelation zum Panel links: docuware_rechnungslauf_documents_written_total - normaler Nachtlauf vs. deutlich höheres Volumen während break-docuware-disk.sh. Passender Tempo-Trace + Loki-Logs: docuware_disk_rechnungslauf_trace.py (Grafana -> Explore).",
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 56
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "expr": "rate(docuware_rechnungslauf_documents_written_total[5m]) * 60",
+     "legendFormat": "Dokumente/Min",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineInterpolation": "smooth"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 80
+       },
+       {
+        "color": "red",
+        "value": 150
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
   }
  ]
 }

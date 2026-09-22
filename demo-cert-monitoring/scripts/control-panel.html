@@ -487,12 +487,17 @@
         On-Call-Eskalation + Mitarbeiter-Benachrichtigung.<br>
         <strong>Zeigt:</strong> Kapazitätsvorfall bleibt isoliert auf eine
         Ressource - von Grafana über OneUptime bis zum BMC-Ticket, inkl.
-        Vorfallsrollen und echter On-Call-Eskalation.
+        Vorfallsrollen und echter On-Call-Eskalation. Zusätzlich ein
+        echter Tempo-Trace + Loki-Logs, die die Ursache zeigen: ein
+        Batch-Chunk des neuen Rechnungslaufs "RL-2026-09" schreibt weit
+        mehr Dokumente als der übliche Nachtlauf - direkt in Explore
+        nachvollziehbar, nicht nur "Platte ist voll".
       </p>
       <div class="links">
         <div class="link-row">
           <span class="role-label">Admin</span>
           <a href="http://localhost:3000/d/docuware-cluster-status" target="_blank">Grafana-Dashboard</a>
+          <a href="http://localhost:3000/explore" target="_blank">Grafana Explore (Tempo/Loki)</a>
           <a href="/mockups/backend-bmc-itsm.html" target="_blank">BMC-Ticket-Mockup</a>
           <a id="link-docuware-disk-roles" href="#" target="_blank" style="display:none">Vorfallsrollen</a>
           <a class="disabled" id="link-oncall-escalation-1" href="#" target="_blank">On-Call-Eskalation</a>

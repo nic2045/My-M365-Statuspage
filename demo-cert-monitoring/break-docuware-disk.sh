@@ -32,6 +32,10 @@ echo "      - 'Speicherplatz-Auslastung (SAN-Volumes)' - Dokumentenspeicher clim
 echo "      - Datenbank/Log volumes stay in their normal range"
 echo "    Grafana: http://localhost:\${GRAFANA_PORT:-3000} (dashboard 'DocuWare - Cluster-Status (App-Owner)')"
 
+echo ""
+echo "==> Sending root-cause trace+logs (Rechnungslauf RL-2026-09 batch) to Tempo/Loki ..."
+python3 scripts/docuware_disk_rechnungslauf_trace.py break || true
+
 ONEUPTIME_CONFIG="oneuptime-selfhosted/oneuptime/config.env"
 if [ -f "$ONEUPTIME_CONFIG" ]; then
   OU_PORT=$(grep -E '^ONEUPTIME_HTTP_PORT=' "$ONEUPTIME_CONFIG" | tail -1 | cut -d= -f2-)

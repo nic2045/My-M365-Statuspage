@@ -12,6 +12,10 @@ docker compose exec -T docuware-metrics-exporter sh -c 'rm -f /tmp/docuware-disk
 echo ""
 echo "==> Done. The volume usage recovers within ~15-30s."
 
+echo ""
+echo "==> Sending confirmation trace+logs (regulärer Nachtlauf) to Tempo/Loki ..."
+python3 scripts/docuware_disk_rechnungslauf_trace.py fix || true
+
 ONEUPTIME_CONFIG="oneuptime-selfhosted/oneuptime/config.env"
 if [ -f "$ONEUPTIME_CONFIG" ]; then
   OU_PORT=$(grep -E '^ONEUPTIME_HTTP_PORT=' "$ONEUPTIME_CONFIG" | tail -1 | cut -d= -f2-)
