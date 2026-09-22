@@ -1530,6 +1530,28 @@ Szenario **komplett durch** - Grafana ist hier nur der Anfang:
   (gitignored), weil die Incident-ID bei jedem Neu-Auslösen wechselt
   (Delete-und-Neuanlegen aus dem Resolved-Zustand) und ein fest
   verdrahteter Link sonst sofort veralten würde.
+- **Root-Cause-Trace+Logs (Tempo/Loki)**: `docuware_disk_incident.py`
+  zeigt *dass* der Dokumentenspeicher voll ist, nicht *warum*.
+  `scripts/docuware_disk_rechnungslauf_trace.py` (von `break-/fix-
+  docuware-disk.sh` aufgerufen, best-effort wie die anderen Tempo/Loki-
+  Sends) schickt einen echten Tempo-Trace + passende Loki-Logs, die genau
+  das zeigen: ein Batch-Chunk des neuen Rechnungslaufs "RL-2026-09"
+  schreibt 2.480 Dokumente (~1,3 GB) in einem Chunk - Gesamtlauf bislang
+  84.560 Dokumente gegen ein übliches Nachtlauf-Volumen von ca. 12.000.
+  Vier Spans (`docuware-rechnungslauf-batch` → `content-server` →
+  `autoindex-service` → `storage-san`, alle `SpanKind.INTERNAL` - reine
+  Batch-Pipeline, keine RPC-Grenze), die Zahlen zusätzlich als
+  Span-Attribute auf dem Wurzel-Span (`docuware.rechnungslauf.*`), direkt
+  in der Tempo-Trace-Ansicht sichtbar, nicht nur im Log-Text. `fix`
+  schickt zum Kontrast einen kleinen, regulären Nachtlauf-Batch (180
+  Dokumente). Gleiche Trace-ID für Tempo-Span und zugehörige Loki-Zeilen
+  (`trace_id=<hex>` im Log-Text), gleiche Korrelation wie beim
+  DocuWare-APM-Szenario. Eigener, unabhängiger Trace-Lauf pro
+  Break/Fix-Aufruf - teilt keine Trace-ID mit dem APM-Szenario, sind
+  zwei getrennte Vorfälle. Nicht live gegen eine echte Tempo/Loki-Instanz
+  verifiziert (nur Mock-Server-Roundtrip, gleiche Sandbox-Einschränkung
+  wie der Rest dieser Demo-Serie), aber dieselben, seit dem Hex-Encoding-
+  Fix bestätigt korrekten OTLP-Konventionen wie `docuware_apm_tempo_trace.py`.
 
 ## IT-Ops – Gesamtübersicht (Grafana, alle Bereiche)
 
