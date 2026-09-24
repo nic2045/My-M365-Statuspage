@@ -132,10 +132,9 @@ All user-facing strings are in `app/i18n.py`:
 
 ## Windows Development
 
-On Windows 10/11, use `Start.ps1` + `setup-wsl2.ps1` for one-click setup:
-- **VS Code:** Terminal automatically runs `Start.ps1`, which detects WSL2/Docker or prompts to run setup
-- **Manual:** Open PowerShell (Admin) and run `.\setup-wsl2.ps1` or double-click `setup-wsl2.bat`
-- See `WINDOWS-SETUP.md` for full guide + troubleshooting
+Windows uses **Docker Desktop** (no WSL setup scripts). `make` is usually not installed on Windows, so use the underlying commands:
+- macOS/Linux: `make docker`
+- Windows (PowerShell / Git Bash): `npm run build:css; docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build`
 
 ## Configuration
 
@@ -309,7 +308,7 @@ Closes race condition via asyncio.Lock on _pending_poll_task
 
 Fixes #456"
 
-git commit -m "docs: add Windows WSL2 setup guide"
+git commit -m "docs: add Windows Docker Desktop setup guide"
 ```
 
 ### Release Workflow (Automated)
@@ -447,7 +446,7 @@ git push -u origin feat/enterprise-apps
 
 The latest PRs added (in order):
 - **#184**: Severity display in incident cards + state-change recording for new resolved incidents
-- **#185**: Windows WSL2 Docker setup automation (setup-wsl2.ps1, setup-wsl2.bat) + VS Code integration (Start.ps1, .vscode/ config)
+- **#185**: Windows WSL2 setup automation (since removed — Windows now uses Docker Desktop directly)
 - **#186**: Database export/import scripts + Makefile targets for cross-platform data migration (macOS → Windows)
 - **#187**: Code style standardization + developer onboarding best practices in CLAUDE.md (type hints, dependency injection, layered architecture, async patterns)
 
