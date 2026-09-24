@@ -45,18 +45,13 @@ make dev
 open http://localhost:8000
 ```
 
-### Windows Development (WSL2)
+### Windows Development (Docker Desktop)
 
-See `WINDOWS-SETUP.md` for complete setup instructions.
+Windows uses Docker Desktop; no WSL setup is required. `make` is usually not
+available on Windows, so run the Compose commands directly:
 
-```powershell
-# Run setup script
-.\setup-wsl2.ps1
-
-# In WSL2 terminal
-cd /mnt/c/path/to/My-M365-Statuspage
-make dev
-```
+- macOS/Linux: `make docker`
+- Windows (PowerShell / Git Bash): `npm run build:css; docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build`
 
 ---
 

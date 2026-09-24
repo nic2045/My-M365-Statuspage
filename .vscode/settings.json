@@ -1,21 +1,4 @@
 {
-  "terminal.integrated.defaultProfile.windows": "PowerShell",
-  "terminal.integrated.profiles.windows": {
-    "PowerShell": {
-      "source": "PowerShell",
-      "args": [
-        "-NoExit",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "& {. .\\Start.ps1}"
-      ]
-    }
-  },
-  "terminal.integrated.automationProfile.windows": {
-    "source": "PowerShell",
-    "args": ["-NoExit", "-ExecutionPolicy", "Bypass"]
-  },
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnSave": true

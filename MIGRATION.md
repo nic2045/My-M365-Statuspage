@@ -101,7 +101,7 @@ make db-export
 Transfer file to Windows machine, then import:
 
 ```bash
-# Windows (WSL2 or native)
+# Windows (Git Bash / PowerShell)
 cd /path/to/My-M365-Statuspage
 make db-import FILE=db_export.json
 ```

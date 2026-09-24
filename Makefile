@@ -1,4 +1,4 @@
-.PHONY: dev install css docker build stop logs shell test lint db-export db-export-file db-import setup help
+.PHONY: dev install css docker build stop logs shell test lint db-export db-export-file db-import help
 
 HOST ?= 127.0.0.1
 PORT ?= 8000
@@ -56,13 +56,6 @@ db-import:
 	fi
 	uv run python scripts/db_import.py $(FILE)
 
-setup:
-	@echo "Windows WSL2 setup:"
-	@echo "  PowerShell: .\setup-wsl2.ps1"
-	@echo "  Or double-click: setup-wsl2.bat"
-	@echo ""
-	@echo "For options: .\setup-wsl2.ps1 -Help"
-
 help:
 	@echo "Available commands:"
 	@echo "  make dev            - Start dev server directly via uv (http://$(HOST):$(PORT))"
@@ -78,4 +71,3 @@ help:
 	@echo "  make db-export      - Export database to db_export.json"
 	@echo "  make db-export-file FILE=output.json - Export to custom file"
 	@echo "  make db-import FILE=input.json - Import from file"
-	@echo "  make setup          - WSL2 setup info (Windows only)"
