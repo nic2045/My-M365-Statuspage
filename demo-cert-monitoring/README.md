@@ -135,6 +135,34 @@ Stack starten:
 docker compose up -d
 ```
 
+### Windows
+
+Docker Desktop reicht allein nicht - `start-demo.sh`, `control-panel.sh`
+und alle `break-/fix-*.sh`-Skripte sind POSIX-Shell-Skripte und rufen
+`python3` direkt auf. Docker Desktop selbst braucht ohnehin WSL2 als
+Backend, deshalb der einfachste Weg: alles **aus einer echten WSL2-Distro
+heraus** starten (z. B. Ubuntu, `wsl --install -d Ubuntu`), nicht aus
+PowerShell oder Git Bash mit Windows-Python:
+
+1. Docker Desktop → Settings → Resources → WSL Integration → die Distro
+   aktivieren (macht `docker`/`docker compose` innerhalb der Distro
+   nutzbar, gegen denselben Docker-Desktop-Daemon).
+2. In der Distro: `sudo apt install -y python3` (meist schon vorhanden).
+3. Repo in das Linux-Dateisystem der Distro klonen (`~/...`, nicht
+   `/mnt/c/...`) - deutlich schneller, und umgeht sämtliche
+   Zeilenenden-/Rechte-Fallstricke eines Windows-seitigen Checkouts.
+4. Ab hier wie oben: `cd demo-cert-monitoring && ./start-demo.sh`.
+   `localhost:<Port>` funktioniert aus der WSL2-Distro heraus genauso wie
+   aus einer normalen Linux-Shell (Docker Desktops WSL2-Integration
+   leitet das durch).
+
+Git Bash statt WSL2 funktioniert nur eingeschränkt: `sh` ist vorhanden,
+aber ein Windows-Python liefert meist nur `python.exe`/`py.exe`, kein
+`python3.exe` - die `python3`-Aufrufe in den Skripten schlagen dann fehl.
+Falls `./start-demo.sh` mit "Permission denied" abbricht (Windows-seitiger
+Checkout, Exec-Bit oft verloren): stattdessen `sh start-demo.sh`
+aufrufen.
+
 ## Zugriff
 
 | Dienst | URL | Hinweis |
