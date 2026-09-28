@@ -1409,6 +1409,71 @@ Panel-IDs, Grid-Layout und Transformationen aller fünf Dashboards
 stattdessen statisch geprüft (eindeutige IDs, keine Grid-Überlappung,
 jedes Panel mit Datasource/Targets/eindeutigen refIds).
 
+## Container-Plattform: Kubernetes-Monitoring über den ganzen Stack (Prometheus, Grafana, OneUptime)
+
+Zeigt Container-/Kubernetes-Monitoring als eigene Ebene, statt eine neue
+losgelöste Beispiel-App zu erfinden: dieselben 4 shop.pyur.com-Services
+(frontend/checkout/catalog/search, siehe oben) jetzt als Deployments mit
+mehreren Pod-Replikas auf einem 3-Node-Cluster (`scripts/container-
+platform-metrics-exporter.py`, Namespace `webshop`) - 10 Pods insgesamt
+(frontend ×3, checkout ×3, catalog ×2, search ×2).
+
+Metriknamen folgen echten kube-state-metrics-/cAdvisor-Konventionen dort,
+wo die echten Exporter sie auch so nennen würden (`kube_pod_info`,
+`kube_pod_status_phase`, `kube_pod_container_status_restarts_total`,
+`kube_deployment_spec_replicas`/`_status_replicas_available` - das sind
+in den echten Exportern ebenfalls Gauges/Counter mit genau diesen
+Namen). `container_cpu_/_memory_usage_percent` und `kube_node_cpu_/
+_memory_usage_percent` sind bewusst vereinfachte Gauges (echtes
+cAdvisor/node_exporter liefert kumulative Counter, die erst per `rate()`
+zu einer Auslastung würden) - dieselbe Vereinfachung, die dieser Stack
+für CPU/RAM schon überall sonst verwendet (siehe
+docuware-metrics-exporter.py).
+
+**Grafana:** `grafana/dashboards/container-platform-overview.json` -
+Nodes Ready, Pods insgesamt/nicht bereit, Container-Neustarts (Stat-
+Kacheln), Deployments Soll- vs. Ist-Replikas + Pods im Detail (Tabellen),
+Neustarts kumulativ, CPU/Memory je Pod, Node CPU/Memory (Zeitreihen).
+
+**OneUptime:** neuer Manual Monitor "Container-Plattform (Kubernetes)"
+auf der IT-Services-Statusseite (`seed_oneuptime.py`, eigene Gruppe
+"Container-Plattform", Order 8 - zwischen Dokumentenmanagement und
+Jira). Manual wie beim DocuWare-Cluster-Monitor: ein CrashLoopBackOff
+ist kein Erreichbarkeitsproblem, das ein Heartbeat erkennen könnte (der
+Cluster/die API bleibt voll erreichbar) - es gibt also keinen Sensor,
+der hier etwas anzeigen könnte.
+
+**Störungsfall - CrashLoopBackOff:** `./break-container-platform.sh`
+lässt Pod `checkout-2` (Deployment `checkout`) in ein CrashLoopBackOff
+laufen - Neustartzähler steigt alle ~25-40s, der Pod wird nicht mehr
+Ready, die Deployment fällt von 3/3 auf 2/3 verfügbare Replikas.
+`frontend`/`catalog`/`search` bleiben unverändert - isolierter Blast
+Radius, gleiches Prinzip wie bei den anderen Ressourcen-Vorfällen in
+diesem Stack. `./fix-container-platform.sh` macht es rückgängig.
+
+Legt zusätzlich einen echten OneUptime-Incident an
+(`scripts/container_platform_incident.py`, exakt dasselbe Break/Fix-
+Muster wie `docuware_disk_incident.py`: gleiche On-Call-Richtlinie
+"IT-Betrieb On-Call", gleicher 5-köpfiger Vorfallsrollen-Cast, gleicher
+Delete-und-Neuanlegen-Fix für erneutes Auslösen aus dem
+Resolved-Zustand, gleiche öffentliche Resolution-Notiz bei `fix` mit
+Abonnenten-Benachrichtigung) - Mitarbeiter-Benachrichtigung und
+On-Call-Eskalation laufen also genauso echt wie bei den anderen
+Vorfall-Szenarien. Übersprungen (mit Hinweis), falls OneUptime nicht
+läuft - der Prometheus/Grafana-Teil funktioniert dann trotzdem
+unverändert.
+
+Im Demo-Kontrollzentrum als achte Karte "Container-Plattform:
+CrashLoopBackOff" unter "Weitere Szenarien" (Kategorie "Ungeplante
+Störung", gleiche Einordnung wie DDoS auf shop.pyur.com).
+
+Nicht live gegen einen echten Prometheus/Grafana/OneUptime-Stack
+verifiziert (gleiche Sandbox-Einschränkung wie der Rest dieser
+Demo-Serie) - der Exporter selbst wurde per Mock-Test in beiden
+Zuständen (healthy/crashloop) geprüft: korrekte Labels, Neustartzähler
+klettert nur während `crashloop`, Deployment-Replikas fallen korrekt
+von 3 auf 2.
+
 ## DocuWare-Cluster: App-Owner-Tiefe + einfache Nutzeransicht
 
 Zeigt beide Zielgruppen eines Monitoring-Stacks am selben Beispiel: **tief

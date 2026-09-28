@@ -61,6 +61,8 @@ ACTIONS = {
     "fix-ddos-shop": ("fix-ddos-shop.sh", "DDoS-Vorfall beheben"),
     "break-docuware-apm": ("break-docuware-apm.sh", "DocuWare-APM-Vergleichstrace (verlangsamt) senden"),
     "fix-docuware-apm": ("fix-docuware-apm.sh", "DocuWare-APM-Vergleichstrace (gesund) senden"),
+    "break-container-platform": ("break-container-platform.sh", "Container-Plattform-Vorfall auslösen"),
+    "fix-container-platform": ("fix-container-platform.sh", "Container-Plattform-Vorfall beheben"),
 }
 
 
@@ -101,6 +103,15 @@ def get_links():
             disk_incident = json.load(fh)
     except (FileNotFoundError, json.JSONDecodeError):
         disk_incident = {}
+
+    # Same reasoning as disk_incident above - written by
+    # container_platform_incident.py on every "break" run.
+    container_platform_incident_path = os.path.join(DEMO_DIR, ".container-platform-incident.json")
+    try:
+        with open(container_platform_incident_path) as fh:
+            container_platform_incident = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        container_platform_incident = {}
 
     base = summary.get("base", "http://localhost")
     project_id = summary.get("projectId")
@@ -147,6 +158,7 @@ def get_links():
         "itServiceStatusPageId": summary.get("itServiceStatusPageId"),
         "leipzigStatusPageId": summary.get("leipzigStatusPageId"),
         "docuwareDiskIncidentRolesUrl": disk_incident.get("rolesUrl"),
+        "containerPlatformIncidentRolesUrl": container_platform_incident.get("rolesUrl"),
         "onCallEscalationUrl": on_call_escalation_url,
         "onCallExecutionLogsUrl": on_call_execution_logs_url,
         "scheduledMaintenanceEventsUrl": scheduled_maintenance_events_url,
@@ -282,6 +294,7 @@ def get_status():
     leipzig_switch = prom_query('net_uplink_up{device="Access-Switch Vertrieb-2"}')
     cognigy_intent_success = prom_query('cc_cognigy_intent_success_rate_percent')
     shop_request_rate = prom_query('shop_request_rate_per_second')
+    container_platform_ready = prom_query('kube_pod_container_status_ready{pod="checkout-2"}')
 
     def state(value, healthy_fn):
         if value is None:
@@ -307,6 +320,7 @@ def get_status():
         # pushes it into the thousands (see webshop-metrics-exporter.py) -
         # 500 sits safely between the two.
         "ddos-shop": state(shop_request_rate, lambda v: v < 500),
+        "container-platform": state(container_platform_ready, lambda v: v >= 1),
     }
 
 

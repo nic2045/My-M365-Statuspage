@@ -827,6 +827,23 @@ attach_resource(it_service_page_id, docuware_monitor_id, DOCUWARE_MONITOR_NAME, 
 attach_resource(it_service_page_id, docuware_portal_monitor_id, DOCUWARE_PORTAL_MONITOR_NAME, 7,
                 group_id=docuware_group, display_description="Für Kundenrückfragen zum Rechnungsabruf")
 
+# Container-Plattform (Kubernetes): same "Manual monitor, status follows
+# the incident" reasoning as DocuWare-Cluster above - a pod CrashLoopBackOff
+# isn't a reachability problem a heartbeat could detect anyway (the
+# cluster/API itself stays fully reachable), so there's no sensor to
+# attach. See container_platform_incident.py / break-container-platform.sh.
+CONTAINER_PLATFORM_MONITOR_NAME = "Container-Plattform (Kubernetes)"
+container_platform_monitor_id = ensure_manual_monitor(
+    CONTAINER_PLATFORM_MONITOR_NAME,
+    "Kubernetes-Cluster für shop.pyur.com (3 Nodes, 10 Pods) - Status folgt "
+    "dem Incident, nicht der reinen Cluster-Erreichbarkeit (siehe "
+    "Grafana-Dashboard für Node-/Pod-/Deployment-Details).")
+container_platform_group = ensure_group(it_service_page_id, "Container-Plattform", 8,
+                                        "Kubernetes-Cluster unter shop.pyur.com - "
+                                        "Node-/Pod-/Deployment-Details siehe Grafana.")
+attach_resource(it_service_page_id, container_platform_monitor_id, CONTAINER_PLATFORM_MONITOR_NAME, 8,
+                group_id=container_platform_group)
+
 # Custom ITIL-v4-style state for the remediation phase. OneUptime seeds
 # only Identified/Acknowledged/Resolved by default (ProjectService
 # addDefaultIncidentState) - "In Behebung" sits between Acknowledged and

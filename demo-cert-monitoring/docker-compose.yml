@@ -149,6 +149,22 @@ services:
     ports:
       - "${WEBSHOP_METRICS_PORT:-9500}:9500"
 
+  container-platform-metrics-exporter:
+    # Synthetic Prometheus exporter for a small Kubernetes cluster - the
+    # container layer underneath the shop.pyur.com services above (same
+    # 4 services, now shown as Deployments/Pods), see
+    # scripts/container-platform-metrics-exporter.py.
+    image: python:3.12-alpine
+    container_name: cert-demo-container-platform-metrics
+    restart: unless-stopped
+    environment:
+      METRICS_PORT: "9600"
+    volumes:
+      - ./scripts/container-platform-metrics-exporter.py:/container-platform-metrics-exporter.py:ro
+    entrypoint: ["python3", "/container-platform-metrics-exporter.py"]
+    ports:
+      - "${CONTAINER_PLATFORM_METRICS_PORT:-9600}:9600"
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: cert-demo-prometheus
@@ -179,6 +195,8 @@ services:
       leipzig-network-metrics-exporter:
         condition: service_started
       webshop-metrics-exporter:
+        condition: service_started
+      container-platform-metrics-exporter:
         condition: service_started
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro

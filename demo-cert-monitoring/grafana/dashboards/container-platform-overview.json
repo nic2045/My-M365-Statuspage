@@ -1,0 +1,287 @@
+{
+ "title": "Container-Plattform – Kubernetes-Cluster (Platform-Team)",
+ "uid": "container-platform-overview",
+ "description": "3 Worker-Nodes, 10 Pods über 4 Deployments (frontend/checkout/catalog/search - die Container-Ebene unter den shop.pyur.com-Services, siehe webshop-metrics-exporter.py). Synthetischer Exporter (scripts/container-platform-metrics-exporter.py), kein echter Kubernetes-API-Server dahinter.",
+ "timezone": "browser",
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "schemaVersion": 39,
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "Nodes Ready",
+   "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "sum(kube_node_status_ready)", "instant": true, "refId": "A" }
+   ],
+   "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value" },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "red", "value": null },
+       { "color": "green", "value": 3 }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Pods insgesamt",
+   "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "count(kube_pod_info)", "instant": true, "refId": "A" }
+   ],
+   "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value" }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Pods nicht bereit",
+   "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "sum(kube_pod_container_status_ready == bool 0)", "instant": true, "refId": "A" }
+   ],
+   "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value" },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "green", "value": null },
+       { "color": "red", "value": 1 }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Container-Neustarts (gesamt)",
+   "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "sum(kube_pod_container_status_restarts_total)", "instant": true, "refId": "A" }
+   ],
+   "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value" },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       { "color": "green", "value": null },
+       { "color": "orange", "value": 1 },
+       { "color": "red", "value": 5 }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 5,
+   "type": "table",
+   "title": "Deployments – Soll- vs. Ist-Replikas",
+   "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "kube_deployment_spec_replicas", "instant": true, "format": "table", "refId": "A" },
+    { "expr": "kube_deployment_status_replicas_available", "instant": true, "format": "table", "refId": "B" }
+   ],
+   "transformations": [
+    { "id": "labelsToFields", "options": {} },
+    { "id": "merge", "options": {}, "filter": { "id": "byRefId", "options": "A" } },
+    { "id": "merge", "options": {}, "filter": { "id": "byRefId", "options": "B" } },
+    { "id": "joinByField", "options": { "byField": "deployment", "mode": "outer" } },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true, "Time 2": true, "__name__": true, "__name__ 2": true,
+       "instance": true, "instance 2": true, "job": true, "job 2": true,
+       "namespace 2": true
+      },
+      "renameByName": { "deployment": "Deployment", "namespace": "Namespace" }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": { "id": "byFrameRefID", "options": "A" },
+      "properties": [{ "id": "displayName", "value": "Soll" }]
+     },
+     {
+      "matcher": { "id": "byFrameRefID", "options": "B" },
+      "properties": [
+       { "id": "displayName", "value": "Verfügbar" },
+       {
+        "id": "custom.cellOptions",
+        "value": { "type": "color-background" }
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          { "color": "red", "value": null },
+          { "color": "green", "value": 2 }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": 6,
+   "type": "table",
+   "title": "Pods im Detail",
+   "gridPos": { "h": 7, "w": 12, "x": 12, "y": 6 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "kube_pod_container_status_ready", "instant": true, "format": "table", "refId": "A" },
+    { "expr": "kube_pod_container_status_restarts_total", "instant": true, "format": "table", "refId": "B" }
+   ],
+   "transformations": [
+    { "id": "labelsToFields", "options": {} },
+    { "id": "merge", "options": {}, "filter": { "id": "byRefId", "options": "A" } },
+    { "id": "merge", "options": {}, "filter": { "id": "byRefId", "options": "B" } },
+    { "id": "joinByField", "options": { "byField": "pod", "mode": "outer" } },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true, "Time 2": true, "__name__": true, "__name__ 2": true,
+       "instance": true, "instance 2": true, "job": true, "job 2": true,
+       "namespace 2": true, "container 2": true
+      },
+      "renameByName": { "pod": "Pod", "namespace": "Namespace", "container": "Container" }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": { "id": "byFrameRefID", "options": "A" },
+      "properties": [
+       { "id": "displayName", "value": "Ready" },
+       { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          { "color": "red", "value": null },
+          { "color": "green", "value": 1 }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "matcher": { "id": "byFrameRefID", "options": "B" },
+      "properties": [
+       { "id": "displayName", "value": "Neustarts" },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          { "color": "green", "value": null },
+          { "color": "orange", "value": 1 },
+          { "color": "red", "value": 3 }
+         ]
+        }
+       },
+       { "id": "custom.cellOptions", "value": { "type": "color-text" } }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": 7,
+   "type": "timeseries",
+   "title": "Container-Neustarts kumulativ je Pod",
+   "gridPos": { "h": 7, "w": 12, "x": 0, "y": 13 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "kube_pod_container_status_restarts_total", "legendFormat": "{{pod}}", "refId": "A" }
+   ],
+   "fieldConfig": {
+    "defaults": { "unit": "short", "custom": { "lineInterpolation": "smooth" } },
+    "overrides": []
+   }
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "CPU je Pod (%)",
+   "gridPos": { "h": 7, "w": 12, "x": 12, "y": 13 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "container_cpu_usage_percent", "legendFormat": "{{pod}}", "refId": "A" }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent", "max": 100, "min": 0,
+     "custom": { "lineInterpolation": "smooth" }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 9,
+   "type": "timeseries",
+   "title": "Memory je Pod (%)",
+   "gridPos": { "h": 7, "w": 12, "x": 0, "y": 20 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "container_memory_usage_percent", "legendFormat": "{{pod}}", "refId": "A" }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent", "max": 100, "min": 0,
+     "custom": { "lineInterpolation": "smooth" }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 10,
+   "type": "timeseries",
+   "title": "Node CPU/Memory (%)",
+   "gridPos": { "h": 7, "w": 12, "x": 12, "y": 20 },
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "targets": [
+    { "expr": "kube_node_cpu_usage_percent", "legendFormat": "{{node}} CPU", "refId": "A" },
+    { "expr": "kube_node_memory_usage_percent", "legendFormat": "{{node}} RAM", "refId": "B" }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent", "max": 100, "min": 0,
+     "custom": { "lineInterpolation": "smooth" }
+    },
+    "overrides": []
+   }
+  }
+ ]
+}
