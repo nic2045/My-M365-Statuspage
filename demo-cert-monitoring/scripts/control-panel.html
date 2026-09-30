@@ -329,6 +329,10 @@
       <div class="hub-icon" style="background:#f46800;">G</div>
       <div class="hub-text"><div class="t">Web-Traffic &amp; Fehlercodes</div><div class="d">Request-Rate, HTTP-Statuscodes je Pfad</div></div>
     </a>
+    <a class="hub-card" href="http://localhost:3000/d/container-platform-overview" target="_blank">
+      <div class="hub-icon" style="background:#f46800;">G</div>
+      <div class="hub-text"><div class="t">Container-Plattform (Kubernetes)</div><div class="d">Nodes, Pods, Deployments, Neustarts</div></div>
+    </a>
 
     <div class="hub-group">Werkzeuge</div>
     <a class="hub-card" href="http://localhost" target="_blank">
@@ -570,8 +574,8 @@
 
   <details class="scenario-more">
     <summary>
-      <span class="more-icon">+9</span>
-      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge, Kettenreaktion Leipzig, DDoS auf shop.pyur.com</span></span>
+      <span class="more-icon">+10</span>
+      <span class="more-label">Weitere Szenarien anzeigen<span class="more-sub">DocuWare-Cluster, Customer-Care, Sicherheit, Leipzig-Netzwerk, Cognigy, Blueant, Jira-Anhänge, Kettenreaktion Leipzig, DDoS auf shop.pyur.com, Container-Plattform</span></span>
       <span class="more-arrow">⌄</span>
     </summary>
     <div class="grid">
@@ -902,6 +906,52 @@
       </div>
     </div>
 
+    <div class="card" id="card-container-platform" style="--accent:#c4314b; --accent-bg:#fdf2f4;">
+      <div class="card-head">
+        <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#c4314b"/>
+          <rect x="10" y="10" width="11" height="11" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <rect x="27" y="10" width="11" height="11" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <rect x="10" y="27" width="11" height="11" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/>
+          <rect x="27" y="27" width="11" height="11" rx="2" fill="#fff"/>
+        </svg>
+        <div>
+          <h2>Container-Plattform: CrashLoopBackOff</h2>
+          <span class="status unknown" id="status-container-platform"><span class="dot"></span>wird geprüft…</span>
+          <span class="cat-badge incident">Ungeplante Störung</span>
+        </div>
+      </div>
+      <p class="story">
+        <strong>Passiert:</strong> ein Pod des checkout-Deployments
+        (checkout-2, 3 Nodes / 10 Pods im Cluster) hängt in
+        CrashLoopBackOff - Neustartzähler steigt, die Deployment fällt
+        von 3/3 auf 2/3 verfügbare Replikas.<br>
+        <strong>Zeigt:</strong> dieselbe Container-Ebene unter den schon
+        bekannten shop.pyur.com-Services (frontend/checkout/catalog/
+        search), jetzt als Kubernetes-Cluster überwacht - echter
+        OneUptime-Incident + On-Call-Eskalation, während die anderen
+        drei Deployments unberührt bleiben (isolierter Blast Radius,
+        gleiches Prinzip wie bei den anderen Ressourcen-Vorfällen in
+        dieser Demo).
+      </p>
+      <div class="links">
+        <div class="link-row">
+          <span class="role-label">Admin</span>
+          <a href="http://localhost:3000/d/container-platform-overview" target="_blank">Grafana-Dashboard</a>
+          <a id="link-container-platform-roles" href="#" target="_blank" style="display:none">Vorfallsrollen</a>
+          <a class="disabled" id="link-oncall-escalation-3" href="#" target="_blank">On-Call-Eskalation</a>
+          <a class="disabled" id="link-oncall-logs-3" href="#" target="_blank">On-Call-Protokoll</a>
+        </div>
+        <div class="link-row">
+          <span class="role-label">Nutzer</span>
+          <a class="disabled" id="link-container-platform-statuspage" href="#" target="_blank">Statusseite</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-break" onclick="run('break-container-platform', 'container-platform')">Vorfall auslösen</button>
+        <button class="btn-fix" onclick="run('fix-container-platform', 'container-platform')">Beheben</button>
+      </div>
+    </div>
+
     </div>
   </details>
 
@@ -948,7 +998,7 @@
       try {
         const res = await fetch("/api/status");
         const data = await res.json();
-        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer", "leipzig-network", "cognigy", "blueant", "jira-attachments", "leipzig-cascade", "ddos-shop"]) {
+        for (const key of ["demo", "docuware", "docuware-disk", "customer-care", "security", "printer", "leipzig-network", "cognigy", "blueant", "jira-attachments", "leipzig-cascade", "ddos-shop", "container-platform"]) {
           const el = document.getElementById("status-" + key);
           const state = data[key] || "unknown";
           el.className = "status " + state;
@@ -989,6 +1039,14 @@
           rolesLink.style.display = "none";
         }
 
+        const containerPlatformRolesLink = document.getElementById("link-container-platform-roles");
+        if (data.containerPlatformIncidentRolesUrl) {
+          containerPlatformRolesLink.href = data.containerPlatformIncidentRolesUrl;
+          containerPlatformRolesLink.style.display = "";
+        } else {
+          containerPlatformRolesLink.style.display = "none";
+        }
+
         // Same disabled-until-seeded pattern as the hub cards above, for
         // the per-scenario Admin-/Nutzer-Sublinks - all derived from ids
         // that are stable across reseeds (status pages, the On-Call
@@ -1002,6 +1060,7 @@
           "link-blueant-statuspage": data.itServiceStatusPageId,
           "link-jira-attachments-statuspage": data.itServiceStatusPageId,
           "link-leipzig-cascade-statuspage": data.leipzigStatusPageId,
+          "link-container-platform-statuspage": data.itServiceStatusPageId,
         };
         for (const [elId, pageId] of Object.entries(statusPageLinks)) {
           const a = document.getElementById(elId);
@@ -1015,8 +1074,10 @@
           "link-printer-admin": data.scheduledMaintenanceEventsUrl,
           "link-oncall-escalation-1": data.onCallEscalationUrl,
           "link-oncall-escalation-2": data.onCallEscalationUrl,
+          "link-oncall-escalation-3": data.onCallEscalationUrl,
           "link-oncall-logs-1": data.onCallExecutionLogsUrl,
           "link-oncall-logs-2": data.onCallExecutionLogsUrl,
+          "link-oncall-logs-3": data.onCallExecutionLogsUrl,
           "hub-service-catalog": data.serviceCatalogUrl,
           "hub-telemetry-logs": data.telemetryLogsUrl,
           "hub-security-events": data.securityEventsUrl,

@@ -119,3 +119,12 @@ scrape_configs:
       - targets: ["webshop-metrics-exporter:9500"]
         labels:
           instance: "shop.pyur.com"
+
+  # Kubernetes-Cluster (3 Nodes) unter shop.pyur.com - dieselben 4 Services
+  # jetzt als Deployments/Pods - siehe
+  # scripts/container-platform-metrics-exporter.py.
+  - job_name: "container_platform"
+    static_configs:
+      - targets: ["container-platform-metrics-exporter:9600"]
+        labels:
+          instance: "webshop-cluster"

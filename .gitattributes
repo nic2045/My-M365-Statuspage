@@ -1,0 +1,7 @@
+# Force LF for shell scripts regardless of the checking-out platform's
+# core.autocrlf setting - Git for Windows defaults to core.autocrlf=true,
+# which would otherwise check these out with CRLF line endings and break
+# them (bad shebang interpreter, malformed tokens) when run via sh/bash
+# (Git Bash, WSL2). Shell scripts are the one file type in this repo
+# where line endings are not cosmetic.
+*.sh text eol=lf
