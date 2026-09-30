@@ -1502,6 +1502,37 @@ Zuständen (healthy/crashloop) geprüft: korrekte Labels, Neustartzähler
 klettert nur während `crashloop`, Deployment-Replikas fallen korrekt
 von 3 auf 2.
 
+### OneUptime-eigenes Docker-/Netzwerk-Monitoring (echte Agenten, kein Exporter)
+
+Der Manual Monitor oben und alle `*-metrics-exporter.py`-Skripte liefern
+synthetische Prometheus-Metriken - sie erscheinen absichtlich **nicht** in
+OneUptimes eigenen, agentenbasierten Bereichen **Monitoring → Docker**,
+**Kubernetes** oder **Netzwerk-Geräte**: die brauchen einen echten Agenten,
+der mit der jeweiligen Infrastruktur spricht, keinen Custom-Exporter. Zwei
+optionale, eigenständige Skripte (nicht Teil von `docker-compose.yml`,
+laufen zusätzlich zu `start-demo.sh --with-oneuptime`):
+
+- **`./enable-oneuptime-docker-agent.sh`** - startet OneUptimes offizielles
+  `oneuptime/docker-agent:release`-Image gegen den eigenen Docker-Daemon.
+  Danach zeigt OneUptime → Monitoring → Docker jeden `cert-demo-*`
+  Container mit echten CPU/Memory/Netzwerk/Block-I/O-Werten und
+  Container-Logs. Holt sich den Telemetry-Ingestion-Key automatisch
+  (`scripts/print_telemetry_key.py`, gleicher Key wie überall sonst in
+  dieser Demo).
+- **`./enable-oneuptime-network-devices.sh`** - startet 3 simulierte
+  SNMP-Geräte (`network-simulator/`, vendored aus OneUptimes eigenem
+  offiziellen Beispiel `Examples/snmp-simulator`) und gibt die Zugangsdaten
+  für die Registrierung aus. Registrierung selbst ist ein manueller
+  Dashboard-Schritt (Netzwerk-Geräte → Hinzufügen) - dafür gibt es bei
+  OneUptime keine öffentliche REST-API, genau wie im offiziellen Beispiel
+  selbst. Danach: Interface-Bandbreite/-Auslastung, LLDP-Topologie
+  (`switch-a` ↔ `switch-b`), SNMPv3 über `router-v3`.
+
+Kubernetes-Integration (echter Agent, nicht der synthetische Exporter oben)
+ist als Folgearbeit vorgesehen - ein echtes, wenn auch minimales
+Kubernetes-Cluster (z. B. k3s-in-Docker) ist ein deutlich größerer
+Fußabdruck als dieser Compose-Stack sonst hat.
+
 ## DocuWare-Cluster: App-Owner-Tiefe + einfache Nutzeransicht
 
 Zeigt beide Zielgruppen eines Monitoring-Stacks am selben Beispiel: **tief
