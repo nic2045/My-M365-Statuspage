@@ -30,12 +30,20 @@ DEVICES = [
         "hostname": "172.30.99.11",
         "snmpVersion": "V2c",
         "snmpCommunityString": "public",
+        "walkInterfaces": True,
+        # switch-a's own public.snmprec bridge-forwarding-table + ARP rows
+        # (see network-simulator/README via the vendored upstream one) name
+        # a MAC at 172.30.99.14 learned on port Gi0/4 - this is the endpoint
+        # "Registrier-Gerät (Simulator)" below is meant to be recognized as,
+        # once switch-a's next walk runs with endpoint collection on.
+        "collectEndpoints": True,
     },
     {
         "name": "Netzwerk-Switch B (Simulator)",
         "hostname": "172.30.99.12",
         "snmpVersion": "V2c",
         "snmpCommunityString": "public",
+        "walkInterfaces": True,
     },
     {
         "name": "Netzwerk-Router V3 (Simulator)",
@@ -47,6 +55,18 @@ DEVICES = [
         "snmpV3AuthKey": "authpass123",
         "snmpV3PrivProtocol": "AES",
         "snmpV3PrivKey": "privpass123",
+        "walkInterfaces": True,
+    },
+    {
+        # No SNMP credentials at all - "simply pinged", per OneUptime's own
+        # NetworkDevice model docs. Demonstrates Connected Endpoints: once
+        # switch-a (collectEndpoints above) walks its ARP/forwarding tables,
+        # this device's MAC is learned on switch-a's Gi0/4 and the Topology
+        # page draws switch-a -> this device as a dashed, auto-learned link
+        # - nothing about it was configured but its address.
+        "name": "Registrier-Geraet (Simulator)",
+        "hostname": "172.30.99.14",
+        "walkInterfaces": False,
     },
 ]
 
@@ -135,9 +155,9 @@ print(f"==> Using probe '{probes[0]['name']}' ({probe_id})")
 
 SELECT_DEVICE = {"_id": True, "name": True}
 for device in DEVICES:
+    walk_interfaces = device.get("walkInterfaces", True)
     payload = {k: v for k, v in device.items() if k != "name"}
     payload["probeId"] = probe_id
-    payload["walkInterfaces"] = True
 
     existing = find_by_name("network-device", device["name"], select=SELECT_DEVICE)
     if existing:
@@ -148,6 +168,13 @@ for device in DEVICES:
         created = call("/api/network-device", {"data": dict(payload, name=device["name"])})
         device_id = created["_id"]
         print(f"    created Network Device '{device['name']}'")
+
+    # A "Network Device" monitor alerts on SNMP walk results/traps - skip it
+    # for a ping-only device, which has neither. Its status still comes from
+    # the device's own probe-driven ping polling, and Connected Endpoints
+    # draws it on the Topology page without any monitor of its own.
+    if not walk_interfaces:
+        continue
 
     monitor_name = f"{device['name']} - Monitor"
     monitor_steps = typed("MonitorSteps", {"monitorStepsInstanceArray": [
@@ -178,8 +205,18 @@ for device in DEVICES:
         print(f"    created Monitor '{monitor_name}'")
 
 print("")
-print("==> Done. OneUptime -> Monitoring -> Network Devices now lists all 3")
+print("==> Done. OneUptime -> Monitoring -> Network Devices now lists all 4")
 print("    simulated devices. Give the probe 2 polls (see its Polling")
 print("    Interval, default 5 min) before checking interface bandwidth/")
 print("    utilization charts and the Topology page - rates are computed")
 print("    from the counter delta between two polls.")
+print("")
+print("    Topology page: switch-a <-> switch-b show as LLDP-adjacent, plus")
+print("    two unmanaged neighbours hanging off switch-a (an unregistered")
+print("    'core-router' and a Cisco IP phone via CDP).")
+print("")
+print("    Connected Endpoints: after switch-a's 2nd poll, its ARP/forwarding")
+print("    tables place 'Registrier-Geraet (Simulator)' on port Gi0/4 -")
+print("    Topology draws switch-a -> this device as a learned (dashed)")
+print("    link, and its Overview page shows the same under 'Connected to',")
+print("    though nothing about it was configured but its address.")
