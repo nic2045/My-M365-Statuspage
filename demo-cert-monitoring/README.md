@@ -1521,12 +1521,14 @@ laufen zusätzlich zu `start-demo.sh --with-oneuptime`):
   dieser Demo).
 - **`./enable-oneuptime-network-devices.sh`** - startet 3 simulierte
   SNMP-Geräte (`network-simulator/`, vendored aus OneUptimes eigenem
-  offiziellen Beispiel `Examples/snmp-simulator`) und gibt die Zugangsdaten
-  für die Registrierung aus. Registrierung selbst ist ein manueller
-  Dashboard-Schritt (Netzwerk-Geräte → Hinzufügen) - dafür gibt es bei
-  OneUptime keine öffentliche REST-API, genau wie im offiziellen Beispiel
-  selbst. Danach: Interface-Bandbreite/-Auslastung, LLDP-Topologie
-  (`switch-a` ↔ `switch-b`), SNMPv3 über `router-v3`.
+  offiziellen Beispiel `Examples/snmp-simulator`) und registriert sie
+  automatisch als OneUptime Network Devices + je einen "Network Device"
+  Monitor mit Interface-Monitoring (`scripts/register_network_devices.py`,
+  `/api/network-device` + `/api/monitor`, gleiches Login-/Idempotenz-Muster
+  wie `seed_oneuptime.py`). Probe wird automatisch aus dem Projekt geholt
+  (erster gefundener Probe, Standard `Probe-1`). Danach: Interface-
+  Bandbreite/-Auslastung nach 2 Polls, LLDP-Topologie (`switch-a` ↔
+  `switch-b`), SNMPv3 über `router-v3`.
 
 Kubernetes-Integration (echter Agent, nicht der synthetische Exporter oben)
 ist als Folgearbeit vorgesehen - ein echtes, wenn auch minimales
