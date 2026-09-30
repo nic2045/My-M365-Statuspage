@@ -1527,8 +1527,23 @@ laufen zusätzlich zu `start-demo.sh --with-oneuptime`):
   `/api/network-device` + `/api/monitor`, gleiches Login-/Idempotenz-Muster
   wie `seed_oneuptime.py`). Probe wird automatisch aus dem Projekt geholt
   (erster gefundener Probe, Standard `Probe-1`). Danach: Interface-
-  Bandbreite/-Auslastung nach 2 Polls, LLDP-Topologie (`switch-a` ↔
-  `switch-b`), SNMPv3 über `router-v3`.
+  Bandbreite/-Auslastung nach 2 Polls, SNMPv3 über `router-v3`.
+
+  Zwei weitere Netzwerk-Funktionen laufen automatisch mit, ohne eigenes
+  Skript - beide stecken schon in den `.snmprec`-Testdaten des Simulators:
+  - **Topology-Ansicht**: sobald beide Switches 2x gepollt wurden, zeigt
+    OneUptime → Netzwerk → Topology `switch-a` ↔ `switch-b` als
+    LLDP-Nachbarn, plus zwei unverwaltete Nachbarn an `switch-a` (ein
+    nicht registrierter "core-router" per LLDP, ein Cisco-IP-Telefon per
+    CDP) - beide bieten "Add to Monitoring" per Klick an.
+  - **Connected Endpoints**: `register_network_devices.py` legt zusätzlich
+    ein viertes Gerät an, "Registrier-Geraet (Simulator)" (`172.30.99.14`,
+    absichtlich ohne SNMP - nur Ping) und schaltet `Collect Connected
+    Endpoints` auf `switch-a` ein. Nach dem nächsten Walk von `switch-a`
+    lernt dessen Forwarding-/ARP-Tabelle die MAC-Adresse dieses Geräts auf
+    Port `Gi0/4` - die Topology-Seite zeichnet `switch-a → Registrier-Geraet`
+    als gelernte (gestrichelte) Verbindung, obwohl außer der Adresse nichts
+    manuell konfiguriert wurde.
 
 **Kubernetes (Skizze, nicht Teil dieses Demo-Stacks):** anders als Docker-
 Agent und SNMP-Simulator ist OneUptimes Kubernetes-Agent kein einzelner
