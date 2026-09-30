@@ -107,10 +107,27 @@ if not project:
     sys.exit(f"ERROR: project '{PROJECT_NAME}' not found - run ./seed-oneuptime.sh first.")
 project_id = project["_id"]
 
-probes = get_list("probe", select={"_id": True, "name": True}, limit=1)
+def get_all_probes():
+    """Project-owned probes plus GLOBAL probes (projectId: null) - the two
+    self-hosted bundle probes (Probe-1/Probe-2, registered via
+    REGISTER_PROBE_KEY) are global and invisible to a plain
+    /api/probe/get-list call once a ProjectID header is attached, since
+    TenantColumn scopes that query to this project's own rows. OneUptime's
+    own dashboard (Utils/Probe.ts) merges both lists the same way, via the
+    dedicated /api/probe/global-probes endpoint for the second one."""
+    select = {"_id": True, "name": True}
+    project_probes = get_list("probe", query={"projectId": project_id}, select=select)
+    global_probes = call("/api/probe/global-probes", {
+        "query": {}, "select": select, "sort": {}, "skip": 0, "limit": 100,
+    }).get("data", [])
+    return project_probes + global_probes
+
+
+probes = get_all_probes()
 if not probes:
     sys.exit(
-        "ERROR: no probe found - OneUptime's own probe-1/probe-2 containers "
+        "ERROR: no probe found (checked this project's own probes and "
+        "global probes) - OneUptime's own probe-1/probe-2 containers "
         "register themselves within a minute of startup; wait and retry."
     )
 probe_id = probes[0]["_id"]
