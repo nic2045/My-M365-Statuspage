@@ -1530,10 +1530,35 @@ laufen zusätzlich zu `start-demo.sh --with-oneuptime`):
   Bandbreite/-Auslastung nach 2 Polls, LLDP-Topologie (`switch-a` ↔
   `switch-b`), SNMPv3 über `router-v3`.
 
-Kubernetes-Integration (echter Agent, nicht der synthetische Exporter oben)
-ist als Folgearbeit vorgesehen - ein echtes, wenn auch minimales
-Kubernetes-Cluster (z. B. k3s-in-Docker) ist ein deutlich größerer
-Fußabdruck als dieser Compose-Stack sonst hat.
+**Kubernetes (Skizze, nicht Teil dieses Demo-Stacks):** anders als Docker-
+Agent und SNMP-Simulator ist OneUptimes Kubernetes-Agent kein einzelner
+Container, sondern ein **Helm-Chart** (OpenTelemetry-Collector + optional
+eBPF-Auto-Instrumentierung), das in einen echten Kubernetes-Cluster
+installiert wird - es gibt keinen "docker run"-Weg dafür. Für diesen
+Compose-Stack hieße das zusätzlich: ein echtes (wenn auch minimales)
+Cluster in Docker (z. B. `k3d`), `helm` als weiteres Tool, und die
+Webshop-Services als echte K8s-Deployments statt als synthetischer
+Exporter - spürbar größerer Fußabdruck als die anderen zwei Integrationen.
+Deshalb hier nur skizziert statt umgesetzt:
+
+```bash
+# 1) Minimal-Cluster in Docker (statt eines echten k8s-Clusters)
+k3d cluster create cert-demo --agents 1
+
+# 2) OneUptime Kubernetes-Agent per Helm installieren (Ingest-Key wie bei
+#    scripts/print_telemetry_key.py, ONEUPTIME_URL zeigt auf den Host)
+helm repo add oneuptime https://helm.oneuptime.com
+helm install oneuptime-k8s-agent oneuptime/kubernetes-agent \
+  --set oneuptimeURL=http://host.k3d.internal \
+  --set ingestionKey=<Demo-Log-Ingest-Key>
+
+# 3) Die bestehenden Webshop-Services (frontend/checkout/catalog/search,
+#    siehe container-platform-metrics-exporter.py) als echte Deployments
+#    in den Cluster bringen, z. B. via `kubectl apply -f k8s/`
+```
+
+Danach zeigt OneUptime → Monitoring → Kubernetes den echten Cluster/Node-/
+Pod-Status statt der synthetischen `kube_*`-Metriken von oben.
 
 ## DocuWare-Cluster: App-Owner-Tiefe + einfache Nutzeransicht
 
