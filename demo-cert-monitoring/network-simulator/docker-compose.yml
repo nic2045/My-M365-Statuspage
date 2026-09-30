@@ -1,0 +1,52 @@
+name: cert-demo-network-simulator
+
+# Vendored (unmodified logic, renamed containers for this repo's cert-demo-*
+# convention) from OneUptime's own official example:
+# https://github.com/OneUptime/oneuptime/tree/master/Examples/snmp-simulator
+#
+# Two simulated switches + one real snmpd agent on a dedicated bridge network
+# with fixed IPs. OneUptime's self-hosted probe runs with network_mode: host
+# (see oneuptime-selfhosted/oneuptime/docker-compose.base.yml), so it can
+# reach these container IPs directly on UDP/161 - no port publishing needed.
+services:
+  switch-a:
+    build: .
+    image: cert-demo-snmp-simulator:local
+    container_name: cert-demo-snmp-switch-a
+    restart: unless-stopped
+    volumes:
+      - ./snmprec/switch-a:/data:ro
+    networks:
+      snmpsim:
+        ipv4_address: 172.30.99.11
+
+  switch-b:
+    build: .
+    image: cert-demo-snmp-simulator:local
+    container_name: cert-demo-snmp-switch-b
+    restart: unless-stopped
+    volumes:
+      - ./snmprec/switch-b:/data:ro
+    networks:
+      snmpsim:
+        ipv4_address: 172.30.99.12
+
+  # Real net-snmp agent for exercising the SNMPv3 path (snmpsim only answers
+  # v3 requests that carry a context name, which the probe does not send).
+  router-v3:
+    build:
+      context: .
+      dockerfile: Dockerfile.snmpd
+    image: cert-demo-snmp-simulator-snmpd:local
+    container_name: cert-demo-snmp-router-v3
+    restart: unless-stopped
+    networks:
+      snmpsim:
+        ipv4_address: 172.30.99.13
+
+networks:
+  snmpsim:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.99.0/24
